@@ -216,7 +216,7 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
       const a = document.createElement('a');
       a.download = `${code}_${new Date().toISOString().slice(0, 10)}.png`;
       a.href = u; a.click();
-    } catch {}
+    } catch (e) { console.error('PNG export failed:', e); }
     stage.remove();
     setDownloading(false);
   }, [code]);
@@ -293,7 +293,7 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
                 <style>{`.ed,.ed *{color:#000!important}.ed .dim{color:#555!important}.ed [data-placeholder].filled{border-bottom-color:transparent;min-width:0;padding-left:0;padding-right:0;margin-left:0;margin-right:0}`}</style>
                 <div className="ed px-12 py-10">
 
-                  <div className="flex justify-center mb-3"><img src="/emblem.png" alt="" className="w-[60px] h-auto" /></div>
+                  <div className="flex justify-center mb-3"><img src={import.meta.env.BASE_URL + 'emblem.png'} alt="" className="w-[60px] h-auto" /></div>
                   <p className="text-[11px] leading-tight tracking-[0.1em] uppercase font-semibold text-center border-b border-[#7f7f7f] pb-3">
                     ГОСУДАРСТВЕННАЯ ИНСПЕКЦИЯ БЕЗОПАСНОСТИ ДОРОЖНОГО<br/>ДВИЖЕНИЯ МВД РОССИЙСКОГО ОКРУГА
                   </p>
@@ -318,7 +318,7 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
                       Российского Округа, 119021, г. Москва, ул. Остоженка, 53/2
                     </div>
                     <div className="w-[45%] text-center p-2 bg-gray-50">
-                      <img src="/emblem.png" alt="" className="w-[22px] h-auto mx-auto mb-1 opacity-80" />
+                      <img src={import.meta.env.BASE_URL + 'emblem.png'} alt="" className="w-[22px] h-auto mx-auto mb-1 opacity-80" />
                       <p className="text-[11px] font-bold">{regType === 'form' ? 'СЛУЖЕБНАЯ ФОРМА' : 'ЗАРЕГИСТРИРОВАНО'}</p>
                       <p className="text-[10px] dim">Рег. № <E ph="____" /> от «<E ph="___" />»</p>
                     </div>
