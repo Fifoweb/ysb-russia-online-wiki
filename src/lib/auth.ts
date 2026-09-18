@@ -20,9 +20,10 @@ export function useAuth() {
 
   const signInWithDiscord = async () => {
     if (!supabase) return;
+    // Redirect must include the repo subpath on GitHub Pages (origin alone → 404)
     await supabase.auth.signInWithOAuth({
       provider: 'discord',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
     });
   };
 
