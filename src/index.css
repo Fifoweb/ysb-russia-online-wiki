@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Handwriting fonts for signatures (local, CORS-free for PNG export) */
+@font-face {
+  font-family: 'Brittany Signature';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/BrittanySignature.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Bad Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/badscript-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Bad Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/badscript-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/caveat-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/caveat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Marck Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/marckscript-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Marck Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/marckscript-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; background: #050508; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #050508;
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+
+:root {
+  --purple: #a855f7;
+  --cyan: #06b6d4;
+  --pink: #ec4899;
+  --lime: #a3e635;
+  --blue: #3b82f6;
+  --bg-deep: #050508;
+  --bg-card: rgba(12,12,24,0.7);
+  --border: rgba(168,85,247,0.15);
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #050508; }
+::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(168,85,247,0.45); }
+
+::selection { background: rgba(168,85,247,0.3); color: #fff; }
+
+@layer base {
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(12, 12, 24, 0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(168, 85, 247, 0.12);
+  }
+  .glass-light {
+    background: rgba(20, 20, 38, 0.5);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(168, 85, 247, 0.08);
+  }
+  .neon-purple {
+    text-shadow: 0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2);
+  }
+  .neon-cyan {
+    text-shadow: 0 0 20px rgba(6,182,212,0.5), 0 0 40px rgba(6,182,212,0.2);
+  }
+  .glow-border {
+    box-shadow: 0 0 15px rgba(168,85,247,0.15), inset 0 0 15px rgba(168,85,247,0.05);
+  }
+  .scanline::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+  }
+  .wiki-content h2 {
+    @apply text-2xl font-bold text-purple-300 mt-10 mb-4 pb-2 border-b border-purple-500/20;
+  }
+  .wiki-content h3 {
+    @apply text-lg font-semibold text-cyan-300 mt-8 mb-3;
+  }
+  .wiki-content p {
+    @apply text-gray-300 leading-relaxed mb-4;
+  }
+  .wiki-content ul {
+    @apply list-disc list-inside text-gray-300 mb-4 space-y-1 ml-2;
+  }
+  .wiki-content li {
+    @apply leading-relaxed;
+  }
+  .wiki-content strong {
+    @apply text-purple-300 font-semibold;
+  }
+  .wiki-content table {
+    @apply w-full border-collapse mb-6 text-sm;
+  }
+  .wiki-content th {
+    @apply bg-purple-500/10 text-purple-300 p-3 text-left border border-purple-500/20 font-semibold;
+  }
+  .wiki-content td {
+    @apply p-3 border border-purple-500/10 text-gray-300 align-top;
+  }
+  .wiki-content blockquote {
+    @apply border-l-4 border-purple-500/40 pl-4 py-2 my-4 bg-purple-500/5 rounded-r-lg text-gray-400 italic;
+  }
+  .wiki-content .highlight-box {
+    @apply bg-purple-500/5 border border-purple-500/20 rounded-xl p-4 my-4;
+  }
+  .wiki-content a {
+    @apply text-cyan-400 hover:text-cyan-300 underline decoration-cyan-400/30 underline-offset-2;
+  }
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .doc-print-area, .doc-print-area * { visibility: visible; }
+  .doc-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+}

@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+dev-server.log
+.playwright-mcp
+*.tsbuildinfo
+
+*.log
+*.png
+!public/emblem.png
+!public/favicon.svg

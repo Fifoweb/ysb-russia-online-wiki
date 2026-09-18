@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>РО | ГИБДД | УСБ — Wiki</title>
+  <!-- SPA fallback for GitHub Pages: unknown paths land here, we restore the route -->
+  <script>
+    (function () {
+      var base = '/ysb-russia-online-wiki';
+      var p = window.location.pathname;
+      var route = p.indexOf(base) === 0 ? p.slice(base.length) : p;
+      sessionStorage.setItem('spa-path', route + window.location.search + window.location.hash);
+      window.location.replace(base + '/');
+    })();
+  </script>
+</head>
+<body></body>
+</html>

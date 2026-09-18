@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "xfa": {
+      "type": "local",
+      "command": ["xlsx-for-ai-mcp"],
+      "enabled": true
+    }
+  }
+}
