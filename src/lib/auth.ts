@@ -20,10 +20,15 @@ export function useAuth() {
 
   const signInWithDiscord = async () => {
     if (!supabase) return;
-    // Redirect must include the repo subpath on GitHub Pages (origin alone → 404)
+    // Redirect must include the repo subpath on GitHub Pages (origin alone → 404).
+    // scopes: 'identify' only — no email required, so Discord accounts without
+    // a verified email can still sign in.
     await supabase.auth.signInWithOAuth({
       provider: 'discord',
-      options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
+      options: {
+        redirectTo: window.location.origin + import.meta.env.BASE_URL,
+        scopes: 'identify',
+      },
     });
   };
 
