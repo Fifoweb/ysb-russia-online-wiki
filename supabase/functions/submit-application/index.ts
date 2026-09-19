@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
   const embed = {
     author: { name: 'Начальник ГИБДД' },
     title: '📤 Заявление на повышение',
-    color: 11032055, // фиолетовый акцент сайта (#a855f7)
+    color: 440020, // бирюзово-голубой акцент сайта (#06b6d4)
     fields: [
       { name: 'Отправил', value: mention, inline: true },
       { name: 'Ник и статик', value: nick, inline: true },
