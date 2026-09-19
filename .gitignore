@@ -9,3 +9,5 @@ dev-server.log
 *.png
 !public/emblem.png
 !public/favicon.svg
+
+deeprig-snapshot.md
