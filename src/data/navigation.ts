@@ -14,4 +14,5 @@ export const navItems: NavItem[] = [
   { id: 'practice', label: 'Практика и зачёт', icon: '📝', path: '/practice' },
   { id: 'appendix', label: 'Приложения и формы', icon: '📎', path: '/appendix' },
   { id: 'handbook', label: 'Памятка Россия Онлайн', icon: '📕', path: '/handbook' },
+  { id: 'report', label: 'Заявление на повышение', icon: '📤', path: '/report' },
 ];

@@ -10,6 +10,7 @@ import Discipline from './pages/Discipline';
 import Practice from './pages/Practice';
 import Appendix from './pages/Appendix';
 import Handbook from './pages/Handbook';
+import ReportForm from './pages/ReportForm';
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -50,6 +51,7 @@ export default function App() {
       case '/practice': return <Practice />;
       case '/appendix': return <Appendix />;
       case '/handbook': return <Handbook />;
+      case '/report': return <ReportForm />;
       default: return <Home onNavigate={navigate} />;
     }
   };
