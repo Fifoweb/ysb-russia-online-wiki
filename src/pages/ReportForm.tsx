@@ -25,7 +25,7 @@ export default function ReportForm() {
 
   const field = (label: string, key: keyof typeof form, placeholder: string) => (
     <label className="block">
-      <span className="text-sm font-medium text-gray-300">{label} <span className="text-red-400">*</span></span>
+      <span className="text-base font-medium text-gray-200">{label} <span className="text-red-400">*</span></span>
       <input value={form[key]} onChange={set(key)} placeholder={placeholder}
         className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
     </label>
@@ -64,7 +64,7 @@ export default function ReportForm() {
             </div>
             {field('Сколько баллов набрано', 'points', 'Например: 15')}
             <label className="block">
-              <span className="text-sm font-medium text-gray-300">Доказательства <span className="text-red-400">*</span></span>
+              <span className="text-base font-medium text-gray-200">Доказательства <span className="text-red-400">*</span></span>
               <textarea value={form.evidence} onChange={set('evidence')} rows={4}
                 placeholder="Ссылки на скриншоты/видео, описание: чем подтверждаете набор баллов..."
                 className="mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none placeholder:text-gray-600" />
