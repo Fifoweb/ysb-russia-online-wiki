@@ -80,8 +80,8 @@ Deno.serve(async (req) => {
       components: [{
         type: 1,
         components: [
-          { type: 2, style: 3, label: 'Принять', custom_id: 'restore-accept', emoji: { name: '✅' } },
-          { type: 2, style: 4, label: 'Отказать', custom_id: 'restore-reject', emoji: { name: '❌' } },
+          { type: 2, style: 3, label: 'Принять', custom_id: 'restore-accept' },
+          { type: 2, style: 4, label: 'Отказать', custom_id: 'restore-reject' },
         ],
       }],
     }),

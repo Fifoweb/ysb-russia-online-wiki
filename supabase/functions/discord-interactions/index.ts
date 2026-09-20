@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
     const embed = interaction.message?.embeds?.[0] || {};
     const rejected = {
       ...embed, // исходные данные заявки сохраняются
-      title: '❌ В восстановлении отказано',
+      title: 'В восстановлении отказано',
       color: 12597547, // приглушённый тёмно-красный
       fields: [
         ...(embed.fields || []),
