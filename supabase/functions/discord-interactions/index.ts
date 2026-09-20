@@ -43,8 +43,10 @@ Deno.serve(async (req) => {
   // 2. PING → PONG (Discord проверяет эндпоинт при сохранении URL в портале)
   if (interaction.type === 1) return json(200, { type: 1 });
 
-  // Имя модератора простым текстом — без тега (чтобы никого не дёргать)
-  const who = interaction.member?.user?.username || 'модератор';
+  // Ник на СЕРВЕРЕ (не глобальный ник Discord) — для плашек
+  const who = interaction.member?.nick || interaction.member?.user?.username || 'модератор';
+  // Тег модератора — для полей «Одобрил»/«Отклонил»
+  const whoTag = interaction.member?.user?.id ? `<@${interaction.member.user.id}>` : who;
 
   // 3. Клик по кнопке
   if (interaction.type === 3) {
@@ -56,7 +58,7 @@ Deno.serve(async (req) => {
         ...embed,
         title: 'Заявление одобрено',
         color: 3066993,
-        fields: [...(embed.fields || []), { name: 'Одобрил', value: who, inline: true }],
+        fields: [...(embed.fields || []), { name: 'Одобрил', value: whoTag, inline: true }],
       };
       // content не передаём — остаётся исходный текст с тегом автора заявления;
       // на месте кнопок — серая плашка «Одобрено» (как и у отказа)
@@ -106,7 +108,7 @@ Deno.serve(async (req) => {
       color: 12597547, // приглушённый тёмно-красный (#c0392b)
       fields: [
         ...(embed.fields || []),
-        { name: 'Отклонил', value: who, inline: true },
+        { name: 'Отклонил', value: whoTag, inline: true },
       ],
     };
     // На месте кнопок — серая неактивная плашка «Отклонено: причина» (кнопки в Discord живут только внизу)
