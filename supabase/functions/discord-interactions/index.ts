@@ -102,14 +102,23 @@ Deno.serve(async (req) => {
         { name: 'Отклонил', value: who, inline: true },
       ],
     };
-    // Причина — маленьким серым окошком под заявлением, на месте кнопок
-    const reasonBox = {
-      color: 15158332,
-      description: `**Причина отказа:**\n\`\`\`${reason}\`\`\``,
-    };
+    // На месте кнопок — серая неактивная плашка с причиной (кнопки в Discord живут только внизу)
+    const reasonBtn = reason.length > 70 ? reason.slice(0, 70) + '…' : reason;
     return json(200, {
       type: 7,
-      data: { embeds: [rejected, reasonBox], components: [] },
+      data: {
+        embeds: [rejected],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2, // серая
+            label: `❌ Причина: ${reasonBtn}`,
+            custom_id: 'rejected_reason',
+            disabled: true,
+          }],
+        }],
+      },
     });
   }
 
