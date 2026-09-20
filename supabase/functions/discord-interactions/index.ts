@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
   const who = interaction.member?.nick || interaction.member?.user?.username || 'модератор';
   // Тег модератора — для полей «Одобрил»/«Отклонил»
   const whoTag = interaction.member?.user?.id ? `<@${interaction.member.user.id}>` : who;
+  const nowStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
   // 3. Клик по кнопке
   if (interaction.type === 3) {
@@ -163,6 +164,72 @@ Deno.serve(async (req) => {
         },
       });
     }
+
+    // ══ ВОССТАНОВЛЕНИЕ СОТРУДНИКА ══
+
+    if (customId === 'restore-accept') {
+      // Сначала — выбор ранга через Select Menu (нельзя принять без выбора)
+      return json(200, {
+        type: 7,
+        data: {
+          components: [{
+            type: 1,
+            components: [{
+              type: 3, // select menu
+              custom_id: 'restore-rank',
+              placeholder: 'На какой ранг восстановить сотрудника?',
+              min_values: 1,
+              max_values: 1,
+              options: Array.from({ length: 15 }, (_, i) => ({ label: `${i + 1} ранг`, value: String(i + 1) })),
+            }],
+          }],
+        },
+      });
+    }
+
+    if (customId === 'restore-rank') {
+      const rank = interaction.data?.values?.[0];
+      if (!rank) return json(400, { error: 'no rank' });
+      const embed = interaction.message?.embeds?.[0] || {};
+      // Заявитель — из тега в тексте исходного сообщения
+      const applicantTag = (interaction.message?.content?.match(/<@(\d+)>/) || [])[0] || '—';
+      const approved = {
+        title: '✅ Восстановление одобрено',
+        color: 3066993, // зелёный
+        fields: [
+          { name: 'Сотрудник', value: applicantTag },
+          { name: 'Восстановлен на ранг', value: `${rank} ранг` },
+          { name: 'Принял', value: whoTag },
+        ],
+        footer: { text: `Дата: ${nowStr}` },
+        timestamp: new Date().toISOString(),
+      };
+      // Кнопки убраны — повторная обработка невозможна
+      return json(200, { type: 7, data: { embeds: [approved], components: [] } });
+    }
+
+    if (customId === 'restore-reject') {
+      // Та же механика отказа, что и в повышении — модалка с обязательной причиной
+      return json(200, {
+        type: 9,
+        data: {
+          title: 'Причина отказа',
+          custom_id: 'restore-reject-modal',
+          components: [{
+            type: 1,
+            components: [{
+              type: 4,
+              custom_id: 'reason',
+              label: 'Причина отказа',
+              style: 2,
+              required: true,
+              placeholder: 'Например: недостаточно доказательств, срок ещё не вышел...',
+              max_length: 500,
+            }],
+          }],
+        },
+      });
+    }
   }
 
   // 4. Отправлена модалка с причиной
@@ -191,6 +258,42 @@ Deno.serve(async (req) => {
             style: 2, // серая
             label: `❌ Отклонено: ${reasonBtn}`,
             custom_id: 'rejected_reason',
+            disabled: true,
+          }],
+        }],
+      },
+    });
+  }
+
+  // Отправлена модалка отказа по восстановлению
+  if (interaction.type === 5 && interaction.data?.custom_id === 'restore-reject-modal') {
+    const reason = interaction.data.components?.[0]?.components?.[0]?.value || 'Без причины';
+    const embed = interaction.message?.embeds?.[0] || {};
+    const rejected = {
+      ...embed, // исходные данные заявки сохраняются
+      title: '❌ В восстановлении отказано',
+      color: 12597547, // приглушённый тёмно-красный
+      fields: [
+        ...(embed.fields || []),
+        { name: 'Причина отказа', value: reason },
+        { name: 'Отказал', value: whoTag, inline: true },
+      ],
+      footer: { text: `Дата: ${nowStr}` },
+      timestamp: new Date().toISOString(),
+    };
+    // И на месте кнопок — серая плашка (как в системе повышений)
+    const reasonBtn = reason.length > 60 ? reason.slice(0, 60) + '…' : reason;
+    return json(200, {
+      type: 7,
+      data: {
+        embeds: [rejected],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2,
+            label: `❌ Отказано: ${reasonBtn}`,
+            custom_id: 'restore_rejected_reason',
             disabled: true,
           }],
         }],
