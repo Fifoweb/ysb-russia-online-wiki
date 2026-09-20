@@ -85,17 +85,19 @@ Deno.serve(async (req) => {
           const msgLink = `https://discord.com/channels/${interaction.guild_id}/${interaction.channel_id}/${interaction.message.id}`;
           const date = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
-          // Кадровый аудит как карточка-embed (как на образце): заголовок + поля
+          // Кадровый аудит — широкая карточка-таблица 3×2 (по ТЗ)
           const auditEmbed = {
-            title: '📖 Отчет о повышении сотрудника',
+            title: '📕 Отчет о повышении сотрудника',
+            // Верхняя часть карточки — причина
+            description: `Причина повышения: ${msgLink}\nПовышен'а с ранга ${currentRank} на ${targetRank} ранг`,
+            // Шесть полей inline: Discord ставит их 3 в ряд — две строки по три колонки
             fields: [
-              { name: 'Причина повышения', value: `${msgLink}\nПовышен'а с ранга ${currentRank} на ${targetRank} ранг` },
-              { name: "Повышен'а", value: `<@${promotedId}>` },
-              { name: 'Имя Фамилия', value: promotedNick || '—' },
-              { name: 'Discord ID', value: String(promotedId) },
-              { name: 'Повышает', value: `<@${whoId}>` },
-              { name: 'Имя Фамилия', value: who },
-              { name: 'Discord ID', value: String(whoId) },
+              { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
+              { name: 'Имя Фамилия :', value: promotedNick || '—', inline: true },
+              { name: 'Discord ID :', value: String(promotedId), inline: true },
+              { name: 'Повышает :', value: `<@${whoId}>`, inline: true },
+              { name: 'Имя Фамилия :', value: who, inline: true },
+              { name: 'Discord ID :', value: String(whoId), inline: true },
             ],
             footer: { text: `Дата: ${date}` },
             timestamp: new Date().toISOString(),
