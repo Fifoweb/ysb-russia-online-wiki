@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
           embeds: [approved],
           components: [{
             type: 1,
-            components: [{ type: 2, style: 2, label: 'Одобрено', custom_id: 'approved_done', disabled: true }],
+            components: [{ type: 2, style: 2, label: `Одобрено: ${who}`, custom_id: 'approved_done', disabled: true }],
           }],
         },
       });
