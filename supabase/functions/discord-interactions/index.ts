@@ -54,14 +54,21 @@ Deno.serve(async (req) => {
     if (customId === 'approve') {
       const approved = {
         ...embed,
-        title: '✅ Заявление одобрено',
-        color: 3066993, // зелёный
+        title: 'Заявление одобрено',
+        color: 3066993,
         fields: [...(embed.fields || []), { name: 'Одобрил', value: who, inline: true }],
       };
-      // content не передаём — остаётся исходный текст с тегом автора заявления
+      // content не передаём — остаётся исходный текст с тегом автора заявления;
+      // на месте кнопок — серая плашка «Одобрено» (как и у отказа)
       return json(200, {
-        type: 7, // обновляем исходное сообщение; components: [] — кнопки исчезают
-        data: { embeds: [approved], components: [] },
+        type: 7,
+        data: {
+          embeds: [approved],
+          components: [{
+            type: 1,
+            components: [{ type: 2, style: 2, label: 'Одобрено', custom_id: 'approved_done', disabled: true }],
+          }],
+        },
       });
     }
 
@@ -102,8 +109,8 @@ Deno.serve(async (req) => {
         { name: 'Отклонил', value: who, inline: true },
       ],
     };
-    // На месте кнопок — серая неактивная плашка с причиной (кнопки в Discord живут только внизу)
-    const reasonBtn = reason.length > 70 ? reason.slice(0, 70) + '…' : reason;
+    // На месте кнопок — серая неактивная плашка «Отклонено: причина» (кнопки в Discord живут только внизу)
+    const reasonBtn = reason.length > 60 ? reason.slice(0, 60) + '…' : reason;
     return json(200, {
       type: 7,
       data: {
@@ -113,7 +120,7 @@ Deno.serve(async (req) => {
           components: [{
             type: 2,
             style: 2, // серая
-            label: `Причина: ${reasonBtn}`,
+            label: `❌ Отклонено: ${reasonBtn}`,
             custom_id: 'rejected_reason',
             disabled: true,
           }],
