@@ -72,6 +72,14 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       content: `📤 Новое заявление на повышение от ${mention}`, // тег в тексте = реальное упоминание
       embeds: [embed],
+      // Кнопки под заявлением — клики обрабатывает функция discord-interactions
+      components: [{
+        type: 1, // action row
+        components: [
+          { type: 2, style: 3, label: 'Одобрить', custom_id: 'approve', emoji: { name: '✅' } }, // зелёная
+          { type: 2, style: 4, label: 'Отклонить', custom_id: 'reject', emoji: { name: '❌' } }, // красная
+        ],
+      }],
     }),
   });
   if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status + ': ' + t.slice(0, 200) }); }
