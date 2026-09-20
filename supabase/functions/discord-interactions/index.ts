@@ -60,6 +60,58 @@ Deno.serve(async (req) => {
         color: 3066993,
         fields: [...(embed.fields || []), { name: 'Одобрил', value: whoTag, inline: true }],
       };
+
+      // ── Кадровый аудит: автоматический пост в канал кадрового аудита ──
+      const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+      const AUDIT_CHANNEL = '1477623590093328568';
+      const whoId = interaction.member?.user?.id;
+      // Кого повышают — берём из тега в исходном сообщении заявления
+      const promotedId =
+        (interaction.message?.content?.match(/<@(\d+)>/) || [])[1] ||
+        ((embed.fields || []).find((f: { name?: string }) => f.name === 'Отправил')?.value || '').match(/<@(\d+)>/)?.[1];
+      const fieldVal = (n: string) => ((embed.fields || []).find((f: { name?: string }) => f.name === n)?.value) || '';
+      const currentRank = fieldVal('Текущее звание');
+      const targetRank = fieldVal('Подаётся на звание');
+
+      if (botToken && promotedId && whoId) {
+        try {
+          // Серверный ник повышенного (Имя Фамилия) — через API бота
+          let promotedNick = '';
+          const gm = await fetch(`https://discord.com/api/v10/guilds/${interaction.guild_id}/members/${promotedId}`, {
+            headers: { Authorization: `Bot ${botToken}` },
+          });
+          if (gm.ok) { const gj = await gm.json(); promotedNick = gj.nick || gj.user?.username || ''; }
+
+          const msgLink = `https://discord.com/channels/${interaction.guild_id}/${interaction.channel_id}/${interaction.message.id}`;
+          const date = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+          const auditText = [
+            `<@${whoId}> повышает <@${promotedId}>`,
+            '📖 Отчет о повышении сотрудника',
+            `Причина повышения: ${msgLink} Повышен'а с ранга ${currentRank} на ${targetRank}`,
+            "Повышен'а :",
+            `<@${promotedId}>`,
+            'Имя Фамилия :',
+            promotedNick,
+            'Discord ID :',
+            String(promotedId),
+            'Повышает :',
+            `<@${whoId}>`,
+            'Имя Фамилия :',
+            who, // серверный ник одобрившего
+            'Discord ID :',
+            String(whoId),
+            `Дата: ${date}`,
+          ].join('\n');
+
+          const auditRes = await fetch(`https://discord.com/api/v10/channels/${AUDIT_CHANNEL}/messages`, {
+            method: 'POST',
+            headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: auditText }),
+          });
+          if (!auditRes.ok) console.error('Audit post failed', auditRes.status, await auditRes.text());
+        } catch (e) { console.error('Audit error', e); }
+      }
+
       // content не передаём — остаётся исходный текст с тегом автора заявления;
       // на месте кнопок — серая плашка «Одобрено» (как и у отказа)
       return json(200, {
