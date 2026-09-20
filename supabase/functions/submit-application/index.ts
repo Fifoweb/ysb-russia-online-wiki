@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         type: 1, // action row
         components: [
           { type: 2, style: 3, label: 'Одобрить', custom_id: 'approve', emoji: { name: '✅' } }, // зелёная
-          { type: 2, style: 4, label: 'Отклонить', custom_id: 'reject', emoji: { name: '❌' } }, // красная
+          { type: 2, style: 4, label: 'Отклонить', custom_id: 'reject' }, // красная
         ],
       }],
     }),

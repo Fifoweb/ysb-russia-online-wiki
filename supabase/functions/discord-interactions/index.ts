@@ -95,8 +95,8 @@ Deno.serve(async (req) => {
     const embed = interaction.message?.embeds?.[0] || {};
     const rejected = {
       ...embed,
-      title: '❌ Заявление отклонено',
-      color: 15158332, // красный
+      title: 'Заявление отклонено',
+      color: 12597547, // приглушённый тёмно-красный (#c0392b)
       fields: [
         ...(embed.fields || []),
         { name: 'Отклонил', value: who, inline: true },
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
           components: [{
             type: 2,
             style: 2, // серая
-            label: `❌ Причина: ${reasonBtn}`,
+            label: `Причина: ${reasonBtn}`,
             custom_id: 'rejected_reason',
             disabled: true,
           }],
