@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
           const auditEmbed = {
             title: '📕 Отчет о повышении сотрудника',
             // Верхняя часть карточки — причина
-            description: `Причина повышения: ${msgLink}\nПовышен'а с ранга ${currentRank} на ${targetRank} ранг`,
+            description: `> Причина повышения: <#${interaction.channel_id}>\n> Повышен'а с ранга \`${currentRank}\` на \`${targetRank}\` ранг`,
             // Шесть полей inline: Discord ставит их 3 в ряд — две строки по три колонки
             fields: [
               { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
