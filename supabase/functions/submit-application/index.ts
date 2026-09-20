@@ -51,18 +51,19 @@ Deno.serve(async (req) => {
   const discordId = identity?.identity_data?.sub || meta.sub || identity?.id || null;
   const mention = discordId ? `<@${discordId}>` : discordName;
 
+  const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
   const embed = {
-    author: { name: 'Начальник ГИБДД' },
     title: '📤 Заявление на повышение',
     color: 440020, // бирюзово-голубой акцент сайта (#06b6d4)
     fields: [
-      { name: 'Отправил', value: mention, inline: true },
-      { name: 'Ник и статик', value: nick, inline: true },
+      { name: '👤 Заявитель', value: mention },
+      { name: 'Ник / статик', value: nick, inline: true },
       { name: 'Текущее звание', value: currentRank, inline: true },
-      { name: 'Подаётся на звание', value: targetRank, inline: true },
+      { name: 'Новое звание', value: targetRank, inline: true },
       { name: 'Набрано баллов', value: points, inline: true },
-      { name: 'Доказательства', value: evidence.slice(0, 1000) },
+      { name: '📎 Доказательства', value: evidence.slice(0, 1000) },
     ],
+    footer: { text: `Начальник ГИБДД • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
 

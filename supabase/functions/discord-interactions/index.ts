@@ -54,11 +54,23 @@ Deno.serve(async (req) => {
     const embed = interaction.message?.embeds?.[0] || {};
 
     if (customId === 'approve') {
+      // Компактная карточка по ТЗ: блоки по смыслу, 2×2 inline-поля
+      const f = (n: string) => ((embed.fields || []).find((x: { name?: string }) => x.name === n)?.value) || '—';
+      const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
       const approved = {
-        ...embed,
-        title: 'Заявление одобрено',
-        color: 3066993,
-        fields: [...(embed.fields || []), { name: 'Одобрил', value: whoTag, inline: true }],
+        title: '✅ Заявление одобрено',
+        color: 3066993, // зелёный
+        fields: [
+          { name: '👤 Заявитель', value: f('👤 Заявитель') },
+          { name: 'Ник / статик', value: f('Ник / статик'), inline: true },
+          { name: 'Текущее звание', value: f('Текущее звание'), inline: true },
+          { name: 'Новое звание', value: f('Новое звание'), inline: true },
+          { name: 'Набрано баллов', value: f('Набрано баллов'), inline: true },
+          { name: '📎 Доказательства', value: f('📎 Доказательства') },
+          { name: '✅ Одобрил', value: whoTag },
+        ],
+        footer: { text: `Начальник ГИБДД • ${dateStr}` },
+        timestamp: new Date().toISOString(),
       };
 
       // ── Кадровый аудит: автоматический пост в канал кадрового аудита ──
@@ -68,10 +80,10 @@ Deno.serve(async (req) => {
       // Кого повышают — берём из тега в исходном сообщении заявления
       const promotedId =
         (interaction.message?.content?.match(/<@(\d+)>/) || [])[1] ||
-        ((embed.fields || []).find((f: { name?: string }) => f.name === 'Отправил')?.value || '').match(/<@(\d+)>/)?.[1];
+        ((embed.fields || []).find((f: { name?: string }) => f.name === '👤 Заявитель')?.value || '').match(/<@(\d+)>/)?.[1];
       const fieldVal = (n: string) => ((embed.fields || []).find((f: { name?: string }) => f.name === n)?.value) || '';
       const currentRank = fieldVal('Текущее звание');
-      const targetRank = fieldVal('Подаётся на звание');
+      const targetRank = fieldVal('Новое звание');
 
       if (botToken && promotedId && whoId) {
         try {
