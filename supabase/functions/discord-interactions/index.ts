@@ -84,29 +84,30 @@ Deno.serve(async (req) => {
 
           const msgLink = `https://discord.com/channels/${interaction.guild_id}/${interaction.channel_id}/${interaction.message.id}`;
           const date = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-          const auditText = [
-            `<@${whoId}> повышает <@${promotedId}>`,
-            '📖 Отчет о повышении сотрудника',
-            `Причина повышения: ${msgLink} Повышен'а с ранга ${currentRank} на ${targetRank}`,
-            "Повышен'а :",
-            `<@${promotedId}>`,
-            'Имя Фамилия :',
-            promotedNick,
-            'Discord ID :',
-            String(promotedId),
-            'Повышает :',
-            `<@${whoId}>`,
-            'Имя Фамилия :',
-            who, // серверный ник одобрившего
-            'Discord ID :',
-            String(whoId),
-            `Дата: ${date}`,
-          ].join('\n');
+
+          // Кадровый аудит как карточка-embed (как на образце): заголовок + поля
+          const auditEmbed = {
+            title: '📖 Отчет о повышении сотрудника',
+            fields: [
+              { name: 'Причина повышения', value: `${msgLink}\nПовышен'а с ранга ${currentRank} на ${targetRank} ранг` },
+              { name: "Повышен'а", value: `<@${promotedId}>` },
+              { name: 'Имя Фамилия', value: promotedNick || '—' },
+              { name: 'Discord ID', value: String(promotedId) },
+              { name: 'Повышает', value: `<@${whoId}>` },
+              { name: 'Имя Фамилия', value: who },
+              { name: 'Discord ID', value: String(whoId) },
+            ],
+            footer: { text: `Дата: ${date}` },
+            timestamp: new Date().toISOString(),
+          };
 
           const auditRes = await fetch(`https://discord.com/api/v10/channels/${AUDIT_CHANNEL}/messages`, {
             method: 'POST',
             headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: auditText }),
+            body: JSON.stringify({
+              content: `<@${whoId}> повышает <@${promotedId}>`,
+              embeds: [auditEmbed],
+            }),
           });
           if (!auditRes.ok) console.error('Audit post failed', auditRes.status, await auditRes.text());
         } catch (e) { console.error('Audit error', e); }
