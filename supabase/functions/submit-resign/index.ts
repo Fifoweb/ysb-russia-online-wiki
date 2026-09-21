@@ -10,6 +10,44 @@ const cors = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
+const VERIFIED_ROLE_ID = '1502062507706155158';
+
+type RoleCheck = 'allowed' | 'denied' | 'unavailable';
+
+async function checkVerifiedRole(botToken: string, channelId: string, discordId: string): Promise<RoleCheck> {
+  try {
+    const channelRes = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
+    if (!channelRes.ok) {
+      console.error('Discord channel lookup failed', channelRes.status);
+      return 'unavailable';
+    }
+
+    const channel = await channelRes.json();
+    const guildId = channel.guild_id;
+    if (!guildId) {
+      console.error('Discord channel has no guild ID', channelId);
+      return 'unavailable';
+    }
+
+    const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
+    if (memberRes.status === 404) return 'denied';
+    if (!memberRes.ok) {
+      console.error('Discord member lookup failed', memberRes.status);
+      return 'unavailable';
+    }
+
+    const member = await memberRes.json();
+    return Array.isArray(member.roles) && member.roles.includes(VERIFIED_ROLE_ID) ? 'allowed' : 'denied';
+  } catch (error) {
+    console.error('Discord role lookup failed', error);
+    return 'unavailable';
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
@@ -59,7 +97,20 @@ Deno.serve(async (req) => {
     | { id?: string; identity_data?: { sub?: string } }
     | undefined;
   const discordId = identity?.identity_data?.sub || meta.sub || identity?.id || null;
-  const mention = discordId ? '<@' + discordId + '>' : discordName;
+  if (!discordId) {
+    return json(403, { error: 'Для использования формы нужен Discord-аккаунт с ролью «Верифицированный».' });
+  }
+
+  const roleCheck = await checkVerifiedRole(botToken, channelId, discordId);
+  if (roleCheck !== 'allowed') {
+    return json(roleCheck === 'denied' ? 403 : 503, {
+      error: roleCheck === 'denied'
+        ? 'Для использования формы нужна роль «Верифицированный».'
+        : 'Не удалось проверить роль в Discord. Попробуйте позже.',
+    });
+  }
+
+  const mention = '<@' + discordId + '>';
 
   const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 

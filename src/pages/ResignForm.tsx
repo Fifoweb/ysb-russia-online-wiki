@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { getFunctionErrorMessage } from '../lib/functionError';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -34,7 +35,7 @@ export default function ResignForm() {
     try {
       const { error } = await supabase.functions.invoke('submit-resign', { body: form });
       if (error) {
-        setErrorMessage('Не удалось отправить заявление. Проверьте поля и попробуйте ещё раз.');
+        setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить заявление. Проверьте поля и попробуйте ещё раз.'));
         setState('error');
         return;
       }

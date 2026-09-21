@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { getFunctionErrorMessage } from '../lib/functionError';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -9,6 +10,7 @@ export default function ReportForm() {
   const { user, loading, signInWithDiscord } = useAuth();
   const [form, setForm] = useState({ nick: '', currentRank: '', targetRank: '', points: '', evidence: '' });
   const [state, setState] = useState<State>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -19,8 +21,19 @@ export default function ReportForm() {
   const submit = async () => {
     if (!supabase || state === 'sending' || !allFilled) return;
     setState('sending');
-    const { error } = await supabase.functions.invoke('submit-application', { body: form });
-    setState(error ? 'error' : 'ok');
+    setErrorMessage('');
+    try {
+      const { error } = await supabase.functions.invoke('submit-application', { body: form });
+      if (error) {
+        setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить. Попробуйте позже или напишите руководству лично.'));
+        setState('error');
+        return;
+      }
+      setState('ok');
+    } catch {
+      setErrorMessage('Сервис временно недоступен. Попробуйте отправить заявление позже.');
+      setState('error');
+    }
   };
 
   const field = (label: string, key: keyof typeof form, placeholder: string) => (
@@ -72,7 +85,7 @@ export default function ReportForm() {
 
             {state === 'error' && (
               <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                ❌ Не удалось отправить. Попробуйте позже или напишите руководству лично.
+                ❌ {errorMessage}
               </p>
             )}
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { getFunctionErrorMessage } from '../lib/functionError';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -16,6 +17,7 @@ export default function AppealForm() {
   const { user, loading, signInWithDiscord } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -26,10 +28,21 @@ export default function AppealForm() {
   const submit = async () => {
     if (!supabase || state === 'sending' || !allFilled) return;
     setState('sending');
-    const { error } = await supabase.functions.invoke('submit-application', {
-      body: { type: 'appeal', ...form },
-    });
-    setState(error ? 'error' : 'ok');
+    setErrorMessage('');
+    try {
+      const { error } = await supabase.functions.invoke('submit-application', {
+        body: { type: 'appeal', ...form },
+      });
+      if (error) {
+        setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить. Проверьте ссылки и попробуйте ещё раз.'));
+        setState('error');
+        return;
+      }
+      setState('ok');
+    } catch {
+      setErrorMessage('Сервис временно недоступен. Попробуйте отправить обращение позже.');
+      setState('error');
+    }
   };
 
   const inputClass = 'mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600';
@@ -84,7 +97,7 @@ export default function AppealForm() {
 
             {state === 'error' && (
               <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                ❌ Не удалось отправить. Проверьте ссылки и попробуйте ещё раз.
+                ❌ {errorMessage}
               </p>
             )}
 
