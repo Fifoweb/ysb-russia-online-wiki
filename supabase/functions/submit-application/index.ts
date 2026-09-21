@@ -23,6 +23,73 @@ Deno.serve(async (req) => {
   let body: Record<string, string>;
   try { body = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
 
+  if ((body.type || '').trim() === 'appeal') {
+    const nick = (body.nick || '').trim();
+    const reason = (body.reason || '').trim();
+    const evidence = (body.evidence || '').trim();
+    const reprimandScreenshot = (body.reprimandScreenshot || '').trim();
+
+    if (!nick || !reason || !evidence || !reprimandScreenshot) {
+      return json(400, { error: 'Заполните все поля обжалования' });
+    }
+    if (nick.length > 100 || reason.length > 1000 || evidence.length > 1000 || reprimandScreenshot.length > 300) {
+      return json(400, { error: 'Слишком длинные поля' });
+    }
+
+    let screenshotUrl: URL;
+    try {
+      screenshotUrl = new URL(reprimandScreenshot);
+      if (!['http:', 'https:'].includes(screenshotUrl.protocol)) throw new Error('Unsupported protocol');
+    } catch {
+      return json(400, { error: 'Некорректная ссылка на скриншот' });
+    }
+
+    const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+    const channelId = '1477623588478517268';
+    if (!botToken) return json(500, { error: 'Сервер не настроен' });
+
+    const meta = (user.user_metadata || {}) as Record<string, string | undefined>;
+    const discordName = meta.full_name || meta.name || 'неизвестно';
+    const identity = (user.identities || []).find((i: { provider?: string }) => i.provider === 'discord') as
+      | { id?: string; identity_data?: { sub?: string } }
+      | undefined;
+    const discordId = identity?.identity_data?.sub || meta.sub || identity?.id || null;
+    const mention = discordId ? `<@${discordId}>` : discordName;
+    const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+    const embed = {
+      title: '⚖️ Обжалование выговора',
+      color: 13912832,
+      fields: [
+        { name: '👤 Заявитель', value: mention },
+        { name: 'Никнейм | статик', value: nick, inline: true },
+        { name: 'Почему нужно обжаловать выговор', value: reason },
+        { name: '📎 Доказательства', value: evidence },
+        { name: '📱 Скрин с планшета', value: `[Открыть скриншот](${screenshotUrl.href})` },
+      ],
+      footer: { text: `Отправил: ${discordName} • ${dateStr}` },
+      timestamp: new Date().toISOString(),
+    };
+
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: `⚖️ Новое обжалование выговора от ${mention}`,
+        embeds: [embed],
+        components: [{
+          type: 1,
+          components: [
+            { type: 2, style: 3, label: 'Одобрить', custom_id: 'appeal-approve' },
+            { type: 2, style: 4, label: 'Отклонить', custom_id: 'appeal-reject' },
+          ],
+        }],
+        allowed_mentions: discordId ? { parse: [], users: [discordId] } : { parse: [] },
+      }),
+    });
+    if (!res.ok) { const t = await res.text(); console.error('Discord appeal error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
+    return json(200, { ok: true });
+  }
+
   const nick = (body.nick || '').trim();
   const currentRank = (body.currentRank || '').trim();
   const targetRank = (body.targetRank || '').trim();

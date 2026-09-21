@@ -99,6 +99,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (customId === 'appeal-approve') {
+      const approved = {
+        ...embed,
+        title: '✅ Обжалование выговора одобрено',
+        color: 3066993,
+        fields: [
+          ...(embed.fields || []),
+          { name: '✅ Одобрил', value: whoTag, inline: true },
+        ],
+        footer: { text: `Решение: ${who} • ${nowStr}` },
+        timestamp: new Date().toISOString(),
+      };
+      return json(200, { type: 7, data: { embeds: [approved], components: [] } });
+    }
+
+    if (customId === 'appeal-reject') {
+      return json(200, {
+        type: 9,
+        data: {
+          title: 'Причина отказа',
+          custom_id: 'appeal-reject-modal',
+          components: [{
+            type: 1,
+            components: [{
+              type: 4,
+              custom_id: 'reason',
+              label: 'Причина отказа',
+              style: 2,
+              required: true,
+              placeholder: 'Например: недостаточно доказательств...',
+              max_length: 500,
+            }],
+          }],
+        },
+      });
+    }
+
     if (customId?.startsWith('route-audit:') || customId?.startsWith('route-promotion:')) {
       const [route, approverId] = customId.split(':');
       const clickerId = interaction.member?.user?.id;
@@ -412,6 +449,40 @@ Deno.serve(async (req) => {
             style: 2, // серая
             label: `❌ Отклонено: ${reasonBtn}`,
             custom_id: 'rejected_reason',
+            disabled: true,
+          }],
+        }],
+      },
+    });
+  }
+
+  if (interaction.type === 5 && interaction.data?.custom_id === 'appeal-reject-modal') {
+    const reason = interaction.data.components?.[0]?.components?.[0]?.value || 'Без причины';
+    const embed = interaction.message?.embeds?.[0] || {};
+    const rejected = {
+      ...embed,
+      title: '❌ Обжалование выговора отклонено',
+      color: 12597547,
+      fields: [
+        ...(embed.fields || []),
+        { name: 'Причина отказа', value: reason },
+        { name: 'Отклонил', value: whoTag, inline: true },
+      ],
+      footer: { text: `Решение: ${who} • ${nowStr}` },
+      timestamp: new Date().toISOString(),
+    };
+    const reasonBtn = reason.length > 60 ? reason.slice(0, 60) + '…' : reason;
+    return json(200, {
+      type: 7,
+      data: {
+        embeds: [rejected],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 2,
+            label: `❌ Отклонено: ${reasonBtn}`,
+            custom_id: 'appeal-rejected-reason',
             disabled: true,
           }],
         }],

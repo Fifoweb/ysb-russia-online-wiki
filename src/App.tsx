@@ -11,6 +11,7 @@ import Practice from './pages/Practice';
 import Appendix from './pages/Appendix';
 import Handbook from './pages/Handbook';
 import ReportForm from './pages/ReportForm';
+import AppealForm from './pages/AppealForm';
 import RestoreForm from './pages/RestoreForm';
 import ResignForm from './pages/ResignForm';
 
@@ -54,6 +55,7 @@ export default function App() {
       case '/appendix': return <Appendix />;
       case '/handbook': return <Handbook />;
       case '/report': return <ReportForm />;
+      case '/appeal': return <AppealForm />;
       case '/restore': return <RestoreForm />;
       case '/resign': return <ResignForm />;
       default: return <Home onNavigate={navigate} />;

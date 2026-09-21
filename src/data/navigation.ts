@@ -15,6 +15,7 @@ export const navItems: NavItem[] = [
   { id: 'appendix', label: 'Приложения и формы', icon: '📎', path: '/appendix' },
   { id: 'handbook', label: 'Памятка Россия Онлайн', icon: '📕', path: '/handbook' },
   { id: 'report', label: 'Заявление на повышение', icon: '📤', path: '/report' },
+  { id: 'appeal', label: 'Обжалование выговора', icon: '⚖️', path: '/appeal' },
   { id: 'restore', label: 'Восстановление сотрудника', icon: '♻️', path: '/restore' },
   { id: 'resign', label: 'Заявление на увольнение', icon: '📄', path: '/resign' },
 ];
