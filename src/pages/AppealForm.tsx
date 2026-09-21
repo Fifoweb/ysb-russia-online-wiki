@@ -21,7 +21,7 @@ export default function AppealForm() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const allFilled = Object.values(form).every(value => value.trim().length > 0);
+  const allFilled = form.reason.trim().length > 0 && form.evidence.trim().length > 0;
 
   const submit = async () => {
     if (!supabase || state === 'sending' || !allFilled) return;
@@ -61,7 +61,7 @@ export default function AppealForm() {
         <section className="glass rounded-2xl p-8 border border-purple-500/10">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Ваш никнейм | статик <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Ваш никнейм | статик <span className="text-gray-500 font-normal">(необязательно)</span></span>
               <input value={form.nick} onChange={set('nick')} placeholder="Например: Kira_Comis | 155" maxLength={100} className={inputClass} />
             </label>
 
@@ -78,7 +78,7 @@ export default function AppealForm() {
             </label>
 
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Скрин с планшета с активным выговором <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Скрин с планшета с активным выговором <span className="text-gray-500 font-normal">(необязательно)</span></span>
               <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} placeholder="https://..." maxLength={300} className={inputClass} />
             </label>
 

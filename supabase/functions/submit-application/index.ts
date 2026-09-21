@@ -36,19 +36,22 @@ Deno.serve(async (req) => {
     const evidence = (body.evidence || '').trim();
     const reprimandScreenshot = (body.reprimandScreenshot || '').trim();
 
-    if (!nick || !reason || !evidence || !reprimandScreenshot) {
-      return json(400, { error: 'Заполните все поля обжалования' });
+    if (!reason || !evidence) {
+      return json(400, { error: 'Заполните обязательные поля обжалования' });
     }
     if (nick.length > 100 || reason.length > 1000 || evidence.length > 1000 || reprimandScreenshot.length > 300) {
       return json(400, { error: 'Слишком длинные поля' });
     }
 
-    let screenshotUrl: URL;
-    try {
-      screenshotUrl = new URL(reprimandScreenshot);
-      if (!['http:', 'https:'].includes(screenshotUrl.protocol)) throw new Error('Unsupported protocol');
-    } catch {
-      return json(400, { error: 'Некорректная ссылка на скриншот' });
+    let screenshotLink = '—';
+    if (reprimandScreenshot) {
+      try {
+        const screenshotUrl = new URL(reprimandScreenshot);
+        if (!['http:', 'https:'].includes(screenshotUrl.protocol)) throw new Error('Unsupported protocol');
+        screenshotLink = `[Открыть скриншот](${screenshotUrl.href})`;
+      } catch {
+        return json(400, { error: 'Некорректная ссылка на скриншот' });
+      }
     }
 
     const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
@@ -68,10 +71,10 @@ Deno.serve(async (req) => {
       color: 13912832,
       fields: [
         { name: '👤 Заявитель', value: mention },
-        { name: 'Никнейм | статик', value: nick, inline: true },
+        { name: 'Никнейм | статик', value: nick || '—', inline: true },
         { name: 'Почему нужно обжаловать выговор', value: reason },
         { name: '📎 Доказательства', value: evidence },
-        { name: '📱 Скрин с планшета', value: `[Открыть скриншот](${screenshotUrl.href})` },
+        { name: '📱 Скрин с планшета', value: screenshotLink },
       ],
       footer: { text: `Отправил: ${discordName} • ${dateStr}` },
       timestamp: new Date().toISOString(),
