@@ -16,4 +16,5 @@ export const navItems: NavItem[] = [
   { id: 'handbook', label: 'Памятка Россия Онлайн', icon: '📕', path: '/handbook' },
   { id: 'report', label: 'Заявление на повышение', icon: '📤', path: '/report' },
   { id: 'restore', label: 'Восстановление сотрудника', icon: '♻️', path: '/restore' },
+  { id: 'resign', label: 'Заявление на увольнение', icon: '📄', path: '/resign' },
 ];

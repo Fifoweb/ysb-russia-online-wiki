@@ -17,6 +17,7 @@ const titles: Record<string, string> = {
   '/handbook': 'Памятка Россия Онлайн',
   '/report': 'Заявление на повышение',
   '/restore': 'Восстановление сотрудника',
+  '/resign': 'Заявление на увольнение',
 };
 
 export default function Header({ onToggleSidebar, currentTitle, onNavigate, sidebarOpen }: HeaderProps) {
