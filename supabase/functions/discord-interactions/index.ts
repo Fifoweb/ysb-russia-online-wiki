@@ -74,69 +74,129 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
       };
 
-      // ── Кадровый аудит: автоматический пост в канал кадрового аудита ──
-      const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
-      const AUDIT_CHANNEL = '1477623590093328568';
       const whoId = interaction.member?.user?.id;
-      // Кого повышают — берём из тега в исходном сообщении заявления
-      const promotedId =
-        (interaction.message?.content?.match(/<@(\d+)>/) || [])[1] ||
-        ((embed.fields || []).find((f: { name?: string }) => f.name === '👤 Заявитель')?.value || '').match(/<@(\d+)>/)?.[1];
-      const fieldVal = (n: string) => ((embed.fields || []).find((f: { name?: string }) => f.name === n)?.value) || '';
-      const currentRank = fieldVal('Текущее звание');
-      const targetRank = fieldVal('Новое звание');
 
-      if (botToken && promotedId && whoId) {
-        try {
-          // Серверный ник повышенного (Имя Фамилия) — через API бота
-          let promotedNick = '';
-          const gm = await fetch(`https://discord.com/api/v10/guilds/${interaction.guild_id}/members/${promotedId}`, {
-            headers: { Authorization: `Bot ${botToken}` },
-          });
-          if (gm.ok) { const gj = await gm.json(); promotedNick = gj.nick || gj.user?.username || ''; }
-
-          const msgLink = `https://discord.com/channels/${interaction.guild_id}/${interaction.channel_id}/${interaction.message.id}`;
-          const date = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-
-          // Кадровый аудит — широкая карточка-таблица 3×2 (по ТЗ)
-          const auditEmbed = {
-            title: '📕 Отчет о повышении сотрудника',
-            // Верхняя часть карточки — причина
-            description: `> Причина повышения: <#${interaction.channel_id}>\n> Повышен'а с ранга \`${currentRank}\` на \`${targetRank}\` ранг`,
-            // Шесть полей inline: Discord ставит их 3 в ряд — две строки по три колонки
-            fields: [
-              { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
-              { name: 'Имя Фамилия :', value: promotedNick || '—', inline: true },
-              { name: 'Discord ID :', value: String(promotedId), inline: true },
-              { name: 'Повышает :', value: `<@${whoId}>`, inline: true },
-              { name: 'Имя Фамилия :', value: who, inline: true },
-              { name: 'Discord ID :', value: String(whoId), inline: true },
-            ],
-            footer: { text: `Дата: ${date}` },
-            timestamp: new Date().toISOString(),
-          };
-
-          const auditRes = await fetch(`https://discord.com/api/v10/channels/${AUDIT_CHANNEL}/messages`, {
-            method: 'POST',
-            headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `<@${whoId}> повышает <@${promotedId}>`,
-              embeds: [auditEmbed],
-            }),
-          });
-          if (!auditRes.ok) console.error('Audit post failed', auditRes.status, await auditRes.text());
-        } catch (e) { console.error('Audit error', e); }
-      }
-
-      // content не передаём — остаётся исходный текст с тегом автора заявления;
-      // на месте кнопок — серая плашка «Одобрено» (как и у отказа)
+      // После одобрения модератор выбирает, куда направить карточку.
+      // ID одобрившего зашит в custom_id, чтобы другой пользователь не мог выбрать канал.
       return json(200, {
         type: 7,
         data: {
           embeds: [approved],
+          components: [
+            {
+              type: 1,
+              components: [{ type: 2, style: 2, label: `Одобрено: ${who}`, custom_id: 'approved_done', disabled: true }],
+            },
+            {
+              type: 1,
+              components: [
+                { type: 2, style: 1, label: 'Отправить в кадровый аудит', custom_id: `route-audit:${whoId}` },
+                { type: 2, style: 1, label: 'Отправить в запросы на повышение', custom_id: `route-promotion:${whoId}` },
+              ],
+            },
+          ],
+        },
+      });
+    }
+
+    if (customId?.startsWith('route-audit:') || customId?.startsWith('route-promotion:')) {
+      const [route, approverId] = customId.split(':');
+      const clickerId = interaction.member?.user?.id;
+      if (!clickerId || clickerId !== approverId) {
+        return json(200, {
+          type: 4,
+          data: { content: 'Выбрать канал может только сотрудник, который одобрил заявление.', flags: 64 },
+        });
+      }
+
+      const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+      const auditChannel = '1477623590093328568';
+      const promotionChannel = Deno.env.get('DISCORD_PROMOTION_REQUESTS_CHANNEL_ID') || '';
+      const targetChannel = route === 'route-audit' ? auditChannel : promotionChannel;
+      if (!botToken || !targetChannel) {
+        return json(200, { type: 4, data: { content: 'Канал назначения не настроен.', flags: 64 } });
+      }
+
+      const promotedId =
+        (interaction.message?.content?.match(/<@(\d+)>/) || [])[1] ||
+        ((embed.fields || []).find((x: { name?: string }) => x.name === '👤 Заявитель')?.value || '').match(/<@(\d+)>/)?.[1];
+      if (!promotedId) {
+        return json(200, { type: 4, data: { content: 'Не удалось определить автора заявления.', flags: 64 } });
+      }
+
+      let destinationEmbed = {
+        title: embed.title,
+        description: embed.description,
+        color: embed.color,
+        fields: embed.fields,
+        footer: embed.footer,
+        timestamp: embed.timestamp,
+      };
+      let destinationContent = `<@${promotedId}>`;
+
+      if (route === 'route-audit') {
+        let promotedNick = '';
+        try {
+          const memberRes = await fetch(`https://discord.com/api/v10/guilds/${interaction.guild_id}/members/${promotedId}`, {
+            headers: { Authorization: `Bot ${botToken}` },
+          });
+          if (memberRes.ok) {
+            const member = await memberRes.json();
+            promotedNick = member.nick || member.user?.username || '';
+          }
+        } catch (error) {
+          console.error('Member lookup failed', error);
+        }
+
+        const fieldVal = (name: string) =>
+          ((embed.fields || []).find((x: { name?: string }) => x.name === name)?.value) || '—';
+        const tick = String.fromCharCode(96);
+        destinationEmbed = {
+          title: '📕 Отчет о повышении сотрудника',
+          description: `> Причина повышения: <#${interaction.channel_id}>\n> Повышен'а с ранга ${tick}${fieldVal('Текущее звание')}${tick} на ${tick}${fieldVal('Новое звание')}${tick} ранг`,
+          fields: [
+            { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
+            { name: 'Имя Фамилия :', value: promotedNick || '—', inline: true },
+            { name: 'Discord ID :', value: String(promotedId), inline: true },
+            { name: 'Повышает :', value: `<@${clickerId}>`, inline: true },
+            { name: 'Имя Фамилия :', value: who, inline: true },
+            { name: 'Discord ID :', value: String(clickerId), inline: true },
+          ],
+          footer: { text: `Дата: ${nowStr}` },
+          timestamp: new Date().toISOString(),
+        };
+        destinationContent = `<@${clickerId}> повышает <@${promotedId}>`;
+      }
+
+      try {
+        const postRes = await fetch(`https://discord.com/api/v10/channels/${targetChannel}/messages`, {
+          method: 'POST',
+          headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: destinationContent,
+            embeds: [destinationEmbed],
+            allowed_mentions: { parse: [], users: [clickerId, promotedId] },
+          }),
+        });
+        if (!postRes.ok) {
+          console.error('Promotion routing failed', postRes.status, await postRes.text());
+          return json(200, { type: 4, data: { content: 'Не удалось отправить карточку в выбранный канал.', flags: 64 } });
+        }
+      } catch (error) {
+        console.error('Promotion routing error', error);
+        return json(200, { type: 4, data: { content: 'Не удалось отправить карточку в выбранный канал.', flags: 64 } });
+      }
+
+      const destinationLabel = route === 'route-audit' ? 'Кадровый аудит' : 'Запросы на повышение';
+      return json(200, {
+        type: 7,
+        data: {
           components: [{
             type: 1,
-            components: [{ type: 2, style: 2, label: `Одобрено: ${who}`, custom_id: 'approved_done', disabled: true }],
+            components: [
+              { type: 2, style: 2, label: `Одобрено: ${who}`, custom_id: 'approved_done', disabled: true },
+              { type: 2, style: 2, label: `Отправлено: ${destinationLabel}`, custom_id: 'routed_done', disabled: true },
+            ],
           }],
         },
       });
