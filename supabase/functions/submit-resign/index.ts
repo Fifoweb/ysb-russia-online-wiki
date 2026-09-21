@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       { name: '👤 Сотрудник', value: mention },
       { name: 'Имя Фамилия | Статик', value: fullNameStatic, inline: true },
       { name: 'Отдел', value: department, inline: true },
-      { name: 'Текущий ранг', value: '`' + currentRank + '`' }, // inline-code рамка Discord
+      { name: 'Текущий ранг', value: String.fromCharCode(96) + currentRank + String.fromCharCode(96) }, // inline-code рамка Discord
       { name: '📎 Скриншот личного дела', value: '[Открыть скриншот](' + screenshotUrl.href + ')' },
     ],
     footer: { text: 'Отправил: ' + discordName + ' • ' + dateStr },
