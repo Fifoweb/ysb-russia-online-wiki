@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             content: destinationContent,
             embeds: [destinationEmbed],
-            allowed_mentions: { parse: [], users: [clickerId, promotedId] },
+            allowed_mentions: { parse: [], users: [...new Set([clickerId, promotedId])] },
           }),
         });
         if (!postRes.ok) {
