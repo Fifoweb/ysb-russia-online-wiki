@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
         timestamp: embed.timestamp,
       };
       let destinationContent = `<@${promotedId}>`;
+      let destinationComponents;
 
       if (route === 'route-audit') {
         let promotedNick = '';
@@ -166,6 +167,20 @@ Deno.serve(async (req) => {
           timestamp: new Date().toISOString(),
         };
         destinationContent = `<@${clickerId}> повышает <@${promotedId}>`;
+      } else {
+        // В канале запросов оставляем ссылку на исходную заявку и кнопку финального одобрения.
+        const sourceUrl = `https://discord.com/channels/${interaction.guild_id}/${interaction.channel_id}/${interaction.message?.id}`;
+        destinationEmbed = {
+          ...destinationEmbed,
+          fields: [
+            ...(destinationEmbed.fields || []),
+            { name: 'Источник заявления', value: `[Открыть заявку](${sourceUrl})` },
+          ],
+        };
+        destinationComponents = [{
+          type: 1,
+          components: [{ type: 2, style: 3, label: 'Одобрить', custom_id: 'promotion-request-approve' }],
+        }];
       }
 
       try {
@@ -175,6 +190,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             content: destinationContent,
             embeds: [destinationEmbed],
+            ...(destinationComponents ? { components: destinationComponents } : {}),
             allowed_mentions: { parse: [], users: [...new Set([clickerId, promotedId])] },
           }),
         });
@@ -197,6 +213,84 @@ Deno.serve(async (req) => {
               { type: 2, style: 2, label: `Одобрено: ${who}`, custom_id: 'approved_done', disabled: true },
               { type: 2, style: 2, label: `Отправлено: ${destinationLabel}`, custom_id: 'routed_done', disabled: true },
             ],
+          }],
+        },
+      });
+    }
+
+    if (customId === 'promotion-request-approve') {
+      const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+      const auditChannel = '1477623590093328568';
+      const clickerId = interaction.member?.user?.id;
+      if (!botToken || !clickerId) {
+        return json(200, { type: 4, data: { content: 'Не удалось определить сотрудника, который одобрил запрос.', flags: 64 } });
+      }
+
+      const fieldVal = (name: string) =>
+        ((embed.fields || []).find((x: { name?: string }) => x.name === name)?.value) || '—';
+      const promotedId =
+        (fieldVal('👤 Заявитель').match(/<@!?([0-9]+)>/) || [])[1] ||
+        (interaction.message?.content?.match(/<@!?([0-9]+)>/) || [])[1];
+      if (!promotedId) {
+        return json(200, { type: 4, data: { content: 'Не удалось определить автора заявления.', flags: 64 } });
+      }
+
+      const sourceValue = fieldVal('Источник заявления');
+      const sourceChannelId = (sourceValue.match(/discord\.com\/channels\/[0-9]+\/([0-9]+)\/[0-9]+/) || [])[1] || interaction.channel_id;
+      let promotedNick = '';
+      try {
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${interaction.guild_id}/members/${promotedId}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+        if (memberRes.ok) {
+          const member = await memberRes.json();
+          promotedNick = member.nick || member.user?.username || '';
+        }
+      } catch (error) {
+        console.error('Member lookup failed', error);
+      }
+
+      const tick = String.fromCharCode(96);
+      const auditEmbed = {
+        title: '📕 Отчет о повышении сотрудника',
+        description: `> Причина повышения: <#${sourceChannelId}>\n> Повышен'а с ранга ${tick}${fieldVal('Текущее звание')}${tick} на ${tick}${fieldVal('Новое звание')}${tick} ранг`,
+        fields: [
+          { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
+          { name: 'Имя Фамилия :', value: promotedNick || fieldVal('Ник / статик'), inline: true },
+          { name: 'Discord ID :', value: String(promotedId), inline: true },
+          { name: 'Повышает :', value: `<@${clickerId}>`, inline: true },
+          { name: 'Имя Фамилия :', value: who, inline: true },
+          { name: 'Discord ID :', value: String(clickerId), inline: true },
+        ],
+        footer: { text: `Дата: ${nowStr}` },
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        const postRes = await fetch(`https://discord.com/api/v10/channels/${auditChannel}/messages`, {
+          method: 'POST',
+          headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `<@${clickerId}> повышает <@${promotedId}>`,
+            embeds: [auditEmbed],
+            allowed_mentions: { parse: [], users: [...new Set([clickerId, promotedId])] },
+          }),
+        });
+        if (!postRes.ok) {
+          console.error('Promotion audit approval failed', postRes.status, await postRes.text());
+          return json(200, { type: 4, data: { content: 'Не удалось отправить запрос в кадровый аудит.', flags: 64 } });
+        }
+      } catch (error) {
+        console.error('Promotion audit approval error', error);
+        return json(200, { type: 4, data: { content: 'Не удалось отправить запрос в кадровый аудит.', flags: 64 } });
+      }
+
+      return json(200, {
+        type: 7,
+        data: {
+          components: [{
+            type: 1,
+            components: [{ type: 2, style: 2, label: `Отправлено в кадровый аудит: ${who}`, custom_id: 'promotion-audit-done', disabled: true }],
           }],
         },
       });
