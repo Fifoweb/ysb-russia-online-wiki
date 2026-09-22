@@ -10,7 +10,8 @@ const cors = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-const VERIFIED_ROLE_ID = '1502062507706155158';
+// Роль "Верифицированный" на сервере, куда теперь поступают заявления на увольнение.
+const VERIFIED_ROLE_ID = '1538937566156300351';
 
 type RoleCheck = 'allowed' | 'denied' | 'unavailable';
 
