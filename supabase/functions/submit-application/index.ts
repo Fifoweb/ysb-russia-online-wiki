@@ -13,7 +13,7 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 const VERIFIED_ROLE_ID = '1502062507706155158';
-const APPEAL_CHANNEL_ID = '1552410932448206968';
+const APPEAL_THREAD_ID = '1540883794075066388';
 const APPEAL_NOTIFICATION_ROLE_IDS = ['1540269592927019038', '1540267656370716693'];
 
 type RoleCheck = 'allowed' | 'denied' | 'unavailable';
@@ -39,9 +39,21 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
   } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
 }
 
-async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[], components?: unknown[]) {
+async function getWebhookForThread(raw: string | undefined) {
+  const url = getWebhookUrl(raw);
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) { console.error('Discord thread webhook lookup failed', response.status); return null; }
+    const webhook = await response.json();
+    return typeof webhook.channel_id === 'string' ? { url } : null;
+  } catch (error) { console.error('Discord thread webhook lookup failed', error); return null; }
+}
+
+async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[], components?: unknown[], threadId?: string) {
   const url = new URL(target.url);
   url.searchParams.set('wait', 'true');
+  if (threadId) url.searchParams.set('thread_id', threadId);
   return await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -138,8 +150,8 @@ Deno.serve(async (req) => {
       return json(400, { error: 'Слишком длинные поля' });
     }
 
-    const target = await getWebhookTarget(Deno.env.get('DISCORD_APPEAL_WEBHOOK_URL'), APPEAL_CHANNEL_ID);
-    if (!target) return json(500, { error: 'Вебхук обжалований не настроен для нужного канала' });
+    const target = await getWebhookForThread(Deno.env.get('DISCORD_APPEAL_WEBHOOK_URL'));
+    if (!target) return json(500, { error: 'Вебхук обжалований не настроен' });
 
     const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
     const embed = {
@@ -167,6 +179,7 @@ Deno.serve(async (req) => {
           { type: 2, style: 4, label: 'Отклонить', custom_id: 'appeal-reject' },
         ],
       }],
+      APPEAL_THREAD_ID,
     );
     if (!res.ok) { const t = await res.text(); console.error('Discord appeal webhook error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
     return json(200, { ok: true });
