@@ -105,7 +105,7 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
             <span className="text-xs text-gray-200 font-medium max-w-[120px] truncate">{displayName}</span>
           </button>
         ) : (
-          <button onClick={signInWithDiscord}
+          <button onClick={() => signInWithDiscord()}
             className="flex items-center gap-2 ml-2 px-3 py-1.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-xs font-medium">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.32 4.37a19.8 19.8 0 00-4.93-1.51 13.78 13.78 0 00-.64 1.28 18.27 18.27 0 00-5.5 0 13.78 13.78 0 00-.64-1.28h-.05A19.82 19.82 0 003.64 4.37 19.07 19.07 0 00.11 18.06a19.9 19.9 0 006.04 3.03c.46-.66.86-1.36 1.25-2.09a12.9 12.9 0 01-1.96-.94c.16-.12.32-.24.47-.37a14.2 14.2 0 0012.18 0c.15.13.31.25.47.37-.62.37-1.28.69-1.96.94.39.73.79 1.43 1.25 2.09a19.84 19.84 0 006.04-3.03 19.03 19.03 0 00-3.53-13.69zM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42s.95-2.42 2.16-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42zm7.97 0c-1.18 0-2.15-1.08-2.15-2.42s.95-2.42 2.15-2.42c1.22 0 2.18 1.1 2.16 2.42 0 1.34-.94 2.42-2.16 2.42z"/></svg>
             Войти через Discord

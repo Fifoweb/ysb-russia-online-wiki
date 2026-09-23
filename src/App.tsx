@@ -15,6 +15,8 @@ import AppealForm from './pages/AppealForm';
 import RestoreForm from './pages/RestoreForm';
 import ResignForm from './pages/ResignForm';
 import TransferForm from './pages/TransferForm';
+import ComplaintForm from './pages/ComplaintForm';
+import PromotionForm from './pages/PromotionForm';
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -60,6 +62,8 @@ export default function App() {
       case '/restore': return <RestoreForm />;
       case '/resign': return <ResignForm />;
       case '/transfer': return <TransferForm />;
+      case '/complaints': return <ComplaintForm />;
+      case '/promotion': return <PromotionForm />;
       default: return <Home onNavigate={navigate} />;
     }
   };

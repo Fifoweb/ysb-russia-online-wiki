@@ -14,7 +14,7 @@ const initialForm = {
 };
 
 export default function ResignForm() {
-  const { user, loading, signInWithDiscord } = useAuth();
+  const { user, providerToken, loading, signInWithDiscord } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -33,7 +33,9 @@ export default function ResignForm() {
     setErrorMessage('');
 
     try {
-      const { error } = await supabase.functions.invoke('submit-resign', { body: form });
+      const { error } = await supabase.functions.invoke('submit-resign', {
+        body: { ...form, discordAccessToken: providerToken },
+      });
       if (error) {
         setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить заявление. Проверьте поля и попробуйте ещё раз.'));
         setState('error');
@@ -58,15 +60,23 @@ export default function ResignForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">📄 Заявление на увольнение</h2>
-        <p className="text-sm text-gray-500 !mb-0">Заполните форму — заявление уйдёт руководству ГИБДД в Discord от лица бота «Начальник ГИБДД».</p>
+        <p className="text-sm text-gray-500 !mb-0">Заполните форму — заявление будет отправлено руководству Discord через вебхук. Для проверки роли потребуется разрешить доступ к сведениям о членстве на сервере.</p>
       </div>
 
       {loading ? null : !user ? (
         <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
           <p className="text-gray-400 text-sm mb-4">🔒 Заявления могут отправлять только авторизованные через Discord пользователи.</p>
-          <button onClick={signInWithDiscord}
+          <button onClick={() => signInWithDiscord('identify guilds.members.read')}
             className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
             Войти через Discord
+          </button>
+        </section>
+      ) : !providerToken ? (
+        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
+          <p className="text-gray-400 text-sm mb-4">Для проверки роли нужно повторно войти через Discord и разрешить доступ к сведениям о членстве на сервере.</p>
+          <button onClick={() => signInWithDiscord('identify guilds.members.read')}
+            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
+            Продолжить через Discord
           </button>
         </section>
       ) : state === 'ok' ? (
@@ -98,9 +108,11 @@ export default function ResignForm() {
             </div>
 
             {state === 'error' && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                {errorMessage}
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">{errorMessage}</p>
+                <button onClick={() => signInWithDiscord('identify guilds.members.read')}
+                  className="text-sm text-[#9aa8ff] hover:text-white underline underline-offset-4">Повторно подключить Discord для проверки роли</button>
+              </div>
             )}
 
             <button onClick={submit} disabled={!allFilled || state === 'sending'}

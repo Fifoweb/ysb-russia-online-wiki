@@ -54,7 +54,7 @@ export default function ReportForm() {
       {loading ? null : !user ? (
         <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
           <p className="text-gray-400 text-sm mb-4">🔒 Заявления могут отправлять только авторизованные через Discord пользователи.</p>
-          <button onClick={signInWithDiscord}
+          <button onClick={() => signInWithDiscord()}
             className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
             Войти через Discord
           </button>
