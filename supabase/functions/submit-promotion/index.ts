@@ -119,13 +119,14 @@ Deno.serve(async (req) => {
       { name: 'Имя Фамилия | StaticID', value: fullNameStatic },
       { name: 'На какой ранг повысить?', value: targetRank, inline: true },
       { name: 'Discord ID', value: discordId, inline: true },
+      { name: 'Ссылка на отчет (ссылка на сообщение)', value: report.href },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
   const response = await sendWebhookMessage(
     target,
-    `📤 Новый запрос на повышение\n${NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}\n${report.href}`,
+    `📤 Новый запрос на повышение\n${NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
     [embed],
     NOTIFICATION_ROLE_IDS,
   );

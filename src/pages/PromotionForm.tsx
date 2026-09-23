@@ -83,7 +83,7 @@ export default function PromotionForm() {
               <input type="number" min="1" max="15" inputMode="numeric" value={form.targetRank} onChange={set('targetRank')} placeholder="1–15" className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Ссылка на сообщение в Discord <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Ссылка на отчет (ссылка на сообщение) <span className="text-red-400">*</span></span>
               <input type="url" value={form.reportUrl} onChange={set('reportUrl')} maxLength={300} placeholder="https://discord.com/channels/..." className={inputClass} />
             </label>
             <label className="block">
