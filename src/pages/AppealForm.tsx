@@ -10,7 +10,6 @@ const initialForm = {
   nick: '',
   reason: '',
   evidence: '',
-  reprimandScreenshot: '',
 };
 
 export default function AppealForm() {
@@ -73,7 +72,7 @@ export default function AppealForm() {
         <section className="glass rounded-2xl p-8 border border-purple-500/10">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Ваш никнейм | статик <span className="text-gray-500 font-normal">(необязательно)</span></span>
+              <span className="text-xs font-bold text-gray-100">Ваш никнейм | статик</span>
               <input value={form.nick} onChange={set('nick')} placeholder="Например: Kira_Comis | 155" maxLength={100} className={inputClass} />
             </label>
 
@@ -84,14 +83,9 @@ export default function AppealForm() {
             </label>
 
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Доказательства, подтверждающие ваши слова <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Доказательства подтверждащие ваши слова (если таковые допустимы) <span className="text-red-400">*</span></span>
               <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
                 placeholder="Ссылки на скриншоты, видео или другие допустимые доказательства..." className={`${inputClass} resize-none`} />
-            </label>
-
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Скрин с планшета с активным выговором <span className="text-gray-500 font-normal">(необязательно)</span></span>
-              <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} placeholder="https://..." maxLength={300} className={inputClass} />
             </label>
 
             {state === 'error' && (

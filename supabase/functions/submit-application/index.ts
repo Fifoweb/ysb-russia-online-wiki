@@ -13,27 +13,34 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 const VERIFIED_ROLE_ID = '1502062507706155158';
+const APPEAL_CHANNEL_ID = '1552410932448206968';
+const APPEAL_NOTIFICATION_ROLE_IDS = ['1540269592927019038', '1540267656370716693'];
 
 type RoleCheck = 'allowed' | 'denied' | 'unavailable';
 
-async function checkVerifiedRole(botToken: string, channelId: string, discordId: string): Promise<RoleCheck> {
+function getWebhookUrl(raw: string | undefined) {
+  if (!raw) return null;
   try {
-    // Канал уже доступен боту для отправки заявления, поэтому через него узнаём сервер Discord.
-    const channelRes = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-      headers: { Authorization: `Bot ${botToken}` },
-    });
-    if (!channelRes.ok) {
-      console.error('Discord channel lookup failed', channelRes.status);
-      return 'unavailable';
-    }
+    const url = new URL(raw);
+    return url.protocol === 'https:' && url.hostname === 'discord.com' && !url.port && !url.username && !url.password &&
+      !url.search && !url.hash && /^\/api\/webhooks\/\d{17,20}\/[\w.-]+$/.test(url.pathname) ? url : null;
+  } catch { return null; }
+}
 
-    const channel = await channelRes.json();
-    const guildId = channel.guild_id;
-    if (!guildId) {
-      console.error('Discord channel has no guild ID', channelId);
-      return 'unavailable';
-    }
+async function getWebhookTarget(raw: string | undefined, expectedChannelId: string) {
+  const url = getWebhookUrl(raw);
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) { console.error('Discord webhook lookup failed', response.status); return null; }
+    const webhook = await response.json();
+    return String(webhook.channel_id) === expectedChannelId && typeof webhook.guild_id === 'string'
+      ? { url, guildId: webhook.guild_id } : null;
+  } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
+}
 
+async function checkVerifiedRoleInGuild(botToken: string, guildId: string, discordId: string): Promise<RoleCheck> {
+  try {
     const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
       headers: { Authorization: `Bot ${botToken}` },
     });
@@ -47,6 +54,29 @@ async function checkVerifiedRole(botToken: string, channelId: string, discordId:
     return Array.isArray(member.roles) && member.roles.includes(VERIFIED_ROLE_ID) ? 'allowed' : 'denied';
   } catch (error) {
     console.error('Discord role lookup failed', error);
+    return 'unavailable';
+  }
+}
+
+async function checkVerifiedRole(botToken: string, channelId: string, discordId: string): Promise<RoleCheck> {
+  try {
+    // Канал уже доступен боту для отправки заявления, поэтому через него узнаём сервер Discord.
+    const channelRes = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
+    if (!channelRes.ok) {
+      console.error('Discord channel lookup failed', channelRes.status);
+      return 'unavailable';
+    }
+
+    const channel = await channelRes.json();
+    if (typeof channel.guild_id !== 'string') {
+      console.error('Discord channel has no guild ID', channelId);
+      return 'unavailable';
+    }
+    return checkVerifiedRoleInGuild(botToken, channel.guild_id, discordId);
+  } catch (error) {
+    console.error('Discord channel lookup failed', error);
     return 'unavailable';
   }
 }
@@ -85,31 +115,19 @@ Deno.serve(async (req) => {
     const nick = (body.nick || '').trim();
     const reason = (body.reason || '').trim();
     const evidence = (body.evidence || '').trim();
-    const reprimandScreenshot = (body.reprimandScreenshot || '').trim();
 
     if (!reason || !evidence) {
       return json(400, { error: 'Заполните обязательные поля обжалования' });
     }
-    if (nick.length > 100 || reason.length > 1000 || evidence.length > 1000 || reprimandScreenshot.length > 300) {
+    if (nick.length > 100 || reason.length > 1000 || evidence.length > 1000) {
       return json(400, { error: 'Слишком длинные поля' });
     }
 
-    let screenshotLink = '—';
-    if (reprimandScreenshot) {
-      try {
-        const screenshotUrl = new URL(reprimandScreenshot);
-        if (!['http:', 'https:'].includes(screenshotUrl.protocol)) throw new Error('Unsupported protocol');
-        screenshotLink = `[Открыть скриншот](${screenshotUrl.href})`;
-      } catch {
-        return json(400, { error: 'Некорректная ссылка на скриншот' });
-      }
-    }
-
     const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
-    const channelId = '1477623588478517268';
-    if (!botToken) return json(500, { error: 'Сервер не настроен' });
+    const target = await getWebhookTarget(Deno.env.get('DISCORD_APPEAL_WEBHOOK_URL'), APPEAL_CHANNEL_ID);
+    if (!botToken || !target) return json(500, { error: 'Сервер не настроен' });
 
-    const roleCheck = await checkVerifiedRole(botToken, channelId, discordId);
+    const roleCheck = await checkVerifiedRoleInGuild(botToken, target.guildId, discordId);
     if (roleCheck !== 'allowed') {
       return json(roleCheck === 'denied' ? 403 : 503, {
         error: roleCheck === 'denied'
@@ -123,21 +141,21 @@ Deno.serve(async (req) => {
       title: '⚖️ Обжалование выговора',
       color: 13912832,
       fields: [
-        { name: '👤 Заявитель', value: mention },
-        { name: 'Никнейм | статик', value: nick || '—', inline: true },
-        { name: 'Почему нужно обжаловать выговор', value: reason },
-        { name: '📎 Доказательства', value: evidence },
-        { name: '📱 Скрин с планшета', value: screenshotLink },
+        { name: 'Ваш никнейм | статик', value: nick || '—' },
+        { name: 'Почему вам должны обжаловать выговор', value: reason },
+        { name: 'Доказательства подтверждащие ваши слова (если таковые допустимы)', value: evidence },
       ],
       footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
       timestamp: new Date().toISOString(),
     };
 
-    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    const webhookUrl = new URL(target.url);
+    webhookUrl.searchParams.set('wait', 'true');
+    const res = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `⚖️ Новое обжалование выговора от ${mention}`,
+        content: `⚖️ Новое обжалование выговора от ${mention}\n${APPEAL_NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
         embeds: [embed],
         components: [{
           type: 1,
@@ -146,7 +164,7 @@ Deno.serve(async (req) => {
             { type: 2, style: 4, label: 'Отклонить', custom_id: 'appeal-reject' },
           ],
         }],
-        allowed_mentions: discordId ? { parse: [], users: [discordId] } : { parse: [] },
+        allowed_mentions: { parse: [], users: [discordId], roles: APPEAL_NOTIFICATION_ROLE_IDS },
       }),
     });
     if (!res.ok) { const t = await res.text(); console.error('Discord appeal error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
