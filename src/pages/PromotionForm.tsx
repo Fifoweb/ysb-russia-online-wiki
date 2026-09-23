@@ -56,6 +56,14 @@ export default function PromotionForm() {
             Войти через Discord
           </button>
         </section>
+      ) : !providerToken ? (
+        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
+          <p className="text-gray-400 text-sm mb-4">Для проверки роли нужно повторно войти через Discord и разрешить доступ к сведениям о членстве на сервере.</p>
+          <button onClick={() => signInWithDiscord('identify guilds.members.read')}
+            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
+            Продолжить через Discord
+          </button>
+        </section>
       ) : state === 'ok' ? (
         <section className="glass rounded-2xl p-8 border border-green-500/20 text-center">
           <p className="text-green-300 text-sm mb-4">Запрос на повышение отправлен.</p>
