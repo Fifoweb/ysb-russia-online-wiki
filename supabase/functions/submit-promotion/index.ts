@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
     color: 3447003,
     fields: [
       { name: 'Имя Фамилия | StaticID', value: fullNameStatic },
-      { name: 'На какой ранг повысить?', value: targetRank, inline: true },
-      { name: 'Discord ID', value: discordId, inline: true },
+      { name: 'На какой ранг повысить?', value: targetRank },
+      { name: 'Discord ID', value: discordId },
       { name: 'Ссылка на отчет (ссылка на сообщение)', value: report.href },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
