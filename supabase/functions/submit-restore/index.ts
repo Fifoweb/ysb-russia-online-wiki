@@ -8,6 +8,9 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Роли руководства, которые получают уведомление о новой заявке на восстановление.
+const restoreNotificationRoleIds = ['1538937566273732637', '1540380882601251007'];
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -67,6 +70,7 @@ Deno.serve(async (req) => {
   // Разрешаем пинг только настоящего Discord snowflake, полученного из OAuth-профиля.
   const discordId = rawDiscordId && /^\d{17,20}$/.test(rawDiscordId) ? rawDiscordId : null;
   const mention = discordId ? `<@${discordId}>` : discordName;
+  const roleMentions = restoreNotificationRoleIds.map((roleId) => `<@&${roleId}>`).join(' ');
 
   const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
@@ -89,10 +93,14 @@ Deno.serve(async (req) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      content: `📋 Новая заявка на восстановление от ${mention}`,
+      content: `${roleMentions}\n📋 Новая заявка на восстановление от ${mention}`,
       embeds: [embed],
-      // Обычный webhook может упомянуть только автора заявки, без @everyone/@roles.
-      allowed_mentions: { parse: [], users: discordId ? [discordId] : [] },
+      // Обычный webhook может упомянуть только автора заявки и конкретные роли руководства.
+      allowed_mentions: {
+        parse: [],
+        users: discordId ? [discordId] : [],
+        roles: restoreNotificationRoleIds,
+      },
     }),
   });
   if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: `Discord ответил ${res.status}` }); }
