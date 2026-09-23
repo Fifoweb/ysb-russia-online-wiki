@@ -48,7 +48,6 @@ export default function ReportForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">📤 Заявление на повышение</h2>
-        <p className="text-sm text-gray-500 !mb-0">Заполните форму — заявление сразу уйдёт руководству ГИБДД в Discord от лица бота «Начальник ГИБДД».</p>
       </div>
 
       {loading ? null : !user ? (

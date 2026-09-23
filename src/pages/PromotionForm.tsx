@@ -45,7 +45,6 @@ export default function PromotionForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">⬆️ Запрос на повышение</h2>
-        <p className="text-sm text-gray-500 !mb-0">ID Discord добавится автоматически. Для проверки роли Discord запросит доступ к сведениям о вашем членстве на сервере.</p>
       </div>
 
       {loading ? null : !user ? (

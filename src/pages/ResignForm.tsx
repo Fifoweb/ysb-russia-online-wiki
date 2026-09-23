@@ -60,7 +60,6 @@ export default function ResignForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">📄 Заявление на увольнение</h2>
-        <p className="text-sm text-gray-500 !mb-0">Заполните форму — заявление будет отправлено руководству Discord через вебхук. Для проверки роли потребуется разрешить доступ к сведениям о членстве на сервере.</p>
       </div>
 
       {loading ? null : !user ? (

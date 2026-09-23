@@ -61,7 +61,6 @@ export default function TransferForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">🚔 Переводы в ГИБДД</h2>
-        <p className="text-sm text-gray-500 !mb-0">Заполните форму перевода - заявка уйдёт руководству ГИБДД в Discord через защищённый webhook.</p>
       </div>
 
       {loading ? null : !user ? (

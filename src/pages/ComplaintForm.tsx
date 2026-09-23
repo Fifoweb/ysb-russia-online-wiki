@@ -44,7 +44,6 @@ export default function ComplaintForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">🕵️ Жалобы</h2>
-        <p className="text-sm text-gray-500 !mb-0">Автор не упоминается в сообщении. Discord-ник, Discord ID и указанный контакт будут видны сотрудникам канала.</p>
       </div>
 
       {loading ? null : !user ? (
@@ -84,6 +83,7 @@ export default function ComplaintForm() {
               <span className="text-xs font-bold text-gray-100">Ваш Discord для связи <span className="text-red-400">*</span></span>
               <input value={form.contactDiscord} onChange={set('contactDiscord')} maxLength={100} placeholder="Например: username" className={inputClass} />
             </label>
+            <p className="text-xs text-gray-500 !mb-0">Discord-ник и ID из авторизации будут видны сотрудникам канала; автора не упоминает.</p>
             {state === 'error' && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">{errorMessage}</p>}
             <button onClick={submit} disabled={!allFilled || state === 'sending'}
               className="w-full py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-200 hover:bg-purple-500/30 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed">
