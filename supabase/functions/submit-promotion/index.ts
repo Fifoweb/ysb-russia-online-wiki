@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
     fields: [
       { name: 'Имя Фамилия | StaticID', value: fullNameStatic },
       { name: 'На какой ранг повысить?', value: targetRank },
-      { name: 'Discord ID', value: discordId },
       { name: 'Ссылка на отчет (ссылка на сообщение)', value: report.href },
+      { name: 'Discord ID', value: discordId },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
