@@ -39,6 +39,21 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
   } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
 }
 
+async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[], components?: unknown[]) {
+  const url = new URL(target.url);
+  url.searchParams.set('wait', 'true');
+  return await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content,
+      embeds,
+      ...(components ? { components } : {}),
+      allowed_mentions: { parse: [], roles: roleIds },
+    }),
+  });
+}
+
 async function checkVerifiedRoleInGuild(botToken: string, guildId: string, discordId: string): Promise<RoleCheck> {
   try {
     const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
@@ -107,7 +122,7 @@ Deno.serve(async (req) => {
   const discordName = String(identityData.username || identityData.global_name || meta.user_name || meta.preferred_username || meta.full_name || meta.name || 'неизвестно').slice(0, 80);
   const discordId = identityData.sub || meta.sub || identity?.id || null;
   if (!discordId) {
-    return json(403, { error: 'Для использования формы нужен Discord-аккаунт с ролью «Верифицированный».' });
+    return json(403, { error: 'Для отправки формы войдите через Discord.' });
   }
   const mention = `<@${discordId}>`;
 
@@ -123,18 +138,8 @@ Deno.serve(async (req) => {
       return json(400, { error: 'Слишком длинные поля' });
     }
 
-    const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
     const target = await getWebhookTarget(Deno.env.get('DISCORD_APPEAL_WEBHOOK_URL'), APPEAL_CHANNEL_ID);
-    if (!botToken || !target) return json(500, { error: 'Сервер не настроен' });
-
-    const roleCheck = await checkVerifiedRoleInGuild(botToken, target.guildId, discordId);
-    if (roleCheck !== 'allowed') {
-      return json(roleCheck === 'denied' ? 403 : 503, {
-        error: roleCheck === 'denied'
-          ? 'Для использования формы нужна роль «Верифицированный».'
-          : 'Не удалось проверить роль в Discord. Попробуйте позже.',
-      });
-    }
+    if (!target) return json(500, { error: 'Вебхук обжалований не настроен для нужного канала' });
 
     const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
     const embed = {
@@ -143,31 +148,27 @@ Deno.serve(async (req) => {
       fields: [
         { name: 'Ваш никнейм | статик', value: nick || '—' },
         { name: 'Почему вам должны обжаловать выговор', value: reason },
-        { name: 'Доказательства подтверждащие ваши слова (если таковые допустимы)', value: evidence },
+        { name: 'Доказательства, подтверждающие ваши слова (если таковые допустимы)', value: evidence },
+        { name: 'Discord ID', value: discordId },
       ],
       footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
       timestamp: new Date().toISOString(),
     };
 
-    const webhookUrl = new URL(target.url);
-    webhookUrl.searchParams.set('wait', 'true');
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: `⚖️ Новое обжалование выговора от ${mention}\n${APPEAL_NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
-        embeds: [embed],
-        components: [{
-          type: 1,
-          components: [
-            { type: 2, style: 3, label: 'Одобрить', custom_id: 'appeal-approve' },
-            { type: 2, style: 4, label: 'Отклонить', custom_id: 'appeal-reject' },
-          ],
-        }],
-        allowed_mentions: { parse: [], users: [discordId], roles: APPEAL_NOTIFICATION_ROLE_IDS },
-      }),
-    });
-    if (!res.ok) { const t = await res.text(); console.error('Discord appeal error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
+    const res = await sendWebhookMessage(
+      target,
+      `⚖️ Новое обжалование выговора\n${APPEAL_NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
+      [embed],
+      APPEAL_NOTIFICATION_ROLE_IDS,
+      [{
+        type: 1,
+        components: [
+          { type: 2, style: 3, label: 'Одобрить', custom_id: 'appeal-approve' },
+          { type: 2, style: 4, label: 'Отклонить', custom_id: 'appeal-reject' },
+        ],
+      }],
+    );
+    if (!res.ok) { const t = await res.text(); console.error('Discord appeal webhook error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
     return json(200, { ok: true });
   }
 

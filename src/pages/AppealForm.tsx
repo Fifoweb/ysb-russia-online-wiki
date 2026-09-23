@@ -83,7 +83,7 @@ export default function AppealForm() {
             </label>
 
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Доказательства подтверждащие ваши слова (если таковые допустимы) <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Доказательства, подтверждающие ваши слова (если таковые допустимы) <span className="text-red-400">*</span></span>
               <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
                 placeholder="Ссылки на скриншоты, видео или другие допустимые доказательства..." className={`${inputClass} resize-none`} />
             </label>
