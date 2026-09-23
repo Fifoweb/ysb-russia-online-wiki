@@ -12,6 +12,7 @@ import Appendix from './pages/Appendix';
 import Handbook from './pages/Handbook';
 import ReportForm from './pages/ReportForm';
 import AppealForm from './pages/AppealForm';
+import ReprimandWorkForm from './pages/ReprimandWorkForm';
 import RestoreForm from './pages/RestoreForm';
 import ResignForm from './pages/ResignForm';
 import TransferForm from './pages/TransferForm';
@@ -59,6 +60,7 @@ export default function App() {
       case '/handbook': return <Handbook />;
       case '/report': return <ReportForm />;
       case '/appeal': return <AppealForm />;
+      case '/reprimand-work': return <ReprimandWorkForm />;
       case '/restore': return <RestoreForm />;
       case '/resign': return <ResignForm />;
       case '/transfer': return <TransferForm />;

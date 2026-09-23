@@ -17,6 +17,7 @@ export const navItems: NavItem[] = [
   { id: 'report', label: 'Заявление на повышение', icon: '📤', path: '/report' },
   { id: 'promotion', label: 'Запрос на повышение', icon: '⬆️', path: '/promotion' },
   { id: 'appeal', label: 'Обжалование выговора', icon: '⚖️', path: '/appeal' },
+  { id: 'reprimand-work', label: 'Отработка выговора', icon: '🛠️', path: '/reprimand-work' },
   { id: 'restore', label: 'Восстановление сотрудника', icon: '♻️', path: '/restore' },
   { id: 'transfer', label: 'Переводы в ГИБДД', icon: '🚔', path: '/transfer' },
   { id: 'resign', label: 'Заявление на увольнение', icon: '📄', path: '/resign' },
