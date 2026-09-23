@@ -69,7 +69,6 @@ Deno.serve(async (req) => {
   if (!discordId || !/^\d{17,20}$/.test(discordId)) {
     return json(403, { error: 'Для отправки войдите через Discord' });
   }
-  const mention = `<@${discordId}>`;
   const roleMentions = restoreNotificationRoleIds.map((roleId) => `<@&${roleId}>`).join(' ');
 
   const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
@@ -93,12 +92,11 @@ Deno.serve(async (req) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      content: `${roleMentions}\n📋 Новая заявка на восстановление от ${mention}`,
+      content: `📋 Новая заявка на восстановление\n${roleMentions}`,
       embeds: [embed],
-      // Обычный webhook может упомянуть только автора заявки и конкретные роли руководства.
+      // Обычный webhook отправляет уведомления только указанным ролям.
       allowed_mentions: {
         parse: [],
-        users: [discordId],
         roles: restoreNotificationRoleIds,
       },
     }),

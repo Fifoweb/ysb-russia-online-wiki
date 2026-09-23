@@ -120,11 +120,10 @@ Deno.serve(async (req) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      content: `${roleMentions}\n📋 Новая заявка на перевод в ГИБДД от <@${discordId}>`,
+      content: `📋 Новая заявка на перевод в ГИБДД\n${roleMentions}`,
       embeds: [embed],
       allowed_mentions: {
         parse: [],
-        users: [discordId],
         roles: transferNotificationRoleIds,
       },
     }),
