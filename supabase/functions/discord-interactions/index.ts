@@ -14,6 +14,26 @@ const cors = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
+const APPROVER_ROLE_IDS = new Set([
+  '1538937566273732637',
+  '1540380882601251007',
+]);
+
+function hasApprovalRole(interaction: { member?: { roles?: unknown } }): boolean {
+  const roles = interaction.member?.roles;
+  return Array.isArray(roles) && roles.some((role) => APPROVER_ROLE_IDS.has(String(role)));
+}
+
+function forbiddenApprovalResponse() {
+  return json(200, {
+    type: 4,
+    data: {
+      content: 'У вас нет роли для одобрения или отклонения заявлений.',
+      flags: 64,
+    },
+  });
+}
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
@@ -53,6 +73,18 @@ Deno.serve(async (req) => {
   if (interaction.type === 3) {
     const customId = interaction.data?.custom_id;
     const embed = interaction.message?.embeds?.[0] || {};
+
+    const isApprovalAction = customId === 'approve' ||
+      customId === 'reject' ||
+      customId === 'appeal-approve' ||
+      customId === 'appeal-reject' ||
+      customId === 'promotion-request-approve' ||
+      customId === 'restore-accept' ||
+      customId === 'restore-rank' ||
+      customId === 'restore-reject' ||
+      customId?.startsWith('route-audit:') ||
+      customId?.startsWith('route-promotion:');
+    if (isApprovalAction && !hasApprovalRole(interaction)) return forbiddenApprovalResponse();
 
     if (customId === 'approve') {
       // Компактная карточка по ТЗ: блоки по смыслу, 2×2 inline-поля
@@ -424,6 +456,13 @@ Deno.serve(async (req) => {
   }
 
   // 4. Отправлена модалка с причиной
+  const isApprovalModal = interaction.type === 5 && (
+    interaction.data?.custom_id === 'reject-modal' ||
+    interaction.data?.custom_id === 'appeal-reject-modal' ||
+    interaction.data?.custom_id === 'restore-reject-modal'
+  );
+  if (isApprovalModal && !hasApprovalRole(interaction)) return forbiddenApprovalResponse();
+
   if (interaction.type === 5 && interaction.data?.custom_id === 'reject-modal') {
     const reason = interaction.data.components?.[0]?.components?.[0]?.value || 'Без причины';
     const embed = interaction.message?.embeds?.[0] || {};
