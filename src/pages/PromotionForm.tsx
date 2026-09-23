@@ -18,7 +18,7 @@ export default function PromotionForm() {
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.targetRank);
-  const reportUrlValid = /^https?:\/\/\S+$/i.test(form.reportUrl.trim());
+  const reportUrlValid = /^https:\/\/discord\.com\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/i.test(form.reportUrl.trim());
   const allFilled = Boolean(form.fullNameStatic.trim() && rankValid && reportUrlValid);
 
   const submit = async () => {
@@ -83,7 +83,7 @@ export default function PromotionForm() {
               <input type="number" min="1" max="15" inputMode="numeric" value={form.targetRank} onChange={set('targetRank')} placeholder="1–15" className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs font-bold text-gray-100">Ссылка на отчёт (сообщение) <span className="text-red-400">*</span></span>
+              <span className="text-xs font-bold text-gray-100">Ссылка на сообщение в Discord <span className="text-red-400">*</span></span>
               <input type="url" value={form.reportUrl} onChange={set('reportUrl')} maxLength={300} placeholder="https://discord.com/channels/..." className={inputClass} />
             </label>
             <label className="block">

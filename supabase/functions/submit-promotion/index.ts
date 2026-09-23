@@ -83,9 +83,12 @@ Deno.serve(async (req) => {
   let report: URL;
   try {
     report = new URL(reportUrl);
-    if (!['https:', 'http:'].includes(report.protocol)) throw new Error('Unsupported protocol');
+    if (report.protocol !== 'https:' || report.hostname !== 'discord.com' ||
+      !/^\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/.test(report.pathname) || report.search || report.hash) {
+      throw new Error('Invalid Discord message URL');
+    }
   } catch {
-    return json(400, { error: 'Укажите корректную ссылку на отчёт' });
+    return json(400, { error: 'Укажите корректную ссылку на сообщение в Discord' });
   }
 
   const identity = user.identities?.find((item) => item.provider === 'discord');
@@ -115,7 +118,6 @@ Deno.serve(async (req) => {
     fields: [
       { name: 'Имя Фамилия | StaticID', value: fullNameStatic },
       { name: 'На какой ранг повысить?', value: targetRank, inline: true },
-      { name: 'Ссылка на отчёт', value: `[Открыть сообщение](${report.href})` },
       { name: 'Discord ID', value: discordId, inline: true },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
@@ -123,7 +125,7 @@ Deno.serve(async (req) => {
   };
   const response = await sendWebhookMessage(
     target,
-    `📤 Новый запрос на повышение\n${NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
+    `📤 Новый запрос на повышение\n${NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}\n${report.href}`,
     [embed],
     NOTIFICATION_ROLE_IDS,
   );
