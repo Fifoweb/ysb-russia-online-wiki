@@ -39,7 +39,7 @@ export default function RestoreForm() {
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0 !mb-2">♻️ Восстановление сотрудника</h2>
-        <p className="text-sm text-gray-500 !mb-0">Заявка на восстановление в ряды ГИБДД — уйдёт руководству в Discord от лица бота «Начальник ГИБДД».</p>
+        <p className="text-sm text-gray-500 !mb-0">Заявка на восстановление в ряды ГИБДД — уйдёт руководству в Discord через защищённый webhook.</p>
       </div>
 
       {loading ? null : !user ? (
