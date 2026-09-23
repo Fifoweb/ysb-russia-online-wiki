@@ -2,29 +2,43 @@ import { useState } from 'react';
 import PageTransition from '../components/PageTransition';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { getFunctionErrorMessage } from '../lib/functionError';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
 export default function RestoreForm() {
   const { user, loading, signInWithDiscord } = useAuth();
   const [form, setForm] = useState({
-    fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '', discordContact: '',
+    fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '',
   });
   const [state, setState] = useState<State>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   // Скриншот из гос.фракций — опционально (только после ban/warn), остальные обязательны
-  const requiredKeys: (keyof typeof form)[] = ['fullNameStatic', 'rankEvidence', 'dismissReason', 'previousRank', 'discordContact'];
+  const requiredKeys: (keyof typeof form)[] = ['fullNameStatic', 'rankEvidence', 'dismissReason', 'previousRank'];
   const allFilled = requiredKeys.every(k => form[k].trim().length > 0);
 
   const submit = async () => {
     if (!supabase || state === 'sending' || !allFilled) return;
     setState('sending');
-    const { error } = await supabase.functions.invoke('submit-restore', { body: form });
-    setState(error ? 'error' : 'ok');
+    setErrorMessage('');
+
+    try {
+      const { error } = await supabase.functions.invoke('submit-restore', { body: form });
+      if (error) {
+        setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить. Попробуйте позже или напишите руководству лично.'));
+        setState('error');
+        return;
+      }
+      setState('ok');
+    } catch {
+      setErrorMessage('Сервис временно недоступен. Попробуйте отправить заявку позже.');
+      setState('error');
+    }
   };
 
   const field = (label: string, key: keyof typeof form, placeholder: string, optional = false) => (
@@ -53,7 +67,7 @@ export default function RestoreForm() {
       ) : state === 'ok' ? (
         <section className="glass rounded-2xl p-8 border border-green-500/20 text-center">
           <p className="text-green-300 text-sm mb-4">✅ Заявка на восстановление отправлена руководству</p>
-          <button onClick={() => { setForm({ fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '', discordContact: '' }); setState('idle'); }}
+          <button onClick={() => { setForm({ fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '' }); setErrorMessage(''); setState('idle'); }}
             className="px-5 py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-gray-300 hover:text-white transition-all text-sm font-mono">
             Отправить ещё одну
           </button>
@@ -70,14 +84,11 @@ export default function RestoreForm() {
                 placeholder="Почему были уволены..."
                 className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none placeholder:text-gray-600" />
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {field('Ранг до увольнения', 'previousRank', 'Например: 5')}
-              {field('Дискорд для связи', 'discordContact', 'Например: username')}
-            </div>
+            {field('Ранг до увольнения', 'previousRank', 'Например: 5')}
 
             {state === 'error' && (
               <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                ❌ Не удалось отправить. Попробуйте позже или напишите руководству лично.
+                {errorMessage}
               </p>
             )}
 

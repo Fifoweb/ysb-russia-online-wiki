@@ -12,7 +12,6 @@ const initialForm = {
   joinDate: '',
   personalFileScreenshot: '',
   currentRank: '',
-  discordContact: '',
 };
 
 export default function TransferForm() {
@@ -104,7 +103,6 @@ export default function TransferForm() {
                   onChange={set('currentRank')} placeholder="Например: 5" required
                   className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
               </label>
-              {field('Ваш Discord', 'discordContact', 'Например: username', 60)}
             </div>
 
             {state === 'error' && (

@@ -62,13 +62,12 @@ Deno.serve(async (req) => {
   const joinDate = readText('joinDate');
   const personalFileScreenshot = readText('personalFileScreenshot');
   const currentRank = readText('currentRank');
-  const discordContact = readText('discordContact');
 
-  if (!fullNameStatic || !sourceFaction || !joinDate || !personalFileScreenshot || !currentRank || !discordContact) {
+  if (!fullNameStatic || !sourceFaction || !joinDate || !personalFileScreenshot || !currentRank) {
     return json(400, { error: 'Заполните все обязательные поля' });
   }
   if (fullNameStatic.length > 100 || sourceFaction.length > 100 || personalFileScreenshot.length > 300 ||
-    currentRank.length > 2 || discordContact.length > 60) {
+    currentRank.length > 2) {
     return json(400, { error: 'Слишком длинные поля' });
   }
   if (!isValidDate(joinDate)) return json(400, { error: 'Укажите корректную дату вступления' });
@@ -111,7 +110,7 @@ Deno.serve(async (req) => {
       { name: 'Дата вступления во фракцию', value: joinDate.split('-').reverse().join('.') },
       { name: 'Скриншот личного дела из планшета', value: personalFileScreenshot },
       { name: 'Ранг', value: currentRank, inline: true },
-      { name: 'Discord для связи', value: discordContact, inline: true },
+      { name: 'Discord ID', value: discordId, inline: true },
     ],
     footer: { text: `By ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),

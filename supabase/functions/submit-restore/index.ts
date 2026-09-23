@@ -35,13 +35,12 @@ Deno.serve(async (req) => {
   const rankEvidence = (body.rankEvidence || '').trim();
   const dismissReason = (body.dismissReason || '').trim();
   const previousRank = (body.previousRank || '').trim();
-  const discordContact = (body.discordContact || '').trim();
 
-  if (!fullNameStatic || !rankEvidence || !dismissReason || !previousRank || !discordContact) {
+  if (!fullNameStatic || !rankEvidence || !dismissReason || !previousRank) {
     return json(400, { error: 'Заполните все обязательные поля' });
   }
   if (fullNameStatic.length > 100 || factionScreenshot.length > 300 || rankEvidence.length > 300 ||
-    dismissReason.length > 500 || previousRank.length > 30 || discordContact.length > 60) {
+    dismissReason.length > 500 || previousRank.length > 30) {
     return json(400, { error: 'Слишком длинные поля' });
   }
 
@@ -66,10 +65,11 @@ Deno.serve(async (req) => {
   const identity = (user.identities || []).find((i: { provider?: string }) => i.provider === 'discord') as
     | { id?: string; identity_data?: { sub?: string } }
     | undefined;
-  const rawDiscordId = identity?.identity_data?.sub || meta.sub || identity?.id || null;
-  // Разрешаем пинг только настоящего Discord snowflake, полученного из OAuth-профиля.
-  const discordId = rawDiscordId && /^\d{17,20}$/.test(rawDiscordId) ? rawDiscordId : null;
-  const mention = discordId ? `<@${discordId}>` : discordName;
+  const discordId = identity?.identity_data?.sub;
+  if (!discordId || !/^\d{17,20}$/.test(discordId)) {
+    return json(403, { error: 'Для отправки войдите через Discord' });
+  }
+  const mention = `<@${discordId}>`;
   const roleMentions = restoreNotificationRoleIds.map((roleId) => `<@&${roleId}>`).join(' ');
 
   const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       { name: 'Доказательства пребывания на ранге', value: rankEvidence },
       { name: 'Причина увольнения', value: dismissReason },
       { name: 'Ранг до увольнения', value: previousRank },
-      { name: 'Дискорд для связи', value: discordContact },
+      { name: 'Discord ID', value: discordId, inline: true },
     ],
     footer: { text: `By ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       // Обычный webhook может упомянуть только автора заявки и конкретные роли руководства.
       allowed_mentions: {
         parse: [],
-        users: discordId ? [discordId] : [],
+        users: [discordId],
         roles: restoreNotificationRoleIds,
       },
     }),
