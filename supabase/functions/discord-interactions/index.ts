@@ -382,15 +382,15 @@ Deno.serve(async (req) => {
       const rank = interaction.data?.values?.[0];
       if (!rank) return json(400, { error: 'no rank' });
       const embed = interaction.message?.embeds?.[0] || {};
-      // Заявитель — из тега в тексте исходного сообщения
-      const applicantTag = (interaction.message?.content?.match(/<@(\d+)>/) || [])[0] || '—';
       const approved = {
+        // Исходные поля заявки остаются видимыми, к ним добавляется решение.
+        ...embed,
         title: '✅ Восстановление одобрено',
         color: 3066993, // зелёный
         fields: [
-          { name: 'Сотрудник', value: applicantTag },
-          { name: 'Восстановлен на ранг', value: `${rank} ранг` },
-          { name: 'Принял', value: whoTag },
+          ...(embed.fields || []),
+          { name: 'Восстановлен на ранг', value: `${rank} ранг`, inline: true },
+          { name: 'Одобрил', value: whoTag, inline: true },
         ],
         footer: { text: `Дата: ${nowStr}` },
         timestamp: new Date().toISOString(),
