@@ -20,5 +20,5 @@ export const navItems: NavItem[] = [
   { id: 'restore', label: 'Восстановление сотрудника', icon: '♻️', path: '/restore' },
   { id: 'transfer', label: 'Переводы в ГИБДД', icon: '🚔', path: '/transfer' },
   { id: 'resign', label: 'Заявление на увольнение', icon: '📄', path: '/resign' },
-  { id: 'complaints', label: 'Анонимные жалобы', icon: '🕵️', path: '/complaints' },
+  { id: 'complaints', label: 'Жалобы', icon: '🕵️', path: '/complaints' },
 ];

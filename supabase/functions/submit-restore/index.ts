@@ -60,12 +60,13 @@ Deno.serve(async (req) => {
   // wait=true заставляет Discord вернуть ошибку или созданное сообщение, а не только 204.
   webhookUrl.searchParams.set('wait', 'true');
 
-  const meta = (user.user_metadata || {}) as Record<string, string | undefined>;
-  const discordName = meta.full_name || meta.name || 'неизвестно';
+  const meta = (user.user_metadata || {}) as Record<string, unknown>;
   const identity = (user.identities || []).find((i: { provider?: string }) => i.provider === 'discord') as
-    | { id?: string; identity_data?: { sub?: string } }
+    | { id?: string; identity_data?: Record<string, unknown> & { sub?: string } }
     | undefined;
-  const discordId = identity?.identity_data?.sub;
+  const identityData = identity?.identity_data || {};
+  const discordName = String(identityData.username || identityData.global_name || meta.user_name || meta.preferred_username || meta.full_name || meta.name || 'неизвестно').slice(0, 80);
+  const discordId = identityData.sub;
   if (!discordId || !/^\d{17,20}$/.test(discordId)) {
     return json(403, { error: 'Для отправки войдите через Discord' });
   }
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
       { name: 'Ранг до увольнения', value: previousRank },
       { name: 'Discord ID', value: discordId, inline: true },
     ],
-    footer: { text: `By ${discordName} • ${dateStr}` },
+    footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
 

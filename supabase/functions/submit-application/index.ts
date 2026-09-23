@@ -70,11 +70,12 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
 
   const meta = (user.user_metadata || {}) as Record<string, string | undefined>;
-  const discordName = meta.full_name || meta.name || 'неизвестно';
   const identity = (user.identities || []).find((i: { provider?: string }) => i.provider === 'discord') as
-    | { id?: string; identity_data?: { sub?: string } }
+    | { id?: string; identity_data?: Record<string, unknown> & { sub?: string } }
     | undefined;
-  const discordId = identity?.identity_data?.sub || meta.sub || identity?.id || null;
+  const identityData = identity?.identity_data || {};
+  const discordName = String(identityData.username || identityData.global_name || meta.user_name || meta.preferred_username || meta.full_name || meta.name || 'неизвестно').slice(0, 80);
+  const discordId = identityData.sub || meta.sub || identity?.id || null;
   if (!discordId) {
     return json(403, { error: 'Для использования формы нужен Discord-аккаунт с ролью «Верифицированный».' });
   }
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
         { name: '📎 Доказательства', value: evidence },
         { name: '📱 Скрин с планшета', value: screenshotLink },
       ],
-      footer: { text: `Отправил: ${discordName} • ${dateStr}` },
+      footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
       timestamp: new Date().toISOString(),
     };
 
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
       { name: 'Набрано баллов', value: points, inline: true },
       { name: '📎 Доказательства', value: evidence.slice(0, 1000) },
     ],
-    footer: { text: `Начальник ГИБДД • ${dateStr}` },
+    footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
 

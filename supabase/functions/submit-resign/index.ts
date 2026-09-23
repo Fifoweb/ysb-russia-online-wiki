@@ -94,7 +94,10 @@ Deno.serve(async (req) => {
   }
 
   const identity = user.identities?.find((item) => item.provider === 'discord');
-  const discordId = (identity?.identity_data as Record<string, unknown> | null)?.sub;
+  const identityData = (identity?.identity_data || {}) as Record<string, unknown>;
+  const metadata = (user.user_metadata || {}) as Record<string, unknown>;
+  const discordId = identityData.sub;
+  const discordName = String(identityData.username || identityData.global_name || metadata.user_name || metadata.preferred_username || metadata.full_name || metadata.name || 'неизвестно').slice(0, 80);
   if (typeof discordId !== 'string' || !/^\d{17,20}$/.test(discordId)) {
     return json(403, { error: 'Для отправки войдите через Discord' });
   }
@@ -121,7 +124,7 @@ Deno.serve(async (req) => {
       { name: 'Скриншот личного дела', value: `[Открыть скриншот](${screenshotUrl.href})` },
       { name: 'Discord ID', value: discordId, inline: true },
     ],
-    footer: { text: `Отправлено через сайт • ${dateStr}` },
+    footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
   const response = await sendWebhookMessage(

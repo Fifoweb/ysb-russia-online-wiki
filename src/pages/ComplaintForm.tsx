@@ -43,8 +43,8 @@ export default function ComplaintForm() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">🕵️ Анонимные жалобы</h2>
-        <p className="text-sm text-gray-500 !mb-0">Жалоба отправляется без имени и упоминания автора. Указанный контакт и Discord ID из авторизации будут видны сотрудникам канала.</p>
+        <h2 className="!mt-0 !mb-2">🕵️ Жалобы</h2>
+        <p className="text-sm text-gray-500 !mb-0">Автор не упоминается в сообщении. Discord-ник, Discord ID и указанный контакт будут видны сотрудникам канала.</p>
       </div>
 
       {loading ? null : !user ? (

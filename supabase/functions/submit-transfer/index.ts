@@ -46,9 +46,10 @@ Deno.serve(async (req) => {
   if (error || !user) return json(401, { error: 'Не авторизован' });
 
   const identity = (user.identities || []).find((item: { provider?: string }) => item.provider === 'discord') as
-    | { identity_data?: { sub?: string } }
+    | { identity_data?: Record<string, unknown> & { sub?: string } }
     | undefined;
-  const discordId = identity?.identity_data?.sub;
+  const identityData = identity?.identity_data || {};
+  const discordId = identityData.sub;
   if (!discordId || !/^\d{17,20}$/.test(discordId)) {
     return json(403, { error: 'Для отправки войдите через Discord' });
   }
@@ -89,8 +90,8 @@ Deno.serve(async (req) => {
   }
   webhookUrl.searchParams.set('wait', 'true');
 
-  const metadata = (user.user_metadata || {}) as Record<string, string | undefined>;
-  const discordName = metadata.full_name || metadata.name || 'неизвестно';
+  const metadata = (user.user_metadata || {}) as Record<string, unknown>;
+  const discordName = String(identityData.username || identityData.global_name || metadata.user_name || metadata.preferred_username || metadata.full_name || metadata.name || 'неизвестно').slice(0, 80);
   const dateStr = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow',
     day: '2-digit',
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
       { name: 'Ранг', value: currentRank, inline: true },
       { name: 'Discord ID', value: discordId, inline: true },
     ],
-    footer: { text: `By ${discordName} • ${dateStr}` },
+    footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
   };
 
