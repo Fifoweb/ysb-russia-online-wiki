@@ -1,10 +1,28 @@
 import { useMemo, useState } from 'react';
-import { Calculator, Download, Minus, Package, Plus, Search, Shield, Stethoscope, Trash2, Wrench, X } from 'lucide-react';
+import { Calculator, Download, Minus, Package, Plus, Search, Trash2, X } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { craftCategoryLabels, craftItems, type CraftCategory, type CraftItem } from '../data/crafts';
 
-const categoryIcons: Record<CraftCategory, typeof Shield> = { medical: Stethoscope, weapon: Shield, technical: Wrench };
 const categoryColors: Record<CraftCategory, string> = { medical: '#ef4444', weapon: '#55c271', technical: '#38bdf8' };
+const materialIcons: Record<CraftCategory, { viewBox: string; path: string }> = {
+  medical: {
+    viewBox: '0 0 16 16',
+    path: 'M13.941,3.353H13.63V2.859a.217.217,0,0,0-.217-.217H12.2a.217.217,0,0,0-.217.217v.494H10.9V2.8A1.531,1.531,0,0,0,9.37,1.273H6.63A1.531,1.531,0,0,0,5.1,2.8v.551H4.022V2.859A.217.217,0,0,0,3.8,2.642H2.587a.217.217,0,0,0-.217.217v.494H2.059A2.059,2.059,0,0,0,0,5.412v7.257a2.059,2.059,0,0,0,2.059,2.059H13.941A2.059,2.059,0,0,0,16,12.668V5.412A2.059,2.059,0,0,0,13.941,3.353ZM5.971,2.8a.66.66,0,0,1,.659-.659H9.37a.66.66,0,0,1,.659.659v.551H5.971ZM8,12.748A3.708,3.708,0,1,1,11.708,9.04,3.708,3.708,0,0,1,8,12.748Zm2.784-2.8a.217.217,0,0,1-.217.218H9.131v1.436a.217.217,0,0,1-.217.217H7.087a.217.217,0,0,1-.217-.217V10.172H5.435a.217.217,0,0,1-.217-.217l0-1.827a.217.217,0,0,1,.217-.218H6.869V6.474a.217.217,0,0,1,.217-.217H8.913a.217.217,0,0,1,.217.217V7.908h1.434a.217.217,0,0,1,.217.217Z',
+  },
+  weapon: {
+    viewBox: '0 0 16 16',
+    path: 'M.184,13.883l1.462,1.731s.516.73.887.183,2.595-5.054,2.595-5.054.223-.368.379.289,1.44,3.837,1.44,3.837a.29.29,0,0,0,.427.07l1.168-.984s.315-.1-.011-.723S7,9.767,7,9.767,6.83,9.4,7.083,9.19s.58-.457.58-.457.146-.3.547.016a8.064,8.064,0,0,0,3.319,1.917,18.325,18.325,0,0,0,3.317.5s.379.014.432-.633.023-1.55.023-1.55.036-.432-.343-.444a5.255,5.255,0,0,1-1.832-.119,14.9,14.9,0,0,1-2.641-1.588.285.285,0,0,1-.021-.461L12.643,4.53s.327-.244.13-.478l-.3-.35L15.94.778,15.282,0,11.82,2.923l-.284-.257s-.253-.22-.467-.04S8.62,4.658,8.62,4.658s-.63-.666-1.1-.272L4.219,7.178a.63.63,0,0,0-.026.521c.1.352.274.6.1.749L3.2,9.367a.95.95,0,0,0-.223.723,1.786,1.786,0,0,1-.734,1.419c-.5.427-1.962,1.623-1.962,1.623A.537.537,0,0,0,.184,13.883Z',
+  },
+  technical: {
+    viewBox: '0 0 18.3 8.5',
+    path: 'M7.454.254,7.187,0,.761,4.171l.411.411c.159.159,3.922,3.887,6.894,3.887h.142l7.031-4.687H13.691C11.1,3.781,7.49.288,7.454.254Z',
+  },
+};
+
+function MaterialIcon({ category, size = 16 }: { category: CraftCategory; size?: number }) {
+  const icon = materialIcons[category];
+  return <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox={icon.viewBox} fill="currentColor"><path d={icon.path} /></svg>;
+}
 
 const loadExportImage = (src: string) => new Promise<HTMLImageElement | null>(resolve => {
   const image = new Image();
@@ -148,7 +166,7 @@ export default function Crafts() {
         <label className="catalog-search"><Search size={18} aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Поиск предметов..." aria-label="Поиск предметов" /></label>
         <div className="segmented" role="tablist" aria-label="Категория крафтов">
           <button className={category === 'all' ? 'active' : ''} onClick={() => setCategory('all')} role="tab" aria-selected={category === 'all'}>Все</button>
-          {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => { const Icon = categoryIcons[key]; return <button key={key} className={category === key ? 'active' : ''} onClick={() => setCategory(key)} role="tab" aria-selected={category === key}><Icon size={16} style={{ color: categoryColors[key] }} /><span className="hidden sm:inline">{craftCategoryLabels[key]}</span></button>; })}
+          {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => <button key={key} className={category === key ? 'active' : ''} onClick={() => setCategory(key)} role="tab" aria-selected={category === key}><MaterialIcon category={key} size={16} /><span className="hidden sm:inline">{craftCategoryLabels[key]}</span></button>)}
         </div>
       </div>
 
@@ -163,11 +181,10 @@ export default function Crafts() {
           <div className="craft-grid">
             {filtered.map(item => {
               const quantity = selected[item.id] || 0;
-              const Icon = categoryIcons[item.category];
               return <article className={`craft-card ${quantity ? 'selected' : ''}`} key={item.id}>
                 <div className="craft-card-title"><span>{item.name}</span>{quantity > 0 && <span className="quantity-badge">×{quantity}</span>}</div>
                 <div className="craft-image-wrap"><span className="craft-fallback" aria-hidden="true"><Package size={24} /></span><img src={item.image} alt={item.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /></div>
-                <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><Icon size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg.toFixed(3)} кг</span></div>
+                <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><MaterialIcon category={item.category} size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg.toFixed(3)} кг</span></div>
                 {quantity ? <div className="quantity-control"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={16} /></button><input type="number" min="1" max="999" value={quantity} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name}`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={16} /></button></div> : <button className="add-craft" onClick={() => changeQuantity(item, 1)}><Plus size={16} /> В калькулятор</button>}
               </article>;
             })}
@@ -182,7 +199,7 @@ export default function Crafts() {
               <div className="calculator-item-controls"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={15} /></button><span>{quantity}</span><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={15} /></button><button onClick={() => setQuantity(item, '0')} aria-label={`Удалить ${item.name}`}><X size={15} /></button></div>
             </div>; })}</div>
             <div className="calculator-summary" aria-live="polite"><div className="calculator-summary-title">ИТОГО</div>
-              {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => { const Icon = categoryIcons[key]; return <div className="calculator-summary-row" key={key} style={{ color: categoryColors[key] }}><Icon size={16} /><span>{craftCategoryLabels[key]} материалы</span><strong>{materialTotals[key].toLocaleString('ru-RU')}</strong></div>; })}
+              {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => <div className="calculator-summary-row" key={key} style={{ color: categoryColors[key] }}><MaterialIcon category={key} size={16} /><span>{craftCategoryLabels[key]} материалы</span><strong>{materialTotals[key].toLocaleString('ru-RU')}</strong></div>)}
               <div className="calculator-summary-row calculator-weight"><Package size={16} /><span>Общий вес</span><strong>{totalWeight.toFixed(2)} кг</strong></div>
             </div>
             <div className="calculator-actions"><button className="calculator-export" onClick={exportCalculator} disabled={isExporting}><Download size={16} /> {isExporting ? 'Подготовка...' : 'Экспорт'}</button><button className="calculator-clear" onClick={() => setSelected({})}><Trash2 size={16} /> Очистить</button></div>
