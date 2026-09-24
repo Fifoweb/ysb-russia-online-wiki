@@ -9,13 +9,21 @@
     <meta name="description" content="ГИБДД Вики Россия Онлайн — курс службы, формы, крафты и онлайн сервера Тверской." />
     <title>ГИБДД Вики · Россия Онлайн</title>
     <script>
-      // SPA route restore: 404.html parked the requested path in sessionStorage
+      // SPA route restore: 404.html forwards the requested path through the URL.
       (function () {
-        var p = sessionStorage.getItem('spa-path');
+        var params = new URLSearchParams(window.location.search);
+        var p = params.get('__spa');
+        if (!p) {
+          try {
+            p = window.sessionStorage.getItem('spa-path');
+            if (p) window.sessionStorage.removeItem('spa-path');
+          } catch (_) {
+            p = null;
+          }
+        }
         if (p) {
-          sessionStorage.removeItem('spa-path');
           var base = '/ysb-russia-online-wiki';
-          window.history.replaceState(null, '', (window.location.pathname.indexOf(base) === 0 ? base : '') + p);
+          window.history.replaceState(null, '', base + p);
         }
       })();
     </script>
