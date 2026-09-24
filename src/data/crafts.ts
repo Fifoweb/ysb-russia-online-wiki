@@ -11,7 +11,7 @@ export interface CraftItem {
 }
 
 const cdn = 'https://cdn.majestic-files.net/public/master/static/img/inventory/items/';
-const localCraftIds = new Set(['124', '168', '169', '170', '252', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5500', '5502', '5504', '5506', '5508']);
+const localCraftIds = new Set(['124', '168', '169', '170', '252', '281', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5500', '5502', '5504', '5506', '5508']);
 
 export const craftCategoryLabels: Record<CraftCategory, string> = {
   medical: 'Медицинские',
