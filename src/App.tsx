@@ -23,10 +23,13 @@ import Servers from './pages/Servers';
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
-const stripBase = (p: string) => (BASE && p.startsWith(BASE) ? p.slice(BASE.length) || '/' : p);
+const normalizePath = (p: string) => {
+  const stripped = BASE && p.startsWith(BASE) ? p.slice(BASE.length) || '/' : p;
+  return stripped.length > 1 ? stripped.replace(/\/+$/, '') : stripped;
+};
 
 export default function App() {
-  const [path, setPath] = useState(() => stripBase(window.location.pathname));
+  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   // Sidebar is always open on desktop (layout already reserves space for it),
   // hidden by default on mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -44,7 +47,7 @@ export default function App() {
 
   useEffect(() => {
     const handlePop = () => {
-      setPath(stripBase(window.location.pathname));
+      setPath(normalizePath(window.location.pathname));
     };
     window.addEventListener('popstate', handlePop);
     return () => window.removeEventListener('popstate', handlePop);
