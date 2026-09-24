@@ -312,7 +312,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .calculator-item-controls { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
 .calculator-item-controls button { width: 25px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; color: #938985; background: transparent; cursor: pointer; }
 .calculator-item-controls button:hover { color: #fff; background: #241e1e; }
-.calculator-item-controls span { width: 21px; color: #f0e9e7; text-align: center; font-size: 12px; font-weight: 700; }
+.calculator-item-controls input { width: 27px; height: 28px; padding: 0; border: 0; outline: 0; color: #f0e9e7; background: transparent; text-align: center; font-size: 12px; font-weight: 700; }
+.calculator-item-controls input:focus { border-radius: 4px; background: #241e1e; box-shadow: 0 0 0 1px rgba(227,66,66,.55); }
 .calculator-summary { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.12); }
 .calculator-summary-title { margin-bottom: 9px; color: #837975; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-align: center; }
 .calculator-summary-row { display: flex; align-items: center; gap: 7px; min-height: 27px; font-size: 11px; }
