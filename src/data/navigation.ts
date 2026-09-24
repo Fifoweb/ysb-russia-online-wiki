@@ -25,5 +25,6 @@ export const navItems: NavItem[] = [
   { id: 'transfer', label: 'Переводы в ГИБДД', icon: '⇄', path: '/transfer', section: 'Заявки' },
   { id: 'department', label: 'Заявки в отдел', icon: '⇢', path: '/department', section: 'Заявки' },
   { id: 'resign', label: 'Заявление на увольнение', icon: '□', path: '/resign', section: 'Заявки' },
-  { id: 'complaints', label: 'Жалобы', icon: '!', path: '/complaints', section: 'Заявки' },
+  { id: 'complaints', label: 'Анонимные жалобы на вышестоящее руководство', icon: '!', path: '/complaints', section: 'Заявки' },
+  { id: 'employee-complaint', label: 'Жалобы на сотрудников', icon: '!', path: '/employee-complaint', section: 'Заявки' },
 ];

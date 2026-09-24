@@ -44,7 +44,8 @@ export default function ComplaintForm() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">🕵️ Жалобы</h2>
+        <h2 className="!mt-0 !mb-2">Анонимные жалобы на вышестоящее руководство</h2>
+        <p className="!m-0 text-sm text-slate-300">Здесь можно пожаловаться на действия начальников и вышестоящего руководства.</p>
       </div>
 
       {loading ? <FormLoader /> : !user ? (

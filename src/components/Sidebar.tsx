@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRightLeft, ArrowUpRight, BookOpen, Boxes, Eye, FileText, Gavel,
-  GraduationCap, Hammer, Home, LogOut, MessageSquare, RotateCcw, Search,
+  GraduationCap, Hammer, Home, LogOut, MessageSquare, MessageSquareText, RotateCcw, Search,
   Server, Shield, TrendingUp, UserCheck, UsersRound, Wrench, X, type LucideIcon,
 } from 'lucide-react';
 import { navItems } from '../data/navigation';
@@ -22,7 +22,7 @@ const itemIcons: Record<string, LucideIcon> = {
   appendix: FileText, handbook: BookOpen, report: ArrowUpRight,
   promotion: TrendingUp, appeal: RotateCcw, 'reprimand-work': Hammer,
   restore: UserCheck, transfer: ArrowRightLeft, department: UsersRound, resign: LogOut,
-  complaints: MessageSquare,
+  complaints: MessageSquare, 'employee-complaint': MessageSquareText,
 };
 
 export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: SidebarProps) {
