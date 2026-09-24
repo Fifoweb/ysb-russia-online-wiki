@@ -22,6 +22,8 @@ const titles: Record<string, string> = {
   '/restore': 'Восстановление сотрудника',
   '/transfer': 'Переводы в ГИБДД',
   '/resign': 'Заявление на увольнение',
+  '/promotion': 'Запрос на повышение',
+  '/complaints': 'Жалобы',
   '/crafts': 'Крафты ГИБДД',
   '/servers': 'Онлайн Тверского',
 };
@@ -49,13 +51,13 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <button onClick={onToggleSidebar} className="icon-button menu-button" title={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-label={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'}>{sidebarOpen ? <X size={19} /> : <Menu size={19} />}</button>
+        <button onClick={onToggleSidebar} className="icon-button menu-button" title={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-label={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={sidebarOpen} aria-controls="site-navigation">{sidebarOpen ? <X size={19} /> : <Menu size={19} />}</button>
         <button className="brand-lockup" onClick={() => onNavigate('/')} aria-label="На главную">
-          <span className="brand-white">РОССИЯ</span><span className="brand-red">ОНЛАЙН</span><span className="brand-divider">*</span><span className="brand-unit">ГИБДД</span>
+          <span className="brand-white">РОССИЯ</span><span className="brand-accent">ОНЛАЙН</span><span className="brand-divider">·</span><span className="brand-unit">ГИБДД</span>
         </button>
         <div className="header-title"><span>ГИБДД Вики</span>{currentTitle !== '/' && titles[currentTitle] && <span className="header-crumb">/ {titles[currentTitle]}</span>}</div>
         <div className="header-actions">
-          <button className="online-pill" onClick={() => onNavigate('/servers')} title="Открыть онлайн Тверского"><span className="status-dot" /> <span>{online === null ? 'Тверской' : `${online.toLocaleString('ru-RU')} · Тверской`}</span></button>
+          <button className="online-pill" onClick={() => onNavigate('/servers')} title="Открыть онлайн Тверского"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /> <span>{online === null ? 'Тверской' : `${online.toLocaleString('ru-RU')} · Тверской`}</span></button>
           <button className="icon-button" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))} title="Поиск" aria-label="Поиск"><Search size={18} /></button>
 
         {enabled && (user ? (
@@ -67,7 +69,7 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
             ) : (
             <span className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-sm"><UserRound size={15} /></span>
             )}
-            <span className="text-xs text-gray-200 font-medium max-w-[120px] truncate">{displayName}</span>
+            <span className="profile-name text-xs text-gray-200 font-medium max-w-[120px] truncate">{displayName}</span>
           </button>
         ) : (
           <button onClick={() => signInWithDiscord()} className="discord-button">Войти</button>

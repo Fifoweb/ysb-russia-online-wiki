@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, BookOpen, ClipboardList, Factory, FileText, Search, Server, ShieldCheck, Wifi } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { navItems } from '../data/navigation';
@@ -16,6 +17,7 @@ const courseCards = [
 ];
 
 export default function Home({ onNavigate }: HomeProps) {
+  const reduceMotion = useReducedMotion();
   const [online, setOnline] = useState<number | null>(null);
   useEffect(() => { const controller = new AbortController(); fetchTverskoyOnline(controller.signal).then(value => setOnline(value.current)).catch(() => undefined); return () => controller.abort(); }, []);
 
@@ -25,11 +27,26 @@ export default function Home({ onNavigate }: HomeProps) {
       <div className="home-intro-mark" aria-hidden="true"><span>ГИБДД</span><strong>ВИКИ</strong></div>
     </section>
 
-    <section className="status-strip"><div className="status-strip-label"><span className="status-dot" /><span>{online === null ? 'Получаем данные' : `${online.toLocaleString('ru-RU')} онлайн в Тверском`}</span></div><button onClick={() => onNavigate('/servers')}>Подробнее <ArrowRight size={15} /></button></section>
+    <section className="status-strip"><div className="status-strip-label"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /><span>{online === null ? 'Получаем данные' : `${online.toLocaleString('ru-RU')} онлайн в Тверском`}</span></div><button onClick={() => onNavigate('/servers')}>Подробнее <ArrowRight size={15} /></button></section>
 
     <div className="section-heading"><div><p className="eyebrow">НАВИГАЦИЯ</p><h2>Все разделы</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))}><Search size={16} /> Поиск по Wiki</button></div>
     <div className="catalog-cards">
-      {courseCards.map(card => { const item = navItems.find(nav => nav.id === card.id); const Icon = card.icon; return <button key={card.id} className="catalog-card" onClick={() => onNavigate(item?.path || '/')}><div className="catalog-card-icon"><Icon size={22} /></div><div className="catalog-card-body"><h3>{card.title}</h3><p>{card.desc}</p><span>{card.count}</span></div><ArrowRight className="card-arrow" size={18} /></button>; })}
+      {courseCards.map((card, index) => {
+        const item = navItems.find(nav => nav.id === card.id);
+        const Icon = card.icon;
+        return (
+          <motion.button key={card.id} className="catalog-card" onClick={() => onNavigate(item?.path || '/')}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            whileHover={reduceMotion ? undefined : { y: -4 }}
+            viewport={{ once: true, amount: 0.18 }}
+            transition={{ duration: reduceMotion ? 0 : 0.42, delay: reduceMotion ? 0 : (index % 3) * 0.06 }}>
+            <div className="catalog-card-icon"><Icon size={22} /></div>
+            <div className="catalog-card-body"><h3>{card.title}</h3><p>{card.desc}</p><span>{card.count}</span></div>
+            <ArrowRight className="card-arrow" size={18} />
+          </motion.button>
+        );
+      })}
     </div>
 
     <div className="section-heading compact"><div><p className="eyebrow">ИНСТРУМЕНТЫ</p><h2>Для ежедневной работы</h2></div></div>

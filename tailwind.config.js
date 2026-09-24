@@ -5,12 +5,20 @@ export default {
     extend: {
       colors: {
         bg: {
-          DEFAULT: '#0a0a0f',
-          card: 'rgba(15, 15, 25, 0.6)',
-          elevated: 'rgba(20, 20, 35, 0.8)',
+          DEFAULT: '#020617',
+          card: 'rgba(8, 27, 54, 0.74)',
+          elevated: 'rgba(12, 39, 75, 0.9)',
+        },
+        // Existing pages use purple utilities. Map them to the system blue palette
+        // so every route shares the new theme without changing document content.
+        purple: {
+          50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe',
+          300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6',
+          600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af',
+          900: '#172554', 950: '#0b1734',
         },
         acid: {
-          violet: '#a855f7',
+          violet: '#3b82f6',
           blue: '#3b82f6',
           cyan: '#06b6d4',
           lime: '#a3e635',

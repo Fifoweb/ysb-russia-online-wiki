@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Home from './pages/Home';
@@ -29,6 +29,7 @@ const normalizePath = (p: string) => {
 };
 
 export default function App() {
+  const reduceMotion = useReducedMotion();
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   // Sidebar is always open on desktop (layout already reserves space for it),
   // hidden by default on mobile
@@ -42,8 +43,8 @@ export default function App() {
     setPath(newPath);
     // Close the sidebar only on mobile — on desktop it stays as the user left it
     if (window.innerWidth < 1024) setSidebarOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, [reduceMotion]);
 
   useEffect(() => {
     const handlePop = () => {
@@ -82,7 +83,15 @@ export default function App() {
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
       <main className="site-main pt-20 px-4 md:px-8 pb-20 min-h-screen relative z-10">
-        <AnimatePresence mode="wait"><div key={path}>{renderPage()}</div></AnimatePresence>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={path}
+            initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.24, ease: 'easeOut' }}>
+            {renderPage()}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

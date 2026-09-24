@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PageTransition from '../components/PageTransition';
+import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
@@ -63,7 +64,7 @@ export default function TransferForm() {
         <h2 className="!mt-0 !mb-2">🚔 Переводы в ГИБДД</h2>
       </div>
 
-      {loading ? null : !user ? (
+      {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
           <p className="text-gray-400 text-sm mb-4">🔒 Заявки на перевод могут отправлять только авторизованные через Discord пользователи.</p>
           <button onClick={() => signInWithDiscord()}

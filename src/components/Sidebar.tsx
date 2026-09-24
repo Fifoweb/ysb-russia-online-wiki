@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Boxes, FileText, Home, Search, Server, X } from 'lucide-react';
+import {
+  ArrowRightLeft, ArrowUpRight, BookOpen, Boxes, Eye, FileText, Gavel,
+  GraduationCap, Hammer, Home, LogOut, MessageSquare, RotateCcw, Search,
+  Server, Shield, TrendingUp, UserCheck, Wrench, X, type LucideIcon,
+} from 'lucide-react';
 import { navItems } from '../data/navigation';
 import { searchIndex, SearchEntry } from '../data/search';
 import { requestDocOpen } from '../lib/docOpen';
@@ -11,6 +15,15 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
+const itemIcons: Record<string, LucideIcon> = {
+  home: Home, crafts: Wrench, servers: Server, basics: Shield,
+  check: Search, control: Eye, discipline: Gavel, practice: GraduationCap,
+  appendix: FileText, handbook: BookOpen, report: ArrowUpRight,
+  promotion: TrendingUp, appeal: RotateCcw, 'reprimand-work': Hammer,
+  restore: UserCheck, transfer: ArrowRightLeft, resign: LogOut,
+  complaints: MessageSquare,
+};
 
 export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -55,7 +68,7 @@ export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: S
 
   return (
     <>
-      <motion.aside initial={{ x: -320 }} animate={{ x: isOpen ? 0 : -320 }}
+      <motion.aside id="site-navigation" initial={{ x: -320 }} animate={{ x: isOpen ? 0 : -320 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="wiki-drawer">
         <div className="drawer-heading"><div><p className="eyebrow">НАВИГАЦИЯ</p><h2>ГИБДД Вики</h2></div><button className="icon-button" onClick={onToggle} title="Закрыть меню" aria-label="Закрыть меню"><X size={18} /></button></div>
@@ -63,7 +76,26 @@ export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: S
           className="drawer-search"><Search size={17} /><span>Поиск по Wiki</span><kbd>Ctrl K</kbd>
         </button>
         <nav className="drawer-nav">
-          {['Обзор', 'Каталоги', 'Курс', 'Заявки'].map(section => { const Icon = sectionIcons[section as keyof typeof sectionIcons]; return <div className="drawer-section" key={section}><div className="drawer-section-title"><Icon size={14} /> {section}</div>{navItems.filter(item => item.section === section).map(item => <button key={item.id} onClick={() => { onNavigate(item.path); onToggle(); }} className={`drawer-link ${currentPath === item.path ? 'active' : ''}`}><span className="drawer-icon">{item.icon}</span><span>{item.label}</span>{currentPath === item.path && <motion.span layoutId="activeNav" className="drawer-active" />}</button>)}</div>; })}
+          {['Обзор', 'Каталоги', 'Курс', 'Заявки'].map(section => {
+            const SectionIcon = sectionIcons[section as keyof typeof sectionIcons];
+            return (
+              <div className="drawer-section" key={section}>
+                <div className="drawer-section-title"><SectionIcon size={14} /> {section}</div>
+                {navItems.filter(item => item.section === section).map(item => {
+                  const ItemIcon = itemIcons[item.id] || FileText;
+                  return (
+                    <button key={item.id} onClick={() => { onNavigate(item.path); onToggle(); }}
+                      className={`drawer-link ${currentPath === item.path ? 'active' : ''}`}
+                      aria-current={currentPath === item.path ? 'page' : undefined}>
+                      <span className="drawer-icon"><ItemIcon size={17} strokeWidth={1.8} /></span>
+                      <span>{item.label}</span>
+                      {currentPath === item.path && <motion.span layoutId="activeNav" className="drawer-active" />}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
         <div className="drawer-foot">Редакция 2.0 · ГИБДД Россия Онлайн</div>
       </motion.aside>
@@ -72,15 +104,15 @@ export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: S
         {searchOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-[15vh]"
-            onClick={() => setSearchOpen(false)}>
+            onClick={() => setSearchOpen(false)} role="dialog" aria-modal="true" aria-label="Поиск по Wiki">
             <motion.div initial={{ opacity: 0, scale: 0.95, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               onClick={e => e.stopPropagation()}
               className="w-full max-w-xl glass rounded-2xl overflow-hidden border border-purple-500/20 glow-border">
               <div className="flex items-center gap-3 px-5 py-4 border-b border-purple-500/10">
-                <span className="text-lg">🔎</span>
+                <Search size={18} className="text-blue-300" aria-hidden="true" />
                 <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
-                  placeholder="Поиск по Wiki..." className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm" />
+                  placeholder="Поиск по Wiki..." aria-label="Поисковый запрос" className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm" />
                 <kbd className="text-[10px] px-2 py-1 rounded bg-purple-500/15 text-purple-400 font-mono">ESC</kbd>
               </div>
               <div className="max-h-[50vh] overflow-y-auto">
