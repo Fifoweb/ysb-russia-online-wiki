@@ -11,6 +11,7 @@ export interface CraftItem {
 }
 
 const cdn = 'https://cdn.majestic-files.net/public/master/static/img/inventory/items/';
+const localCraftIds = new Set(['124', '168', '169', '170', '252', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5500', '5502', '5504', '5506', '5508']);
 
 export const craftCategoryLabels: Record<CraftCategory, string> = {
   medical: 'Медицинские',
@@ -19,7 +20,7 @@ export const craftCategoryLabels: Record<CraftCategory, string> = {
 };
 
 const item = (id: string, name: string, category: CraftCategory, materials: number, weightKg: number, type: string, imageId = id): CraftItem => ({
-  id, name, category, materials, weightKg, image: `${cdn}${['168', '169', '170', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5028', '5500', '5502', '5504', '5506', '5508', '334', '347', '456', '5000'].includes(imageId) ? 'ro/' : ''}${imageId}.webp`,
+  id, name, category, materials, weightKg, image: localCraftIds.has(id) ? `${import.meta.env.BASE_URL}crafts/${id}.png` : `${cdn}${['168', '169', '170', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5028', '5500', '5502', '5504', '5506', '5508', '334', '347', '456', '5000'].includes(imageId) ? 'ro/' : ''}${imageId}.webp`,
   sourcePath: `/ru/items/${type}/${id}`,
 });
 

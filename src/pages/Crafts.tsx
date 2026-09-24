@@ -65,7 +65,7 @@ export default function Crafts() {
               const Icon = categoryIcons[item.category];
               return <article className={`craft-card ${quantity ? 'selected' : ''}`} key={item.id}>
                 <div className="craft-card-title"><span>{item.name}</span>{quantity > 0 && <span className="quantity-badge">×{quantity}</span>}</div>
-                <div className="craft-image-wrap"><span className="craft-fallback" aria-hidden="true">{item.name.slice(0, 1)}</span><img src={item.image} alt={item.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; }} /></div>
+                <div className="craft-image-wrap"><span className="craft-fallback" aria-hidden="true"><Package size={24} /></span><img src={item.image} alt={item.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /></div>
                 <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><Icon size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg.toFixed(3)} кг</span></div>
                 {quantity ? <div className="quantity-control"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={16} /></button><input type="number" min="1" max="999" value={quantity} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name}`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={16} /></button></div> : <button className="add-craft" onClick={() => changeQuantity(item, 1)}><Plus size={16} /> В калькулятор</button>}
               </article>;
