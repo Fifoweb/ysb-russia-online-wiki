@@ -244,6 +244,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .status-strip-label { display: flex; align-items: center; gap: 9px; }
 .status-strip button, .text-button { display: inline-flex; align-items: center; gap: 6px; border: 0; color: #dbeafe; background: none; font-size: 12px; cursor: pointer; }
 .status-strip button:hover, .text-button:hover { color: var(--wiki-accent); }
+.family-invite { display: flex; align-items: center; gap: 18px; padding: 20px 24px; margin: -18px 0 42px; border: 1px solid rgba(125,211,252,.26); border-radius: 14px; background: linear-gradient(110deg, rgba(14,48,90,.82), rgba(5,20,43,.78)); box-shadow: 0 16px 38px rgba(0,8,27,.18); }
+.family-invite-icon { width: 46px; height: 46px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(125,211,252,.28); border-radius: 12px; color: #7dd3fc; background: rgba(59,130,246,.14); }
+.family-invite-copy { min-width: 0; flex: 1; }
+.family-invite-copy .eyebrow { margin-bottom: 5px; color: #7dd3fc; }
+.family-invite h2 { margin: 0 0 4px; color: #f0f7ff; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.family-invite-copy p:last-child { margin: 0; color: var(--wiki-muted); font-size: 12px; line-height: 1.5; }
+.family-invite-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-height: 40px; padding: 9px 14px; border: 1px solid rgba(125,211,252,.38); border-radius: 9px; color: #e0f2fe; background: rgba(59,130,246,.2); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; transition: transform .2s, border-color .2s, background .2s; }
+.family-invite-link:hover { transform: translateY(-2px); border-color: #7dd3fc; background: rgba(59,130,246,.34); }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 0 0 18px; }
 .section-heading.compact { margin-top: 42px; }
 .section-heading h2 { margin: 5px 0 0; font-size: 23px; letter-spacing: -.03em; }
@@ -377,7 +385,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @keyframes loader-spin { to { transform: rotate(360deg); } }
 
 @supports (animation-timeline: view()) {
-  .wiki-content > section.glass, .home-page > .section-heading { animation: reveal-panel linear both; animation-timeline: view(); animation-range: entry 0% cover 20%; }
+  .wiki-content > section.glass, .home-page > .section-heading, .home-page > .family-invite { animation: reveal-panel linear both; animation-timeline: view(); animation-range: entry 0% cover 20%; }
 }
 @keyframes reveal-panel { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -386,6 +394,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 640px) { .site-header-inner { width: calc(100% - 20px); gap: 9px; } .brand-lockup { order: 1; } .menu-button { order: 0; } .header-title { display: none; } .header-actions { order: 2; margin-left: auto; } .online-pill { padding: 8px 4px; } .home-intro { min-height: 0; padding: 32px 22px; } .home-intro-photo { aspect-ratio: 1.55; } .home-lead { font-size: 15px; } .catalog-cards, .tool-grid { grid-template-columns: 1fr; } .section-heading { align-items: start; flex-direction: column; } .toolbar { display: block; } .segmented { margin-top: 8px; overflow-x: auto; } .craft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; } .craft-image-wrap { height: 124px; } .craft-card-title { min-height: 55px; font-size: 11px; } .page-heading-row { align-items: start; flex-direction: column; } .period-tabs { align-self: stretch; } .period-tabs button { flex: 1; } }
 @media (max-width: 760px) { .online-pill { display: none; } .site-main { padding-top: 88px; } }
 @media (max-width: 640px) { .wiki-content table { display: block; max-width: 100%; overflow-x: auto; } .wiki-content > .glass:first-child { margin-bottom: 18px; } .site-main { padding-bottom: 50px; } .status-strip { margin-bottom: 32px; } .application-heading { align-items: flex-start; gap: 13px; } .application-heading-icon { width: 44px; height: 44px; border-radius: 12px; } }
+@media (max-width: 640px) { .family-invite { flex-wrap: wrap; gap: 14px; padding: 18px; margin: -8px 0 34px; } .family-invite-copy { flex: 1 1 calc(100% - 64px); } .family-invite-link { width: 100%; } }
 @media (max-width: 450px) { .brand-unit, .brand-divider, .profile-name { display: none; } .brand-white, .brand-accent { font-size: 14px; } .header-actions { gap: 6px; } }
-@media (prefers-reduced-motion: reduce) { .wiki-content > section.glass, .home-page > .section-heading { animation: none !important; } .home-intro-photo, .home-intro:hover .home-intro-photo, .home-intro:hover .home-intro-photo img { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wiki-content > section.glass, .home-page > .section-heading, .home-page > .family-invite { animation: none !important; } .home-intro-photo, .home-intro:hover .home-intro-photo, .home-intro:hover .home-intro-photo img { transform: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

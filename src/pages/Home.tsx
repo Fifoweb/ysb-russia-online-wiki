@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, BookOpen, ClipboardList, Factory, FileText, Search, Server, ShieldCheck, Wifi } from 'lucide-react';
+import { ArrowRight, BookOpen, ClipboardList, ExternalLink, Factory, FileText, Search, Server, ShieldCheck, UsersRound, Wifi } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { navItems } from '../data/navigation';
 import { fetchTverskoyOnline } from '../lib/online';
@@ -32,6 +32,18 @@ export default function Home({ onNavigate }: HomeProps) {
     </section>
 
     <section className="status-strip"><div className="status-strip-label"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /><span>{online === null ? 'Получаем данные' : `${online.toLocaleString('ru-RU')} онлайн в Тверском`}</span></div><button onClick={() => onNavigate('/servers')}>Подробнее <ArrowRight size={15} /></button></section>
+
+    <section className="family-invite" aria-labelledby="family-invite-title">
+      <span className="family-invite-icon" aria-hidden="true"><UsersRound size={22} /></span>
+      <div className="family-invite-copy">
+        <p className="eyebrow">СООБЩЕСТВО</p>
+        <h2 id="family-invite-title">Заявка в семью Комиссаровы</h2>
+        <p>Перейдите на сервер семьи в Discord, чтобы подать заявку.</p>
+      </div>
+      <a href="https://discord.gg/freakez" target="_blank" rel="noopener noreferrer" className="family-invite-link">
+        Открыть Discord <ExternalLink size={16} aria-hidden="true" />
+      </a>
+    </section>
 
     <div className="section-heading"><div><p className="eyebrow">НАВИГАЦИЯ</p><h2>Все разделы</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))}><Search size={16} /> Поиск по Wiki</button></div>
     <div className="catalog-cards">
