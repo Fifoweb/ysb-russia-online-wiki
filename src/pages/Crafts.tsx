@@ -4,6 +4,7 @@ import PageTransition from '../components/PageTransition';
 import { craftCategoryLabels, craftItems, type CraftCategory, type CraftItem } from '../data/crafts';
 
 const categoryColors: Record<CraftCategory, string> = { medical: '#ef4444', weapon: '#55c271', technical: '#38bdf8' };
+const quantityInputWidth = (quantity: number) => `${27 + Math.max(0, String(quantity).length - 1) * 8}px`;
 const materialIcons: Record<CraftCategory, { viewBox: string; path: string }> = {
   medical: {
     viewBox: '0 0 16 16',
@@ -185,7 +186,7 @@ export default function Crafts() {
                 <div className="craft-card-title"><span>{item.name}</span>{quantity > 0 && <span className="quantity-badge">×{quantity}</span>}</div>
                 <div className="craft-image-wrap"><span className="craft-fallback" aria-hidden="true"><Package size={24} /></span><img src={item.image} alt={item.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /></div>
                 <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><MaterialIcon category={item.category} size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg.toFixed(3)} кг</span></div>
-                {quantity ? <div className="quantity-control"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={16} /></button><input type="number" min="1" max="999" value={quantity} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name}`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={16} /></button></div> : <button className="add-craft" onClick={() => changeQuantity(item, 1)}><Plus size={16} /> В калькулятор</button>}
+                {quantity ? <div className="quantity-control"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={16} /></button><input type="number" min="1" max="999" value={quantity} style={{ width: quantityInputWidth(quantity) }} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name}`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={16} /></button></div> : <button className="add-craft" onClick={() => changeQuantity(item, 1)}><Plus size={16} /> В калькулятор</button>}
               </article>;
             })}
           </div>
@@ -196,7 +197,7 @@ export default function Crafts() {
           {selectedItems.length ? <>
             <div className="calculator-items">{selectedItems.map(item => { const quantity = selected[item.id] || 0; return <div className="calculator-item" key={item.id}>
               <div className="calculator-item-main"><div className="calculator-item-image"><img src={item.image} alt="" loading="eager" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /><Package size={16} aria-hidden="true" /></div><strong>{item.name}</strong></div>
-              <div className="calculator-item-controls"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={15} /></button><input type="number" min="1" max="999" value={quantity} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name} в калькуляторе`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={15} /></button><button onClick={() => setQuantity(item, '0')} aria-label={`Удалить ${item.name}`}><X size={15} /></button></div>
+              <div className="calculator-item-controls"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={15} /></button><input type="number" min="1" max="999" value={quantity} style={{ width: quantityInputWidth(quantity) }} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name} в калькуляторе`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={15} /></button><button onClick={() => setQuantity(item, '0')} aria-label={`Удалить ${item.name}`}><X size={15} /></button></div>
             </div>; })}</div>
             <div className="calculator-summary" aria-live="polite"><div className="calculator-summary-title">ИТОГО</div>
               {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => <div className="calculator-summary-row" key={key} style={{ color: categoryColors[key] }}><MaterialIcon category={key} size={16} /><span>{craftCategoryLabels[key]} материалы</span><strong>{materialTotals[key].toLocaleString('ru-RU')}</strong></div>)}
