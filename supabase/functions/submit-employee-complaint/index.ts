@@ -5,7 +5,7 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-const CHANNEL_ID = '1543107340016812144';
+const CHANNEL_ID = '1538937580421255239';
 const GIBDD_ROLE_IDS = ['1540269592927019038', '1540267656370716693'];
 const OTHER_ROLE_IDS = ['1538937566273732637'];
 const FACTIONS: Record<string, string> = {
