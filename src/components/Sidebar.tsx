@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Boxes, FileText, Home, Search, Server, X } from 'lucide-react';
 import { navItems } from '../data/navigation';
 import { searchIndex, SearchEntry } from '../data/search';
 import { requestDocOpen } from '../lib/docOpen';
@@ -44,36 +45,27 @@ export default function Sidebar({ currentPath, onNavigate, isOpen, onToggle }: S
     return () => window.removeEventListener('keydown', h);
   }, []);
 
+  useEffect(() => {
+    const open = () => setSearchOpen(true);
+    window.addEventListener('open-wiki-search', open);
+    return () => window.removeEventListener('open-wiki-search', open);
+  }, []);
+
+  const sectionIcons = { Обзор: Home, Каталоги: Boxes, Курс: BookOpen, Заявки: FileText };
+
   return (
     <>
-      <motion.aside initial={{ x: -280 }} animate={{ x: isOpen ? 0 : -280 }}
+      <motion.aside initial={{ x: -320 }} animate={{ x: isOpen ? 0 : -320 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed left-0 top-0 bottom-0 w-[260px] z-40 glass border-r border-purple-500/10 flex flex-col">
-        <div className="p-5 border-b border-purple-500/10">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-xl border border-purple-500/30">🛡️</div>
-            <div><div className="text-xs text-purple-400 font-mono tracking-wider">РО · ГИБДД</div><div className="text-sm font-bold text-white">УСБ Wiki</div></div>
-          </div>
-        </div>
+        className="wiki-drawer">
+        <div className="drawer-heading"><div><p className="eyebrow">НАВИГАЦИЯ</p><h2>ГИБДД Вики</h2></div><button className="icon-button" onClick={onToggle} title="Закрыть меню" aria-label="Закрыть меню"><X size={18} /></button></div>
         <button onClick={() => setSearchOpen(true)}
-          className="mx-4 mt-4 px-4 py-2.5 rounded-xl bg-white/5 border border-purple-500/15 text-sm text-gray-400 hover:border-purple-500/30 hover:text-gray-200 transition-all flex items-center gap-3 text-left">
-          <span>🔎</span><span>Поиск по Wiki</span>
-          <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 font-mono">Ctrl+K</kbd>
+          className="drawer-search"><Search size={17} /><span>Поиск по Wiki</span><kbd>Ctrl K</kbd>
         </button>
-        <nav className="flex-1 overflow-y-auto p-3 mt-2 space-y-1">
-          {navItems.map(item => (
-            <button key={item.id} onClick={() => onNavigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${currentPath === item.path
-                ? 'bg-purple-500/15 text-purple-300 border border-purple-500/25'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'}`}>
-              <span className="text-lg">{item.icon}</span><span className="font-medium">{item.label}</span>
-              {currentPath === item.path && <motion.div layoutId="activeNav" className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-400" />}
-            </button>
-          ))}
+        <nav className="drawer-nav">
+          {['Обзор', 'Каталоги', 'Курс', 'Заявки'].map(section => { const Icon = sectionIcons[section as keyof typeof sectionIcons]; return <div className="drawer-section" key={section}><div className="drawer-section-title"><Icon size={14} /> {section}</div>{navItems.filter(item => item.section === section).map(item => <button key={item.id} onClick={() => { onNavigate(item.path); onToggle(); }} className={`drawer-link ${currentPath === item.path ? 'active' : ''}`}><span className="drawer-icon">{item.icon}</span><span>{item.label}</span>{currentPath === item.path && <motion.span layoutId="activeNav" className="drawer-active" />}</button>)}</div>; })}
         </nav>
-        <div className="p-4 border-t border-purple-500/10">
-          <div className="text-[10px] text-gray-600 font-mono tracking-wider text-center">РЕДАКЦИЯ 2.0 · 09.2026</div>
-        </div>
+        <div className="drawer-foot">Редакция 2.0 · ГИБДД Россия Онлайн</div>
       </motion.aside>
       {isOpen && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={onToggle} />}
       <AnimatePresence>

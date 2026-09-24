@@ -18,6 +18,8 @@ import ResignForm from './pages/ResignForm';
 import TransferForm from './pages/TransferForm';
 import ComplaintForm from './pages/ComplaintForm';
 import PromotionForm from './pages/PromotionForm';
+import Crafts from './pages/Crafts';
+import Servers from './pages/Servers';
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -27,7 +29,7 @@ export default function App() {
   const [path, setPath] = useState(() => stripBase(window.location.pathname));
   // Sidebar is always open on desktop (layout already reserves space for it),
   // hidden by default on mobile
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigate = useCallback((newPath: string) => {
     const target = BASE + newPath;
@@ -66,20 +68,17 @@ export default function App() {
       case '/transfer': return <TransferForm />;
       case '/complaints': return <ComplaintForm />;
       case '/promotion': return <PromotionForm />;
+      case '/crafts': return <Crafts />;
+      case '/servers': return <Servers />;
       default: return <Home onNavigate={navigate} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#050508] text-gray-200">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 -right-20 w-[600px] h-[600px] bg-purple-500/[0.02] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 -left-20 w-[500px] h-[500px] bg-cyan-500/[0.02] rounded-full blur-3xl" />
-        <div className="absolute inset-0 bg-grid opacity-30" />
-      </div>
+    <div className="min-h-screen site-shell text-gray-200">
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
-      <main className={`${sidebarOpen ? 'lg:ml-[260px]' : ''} transition-[margin] duration-300 pt-20 px-4 md:px-8 pb-20 min-h-screen relative z-10 max-w-5xl mx-auto`}>
+      <main className="site-main pt-20 px-4 md:px-8 pb-20 min-h-screen relative z-10">
         <AnimatePresence mode="wait"><div key={path}>{renderPage()}</div></AnimatePresence>
       </main>
     </div>
