@@ -24,7 +24,11 @@ export default function Home({ onNavigate }: HomeProps) {
   return <PageTransition className="home-page">
     <section className="home-intro">
       <div className="home-intro-copy"><p className="eyebrow">РОССИЯ ОНЛАЙН · ГИБДД</p><h1>ГИБДД Вики</h1><p className="home-lead">Рабочая энциклопедия для сотрудников ГИБДД: курс службы, формы, кадровые документы и инструменты фракции в одном месте.</p><div className="home-actions"><button className="primary-button" onClick={() => onNavigate('/basics')}>Начать курс <ArrowRight size={17} /></button><button className="secondary-button" onClick={() => onNavigate('/crafts')}>Открыть крафты</button></div></div>
-      <div className="home-intro-mark" aria-hidden="true"><span>ГИБДД</span><strong>ВИКИ</strong></div>
+      <figure className="home-intro-photo">
+        <img src={`${import.meta.env.BASE_URL}gibdd-hero.webp`}
+          alt="Патрульный автомобиль дорожной полиции на вечерней городской улице"
+          width={1200} height={751} loading="eager" />
+      </figure>
     </section>
 
     <section className="status-strip"><div className="status-strip-label"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /><span>{online === null ? 'Получаем данные' : `${online.toLocaleString('ru-RU')} онлайн в Тверском`}</span></div><button onClick={() => onNavigate('/servers')}>Подробнее <ArrowRight size={15} /></button></section>
