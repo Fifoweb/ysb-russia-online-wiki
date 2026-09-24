@@ -298,13 +298,33 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .craft-calculator { position: sticky; top: 85px; min-height: 170px; padding: 15px; border: 1px solid var(--wiki-border); border-radius: 9px; background: var(--wiki-surface); }
 .calculator-heading, .panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .calculator-heading h2, .panel-heading h2 { display: flex; align-items: center; gap: 7px; margin: 5px 0 0; font-size: 15px; }
+.calculator-subtitle { margin: 6px 0 0; color: #837975; font-size: 11px; }
 .calculator-empty { min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: #655c59; text-align: center; }
 .calculator-empty p { max-width: 190px; margin: 0; font-size: 11px; line-height: 1.5; }
-.calculator-items { max-height: 230px; overflow-y: auto; margin-top: 16px; }
-.calculator-item { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); color: #aaa09d; font-size: 11px; }
-.calculator-item strong { color: #eee7e5; }
-.calculator-total { display: grid; grid-template-columns: 1fr auto; gap: 7px; margin-top: 13px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.12); color: #837975; font-size: 11px; }
-.calculator-total strong { color: #f0e9e7; font-size: 12px; }
+.calculator-items { max-height: 330px; overflow-y: auto; margin-top: 16px; }
+.calculator-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 58px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.05); color: #aaa09d; font-size: 11px; }
+.calculator-item-main { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.calculator-item-main strong { overflow: hidden; color: #eee7e5; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.calculator-item-image { position: relative; width: 47px; height: 42px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: #0e0c0c; }
+.calculator-item-image img { width: 100%; height: 100%; object-fit: contain; }
+.calculator-item-image > svg { display: none; color: #786e6b; }
+.calculator-item-image.image-error > svg { display: block; }
+.calculator-item-controls { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.calculator-item-controls button { width: 25px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; color: #938985; background: transparent; cursor: pointer; }
+.calculator-item-controls button:hover { color: #fff; background: #241e1e; }
+.calculator-item-controls span { width: 21px; color: #f0e9e7; text-align: center; font-size: 12px; font-weight: 700; }
+.calculator-summary { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.12); }
+.calculator-summary-title { margin-bottom: 9px; color: #837975; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-align: center; }
+.calculator-summary-row { display: flex; align-items: center; gap: 7px; min-height: 27px; font-size: 11px; }
+.calculator-summary-row span { min-width: 0; flex: 1; }
+.calculator-summary-row strong { color: #f0e9e7; font-size: 12px; }
+.calculator-summary-row.calculator-weight { color: #837975; }
+.calculator-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 13px; }
+.calculator-actions button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 7px; color: #dfd7d4; background: #0e0c0c; font-size: 11px; font-weight: 700; cursor: pointer; }
+.calculator-actions button:hover { color: #fff; background: #241e1e; }
+.calculator-actions button:disabled { opacity: .65; cursor: wait; }
+.calculator-export { color: #f0e9e7 !important; background: rgba(227,66,66,.16) !important; }
+.calculator-export:hover { background: rgba(227,66,66,.28) !important; }
 .online-hero { padding: 24px; margin-bottom: 14px; background: radial-gradient(circle at 8% 80%, rgba(69,201,120,.1), transparent 38%), var(--wiki-surface); }
 .online-value { display: flex; align-items: center; gap: 12px; color: #f4efed; font-size: clamp(48px, 9vw, 84px); font-weight: 800; letter-spacing: -.07em; line-height: 1; }
 .online-caption { display: flex; align-items: center; gap: 7px; margin-top: 13px; color: #a79d99; font-size: 13px; }

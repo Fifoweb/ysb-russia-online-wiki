@@ -1,22 +1,40 @@
 import { useMemo, useState } from 'react';
-import { Calculator, Minus, Package, Plus, Search, Shield, Stethoscope, Wrench, X } from 'lucide-react';
+import { Calculator, Download, Minus, Package, Plus, Search, Shield, Stethoscope, Trash2, Wrench, X } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { craftCategoryLabels, craftItems, type CraftCategory, type CraftItem } from '../data/crafts';
 
 const categoryIcons: Record<CraftCategory, typeof Shield> = { medical: Stethoscope, weapon: Shield, technical: Wrench };
 const categoryColors: Record<CraftCategory, string> = { medical: '#ef4444', weapon: '#55c271', technical: '#38bdf8' };
 
+const loadExportImage = (src: string) => new Promise<HTMLImageElement | null>(resolve => {
+  const image = new Image();
+  const timeout = window.setTimeout(() => resolve(null), 1500);
+  const finish = (result: HTMLImageElement | null) => { window.clearTimeout(timeout); resolve(result); };
+  image.crossOrigin = 'anonymous';
+  image.onload = () => finish(image);
+  image.onerror = () => finish(null);
+  image.src = src;
+});
+
 export default function Crafts() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<'all' | CraftCategory>('all');
   const [selected, setSelected] = useState<Record<string, number>>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   const filtered = useMemo(() => craftItems.filter(item =>
     (category === 'all' || item.category === category) && item.name.toLowerCase().includes(query.trim().toLowerCase())
   ), [category, query]);
   const selectedItems = craftItems.filter(item => selected[item.id]);
-  const totalMaterials = selectedItems.reduce((sum, item) => sum + item.materials * (selected[item.id] || 0), 0);
+  const totalItems = selectedItems.reduce((sum, item) => sum + (selected[item.id] || 0), 0);
   const totalWeight = selectedItems.reduce((sum, item) => sum + item.weightKg * (selected[item.id] || 0), 0);
+  const materialTotals = useMemo(() => (Object.keys(craftCategoryLabels) as CraftCategory[]).reduce((totals, key) => {
+    totals[key] = selectedItems
+      .filter(item => item.category === key)
+      .reduce((sum, item) => sum + item.materials * (selected[item.id] || 0), 0);
+    return totals;
+  }, {} as Record<CraftCategory, number>), [selectedItems, selected]);
+  const totalMaterials = (Object.keys(materialTotals) as CraftCategory[]).reduce((sum, key) => sum + materialTotals[key], 0);
 
   const changeQuantity = (item: CraftItem, delta: number) => {
     setSelected(current => {
@@ -33,6 +51,89 @@ export default function Crafts() {
       if (next) copy[item.id] = next; else delete copy[item.id];
       return copy;
     });
+  };
+
+  const exportCalculator = async () => {
+    if (!selectedItems.length || isExporting) return;
+
+    setIsExporting(true);
+    try {
+      const scale = 2;
+      const width = 760;
+      const padding = 32;
+      const itemHeight = 78;
+      const height = 190 + selectedItems.length * itemHeight + 220;
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.scale(scale, scale);
+      context.fillStyle = '#151212';
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = '#e9e1df';
+      context.font = '800 24px Inter, Arial, sans-serif';
+      context.fillText('Калькулятор крафта', padding, 45);
+      context.fillStyle = '#968b87';
+      context.font = '500 15px Inter, Arial, sans-serif';
+      context.fillText(`${totalItems} шт.  ·  ${totalMaterials.toLocaleString('ru-RU')} мат.  ·  ${totalWeight.toFixed(2)} кг`, padding, 72);
+
+      let y = 105;
+      for (const item of selectedItems) {
+        const quantity = selected[item.id] || 0;
+        context.fillStyle = '#0e0c0c';
+        context.fillRect(padding, y, width - padding * 2, 62);
+        const loadedImage = Array.from(document.querySelectorAll<HTMLImageElement>('.calculator-item-image img')).find(candidate => candidate.getAttribute('src') === item.image && candidate.complete && candidate.naturalWidth > 0);
+        const image = loadedImage || await loadExportImage(item.image);
+        if (image) {
+          const imageSize = 48;
+          const ratio = Math.min(imageSize / image.naturalWidth, imageSize / image.naturalHeight);
+          const imageWidth = image.naturalWidth * ratio;
+          const imageHeight = image.naturalHeight * ratio;
+          context.drawImage(image, padding + 10 + (imageSize - imageWidth) / 2, y + 7 + (imageSize - imageHeight) / 2, imageWidth, imageHeight);
+        }
+        context.fillStyle = '#eee7e5';
+        context.font = '700 15px Inter, Arial, sans-serif';
+        context.fillText(item.name, padding + 76, y + 36);
+        context.fillStyle = '#9f9591';
+      context.font = '500 14px Inter, Arial, sans-serif';
+      context.fillText(`×${quantity}`, width - padding - 50, y + 36);
+      y += itemHeight;
+      }
+
+      context.fillStyle = '#786e6b';
+      context.font = '800 11px Inter, Arial, sans-serif';
+      context.fillText('ИТОГО', padding, y + 5);
+      y += 29;
+      for (const key of Object.keys(craftCategoryLabels) as CraftCategory[]) {
+        context.fillStyle = categoryColors[key];
+        context.font = '600 14px Inter, Arial, sans-serif';
+        context.fillText(`${craftCategoryLabels[key]} материалы`, padding, y);
+        context.fillStyle = '#f0e9e7';
+        context.font = '800 14px Inter, Arial, sans-serif';
+        context.fillText(materialTotals[key].toLocaleString('ru-RU'), width - padding - 42, y);
+        y += 28;
+      }
+      context.fillStyle = '#968b87';
+      context.font = '600 14px Inter, Arial, sans-serif';
+      context.fillText('Общий вес', padding, y);
+      context.fillStyle = '#f0e9e7';
+      context.font = '800 14px Inter, Arial, sans-serif';
+      context.fillText(`${totalWeight.toFixed(2)} кг`, width - padding - 65, y);
+
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return;
+      const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      link.download = `gibdd-krafty-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = objectUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      window.setTimeout(() => { URL.revokeObjectURL(objectUrl); link.remove(); }, 30000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -74,10 +175,17 @@ export default function Crafts() {
         </div>
 
         <aside className={`craft-calculator ${selectedItems.length ? 'has-items' : ''}`} aria-label="Калькулятор крафта">
-          <div className="calculator-heading"><div><p className="eyebrow">ИНСТРУМЕНТ</p><h2><Calculator size={18} /> Калькулятор</h2></div>{selectedItems.length > 0 && <button className="icon-button" onClick={() => setSelected({})} title="Очистить калькулятор" aria-label="Очистить калькулятор"><X size={17} /></button>}</div>
+          <div className="calculator-heading"><div><p className="eyebrow">ИНСТРУМЕНТ</p><h2><Calculator size={18} /> Калькулятор крафта</h2>{selectedItems.length > 0 && <p className="calculator-subtitle">{totalItems} шт. · {totalMaterials.toLocaleString('ru-RU')} мат. · {totalWeight.toFixed(2)} кг</p>}</div></div>
           {selectedItems.length ? <>
-            <div className="calculator-items">{selectedItems.map(item => <div className="calculator-item" key={item.id}><span>{item.name}</span><strong>×{selected[item.id]}</strong></div>)}</div>
-            <div className="calculator-total"><span>Материалы</span><strong>{totalMaterials.toLocaleString('ru-RU')}</strong><span>Вес</span><strong>{totalWeight.toFixed(3)} кг</strong></div>
+            <div className="calculator-items">{selectedItems.map(item => { const quantity = selected[item.id] || 0; return <div className="calculator-item" key={item.id}>
+              <div className="calculator-item-main"><div className="calculator-item-image"><img src={item.image} alt="" loading="eager" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /><Package size={16} aria-hidden="true" /></div><strong>{item.name}</strong></div>
+              <div className="calculator-item-controls"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={15} /></button><span>{quantity}</span><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={15} /></button><button onClick={() => setQuantity(item, '0')} aria-label={`Удалить ${item.name}`}><X size={15} /></button></div>
+            </div>; })}</div>
+            <div className="calculator-summary" aria-live="polite"><div className="calculator-summary-title">ИТОГО</div>
+              {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => { const Icon = categoryIcons[key]; return <div className="calculator-summary-row" key={key} style={{ color: categoryColors[key] }}><Icon size={16} /><span>{craftCategoryLabels[key]} материалы</span><strong>{materialTotals[key].toLocaleString('ru-RU')}</strong></div>; })}
+              <div className="calculator-summary-row calculator-weight"><Package size={16} /><span>Общий вес</span><strong>{totalWeight.toFixed(2)} кг</strong></div>
+            </div>
+            <div className="calculator-actions"><button className="calculator-export" onClick={exportCalculator} disabled={isExporting}><Download size={16} /> {isExporting ? 'Подготовка...' : 'Экспорт'}</button><button className="calculator-clear" onClick={() => setSelected({})}><Trash2 size={16} /> Очистить</button></div>
           </> : <div className="calculator-empty"><Calculator size={24} /><p>Добавьте предметы в список, чтобы увидеть итог.</p></div>}
         </aside>
       </div>
