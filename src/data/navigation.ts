@@ -23,6 +23,7 @@ export const navItems: NavItem[] = [
   { id: 'reprimand-work', label: 'Отработка выговора', icon: '↯', path: '/reprimand-work', section: 'Заявки' },
   { id: 'restore', label: 'Восстановление сотрудника', icon: '↻', path: '/restore', section: 'Заявки' },
   { id: 'transfer', label: 'Переводы в ГИБДД', icon: '⇄', path: '/transfer', section: 'Заявки' },
+  { id: 'department', label: 'Заявки в отдел', icon: '⇢', path: '/department', section: 'Заявки' },
   { id: 'resign', label: 'Заявление на увольнение', icon: '□', path: '/resign', section: 'Заявки' },
   { id: 'complaints', label: 'Жалобы', icon: '!', path: '/complaints', section: 'Заявки' },
 ];

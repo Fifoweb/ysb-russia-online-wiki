@@ -16,6 +16,7 @@ import ReprimandWorkForm from './pages/ReprimandWorkForm';
 import RestoreForm from './pages/RestoreForm';
 import ResignForm from './pages/ResignForm';
 import TransferForm from './pages/TransferForm';
+import DepartmentApplicationForm from './pages/DepartmentApplicationForm';
 import ComplaintForm from './pages/ComplaintForm';
 import PromotionForm from './pages/PromotionForm';
 import Crafts from './pages/Crafts';
@@ -70,6 +71,7 @@ export default function App() {
       case '/restore': return <RestoreForm />;
       case '/resign': return <ResignForm />;
       case '/transfer': return <TransferForm />;
+      case '/department': return <DepartmentApplicationForm />;
       case '/complaints': return <ComplaintForm />;
       case '/promotion': return <PromotionForm />;
       case '/crafts': return <Crafts />;

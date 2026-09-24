@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRightLeft, ArrowUpRight, BookOpen, Boxes, Eye, FileText, Gavel,
   GraduationCap, Hammer, Home, LogOut, MessageSquare, RotateCcw, Search,
-  Server, Shield, TrendingUp, UserCheck, Wrench, X, type LucideIcon,
+  Server, Shield, TrendingUp, UserCheck, UsersRound, Wrench, X, type LucideIcon,
 } from 'lucide-react';
 import { navItems } from '../data/navigation';
 import { searchIndex, SearchEntry } from '../data/search';
@@ -21,7 +21,7 @@ const itemIcons: Record<string, LucideIcon> = {
   check: Search, control: Eye, discipline: Gavel, practice: GraduationCap,
   appendix: FileText, handbook: BookOpen, report: ArrowUpRight,
   promotion: TrendingUp, appeal: RotateCcw, 'reprimand-work': Hammer,
-  restore: UserCheck, transfer: ArrowRightLeft, resign: LogOut,
+  restore: UserCheck, transfer: ArrowRightLeft, department: UsersRound, resign: LogOut,
   complaints: MessageSquare,
 };
 
