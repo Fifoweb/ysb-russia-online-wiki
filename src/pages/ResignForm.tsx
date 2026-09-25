@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRight, CheckCircle2, FileText, Send, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -51,75 +52,91 @@ export default function ResignForm() {
 
   const field = (label: string, key: keyof typeof form, placeholder: string, maxLength: number) => (
     <label className="block">
-      <span className="text-xs font-bold text-gray-100">{label} <span className="text-red-400">*</span></span>
+      <span>{label} <span className="text-rose-300">*</span></span>
       <input value={form[key]} onChange={set(key)} placeholder={placeholder} maxLength={maxLength} required
-        className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
+        className="mt-2 w-full px-4 py-3 text-sm outline-none" />
     </label>
   );
 
   return (
-    <PageTransition className="wiki-content">
-      <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">📄 Заявление на увольнение</h2>
+    <PageTransition className="wiki-content application-panel">
+      <div className="glass rounded-2xl mb-6 application-heading">
+        <span className="application-heading-icon" aria-hidden="true"><FileText size={26} /></span>
+        <div>
+          <p className="eyebrow">КАДРОВЫЕ ЗАЯВКИ · УВОЛЬНЕНИЕ</p>
+          <h2 className="!mt-0 !mb-2">Заявление на увольнение</h2>
+          <p className="!m-0 text-sm text-slate-300">Укажите отдел, текущий ранг и ссылку на личное дело.</p>
+        </div>
       </div>
 
       {loading ? <FormLoader /> : !user ? (
-        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
-          <p className="text-gray-400 text-sm mb-4">🔒 Заявления могут отправлять только авторизованные через Discord пользователи.</p>
-          <button onClick={() => signInWithDiscord('identify guilds.members.read')}
-            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
-            Войти через Discord
+        <section className="glass rounded-2xl border border-sky-300/20 text-center">
+          <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
+          <p className="text-slate-200 text-sm mb-5">Заявления могут отправлять только авторизованные через Discord пользователи.</p>
+          <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')} className="primary-button mx-auto">
+            Войти через Discord <ArrowRight size={16} aria-hidden="true" />
           </button>
         </section>
       ) : !providerToken ? (
-        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
-          <p className="text-gray-400 text-sm mb-4">Для проверки роли нужно повторно войти через Discord и разрешить доступ к сведениям о членстве на сервере.</p>
-          <button onClick={() => signInWithDiscord('identify guilds.members.read')}
-            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
-            Продолжить через Discord
+        <section className="glass rounded-2xl border border-sky-300/20 text-center">
+          <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
+          <p className="text-slate-200 text-sm mb-5">Для проверки роли нужно повторно войти через Discord и разрешить доступ к сведениям о членстве на сервере.</p>
+          <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')} className="primary-button mx-auto">
+            Продолжить через Discord <ArrowRight size={16} aria-hidden="true" />
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl p-8 border border-green-500/20 text-center">
-          <p className="text-green-300 text-sm mb-4">✅ Заявление на увольнение отправлено руководству</p>
-          <button onClick={() => { setForm(initialForm); setErrorMessage(''); setState('idle'); }}
-            className="px-5 py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-gray-300 hover:text-white transition-all text-sm font-mono">
+        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
+          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
+          <p className="text-emerald-200 text-base font-semibold mb-5">Заявление на увольнение отправлено руководству</p>
+          <button type="button" onClick={() => { setForm(initialForm); setErrorMessage(''); setState('idle'); }}
+            className="secondary-button mx-auto">
             Отправить ещё одно
           </button>
         </section>
       ) : (
-        <section className="glass rounded-2xl p-8 border border-purple-500/10">
-          <div className="space-y-4">
-            {field('Имя Фамилия | static', 'fullNameStatic', 'Например: Стажер | Андрей Смирный | 75463', 100)}
-            {field('Отдел', 'department', 'Например: ГИБДД', 60)}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <section className="glass rounded-2xl border border-sky-300/15">
+          <div className="space-y-6">
+            <div>
+              <p className="eyebrow mb-2">01 · ДАННЫЕ СОТРУДНИКА</p>
+              {field('Имя Фамилия | static', 'fullNameStatic', 'Например: Стажер | Андрей Смирный | 75463', 100)}
+            </div>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">02 · ТЕКУЩАЯ СЛУЖБА</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {field('Отдел', 'department', 'Например: ГИБДД', 60)}
+                <label className="block">
+                  <span>Текущий ранг <span className="text-rose-300">*</span></span>
+                  <input type="number" min="1" max="15" inputMode="numeric" value={form.currentRank}
+                    onChange={set('currentRank')} placeholder="Например: 5" required
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+                </label>
+              </div>
+            </div>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">03 · ЛИЧНОЕ ДЕЛО</p>
               <label className="block">
-                <span className="text-xs font-bold text-gray-100">Текущий ранг <span className="text-red-400">*</span></span>
-                <input type="number" min="1" max="15" inputMode="numeric" value={form.currentRank}
-                  onChange={set('currentRank')} placeholder="Например: 5" required
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
-              </label>
-              <label className="block">
-                <span className="text-xs font-bold text-gray-100">Скриншот личного дела <span className="text-red-400">*</span></span>
+                <span>Скриншот личного дела <span className="text-rose-300">*</span></span>
                 <input type="url" value={form.recordScreenshot} onChange={set('recordScreenshot')}
                   placeholder="https://..." maxLength={300} required
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
+                  className="mt-2 w-full px-4 py-3 text-sm outline-none" />
               </label>
             </div>
 
             {state === 'error' && (
               <div className="space-y-3">
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">{errorMessage}</p>
-                <button onClick={() => signInWithDiscord('identify guilds.members.read')}
-                  className="text-sm text-[#9aa8ff] hover:text-white underline underline-offset-4">Повторно подключить Discord для проверки роли</button>
+                <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</p>
+                <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')}
+                  className="text-sm text-sky-300 hover:text-white underline underline-offset-4">Повторно подключить Discord для проверки роли</button>
               </div>
             )}
 
-            <button onClick={submit} disabled={!allFilled || state === 'sending'}
-              className="w-full py-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-              {state === 'sending' ? 'Отправка...' : '📄 Отправить заявление на увольнение'}
+            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending'}
+              className="primary-button w-full justify-center !py-3.5">
+              {state === 'sending' ? 'Отправка…' : 'Отправить заявление на увольнение'}
+              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
             </button>
-            <p className="text-[11px] text-gray-600 text-center !mb-0">Отправляется от вашего Discord-аккаунта: {(user.user_metadata as Record<string, string | undefined>)?.full_name || 'пользователь'}</p>
+            <p className="application-note text-center">Отправляется от вашего Discord-аккаунта: {(user.user_metadata as Record<string, string | undefined>)?.full_name || 'пользователь'}</p>
           </div>
         </section>
       )}

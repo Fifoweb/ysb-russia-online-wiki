@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRight, CheckCircle2, RotateCcw, Send, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -44,59 +45,79 @@ export default function RestoreForm() {
 
   const field = (label: string, key: keyof typeof form, placeholder: string, optional = false) => (
     <label className="block">
-      <span className="text-xs font-bold text-gray-100">{label} {optional ? <span className="text-gray-500 font-normal">(необязательно)</span> : <span className="text-red-400">*</span>}</span>
+      <span>{label} {optional ? <span className="text-slate-400 font-normal">(необязательно)</span> : <span className="text-rose-300">*</span>}</span>
       <input value={form[key]} onChange={set(key)} placeholder={placeholder}
-        className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600" />
+        className="mt-2 w-full px-4 py-3 text-sm outline-none" />
     </label>
   );
 
   return (
-    <PageTransition className="wiki-content">
-      <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">♻️ Восстановление сотрудника</h2>
+    <PageTransition className="wiki-content application-panel">
+      <div className="glass rounded-2xl mb-6 application-heading">
+        <span className="application-heading-icon" aria-hidden="true"><RotateCcw size={26} /></span>
+        <div>
+          <p className="eyebrow">КАДРОВЫЕ ЗАЯВКИ · ВОССТАНОВЛЕНИЕ</p>
+          <h2 className="!mt-0 !mb-2">Восстановление сотрудника</h2>
+          <p className="!m-0 text-sm text-slate-300">Расскажите о прежнем ранге и причине увольнения, приложите подтверждение.</p>
+        </div>
       </div>
 
       {loading ? <FormLoader /> : !user ? (
-        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
-          <p className="text-gray-400 text-sm mb-4">🔒 Заявки могут отправлять только авторизованные через Discord пользователи.</p>
-          <button onClick={() => signInWithDiscord()}
-            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
-            Войти через Discord
+        <section className="glass rounded-2xl border border-sky-300/20 text-center">
+          <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
+          <p className="text-slate-200 text-sm mb-5">Заявки могут отправлять только авторизованные через Discord пользователи.</p>
+          <button type="button" onClick={() => signInWithDiscord()} className="primary-button mx-auto">
+            Войти через Discord <ArrowRight size={16} aria-hidden="true" />
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl p-8 border border-green-500/20 text-center">
-          <p className="text-green-300 text-sm mb-4">✅ Заявка на восстановление отправлена руководству</p>
-          <button onClick={() => { setForm({ fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '' }); setErrorMessage(''); setState('idle'); }}
-            className="px-5 py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-gray-300 hover:text-white transition-all text-sm font-mono">
+        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
+          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
+          <p className="text-emerald-200 text-base font-semibold mb-5">Заявка на восстановление отправлена руководству</p>
+          <button type="button" onClick={() => { setForm({ fullNameStatic: '', factionScreenshot: '', rankEvidence: '', dismissReason: '', previousRank: '' }); setErrorMessage(''); setState('idle'); }}
+            className="secondary-button mx-auto">
             Отправить ещё одну
           </button>
         </section>
       ) : (
-        <section className="glass rounded-2xl p-8 border border-purple-500/10">
-          <div className="space-y-4">
-            {field('Имя Фамилия | static', 'fullNameStatic', 'Например: Стажер | Андрей Смирный | 75463')}
-            {field('Скриншот на одобренный запрос из дискорда гос.фракций (если после ban/warn)', 'factionScreenshot', 'Ссылка на скриншот...', true)}
-            {field('Доказательства пребывания на ранге', 'rankEvidence', 'Ссылка на скриншот/видео...')}
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Причина увольнения <span className="text-red-400">*</span></span>
-              <textarea value={form.dismissReason} onChange={set('dismissReason')} rows={3}
-                placeholder="Почему были уволены..."
-                className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none placeholder:text-gray-600" />
-            </label>
-            {field('Ранг до увольнения', 'previousRank', 'Например: 5')}
+        <section className="glass rounded-2xl border border-sky-300/15">
+          <div className="space-y-6">
+            <div>
+              <p className="eyebrow mb-2">01 · ДАННЫЕ СОТРУДНИКА</p>
+              {field('Имя Фамилия | static', 'fullNameStatic', 'Например: Стажер | Андрей Смирный | 75463')}
+            </div>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">02 · ПРЕЖНЯЯ СЛУЖБА</p>
+              <div className="space-y-5">
+                {field('Ранг до увольнения', 'previousRank', 'Например: 5')}
+                <label className="block">
+                  <span>Причина увольнения <span className="text-rose-300">*</span></span>
+                  <textarea value={form.dismissReason} onChange={set('dismissReason')} rows={3}
+                    placeholder="Почему были уволены..."
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none resize-y" />
+                </label>
+              </div>
+            </div>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">03 · ПОДТВЕРЖДЕНИЕ</p>
+              <div className="space-y-5">
+                {field('Доказательства пребывания на ранге', 'rankEvidence', 'Ссылка на скриншот/видео...')}
+                {field('Скриншот на одобренный запрос из дискорда гос.фракций (если после ban/warn)', 'factionScreenshot', 'Ссылка на скриншот...', true)}
+              </div>
+            </div>
 
             {state === 'error' && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
+              <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                 {errorMessage}
               </p>
             )}
 
-            <button onClick={submit} disabled={!allFilled || state === 'sending'}
-              className="w-full py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-200 hover:bg-purple-500/30 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-              {state === 'sending' ? 'Отправка...' : '♻️ Отправить заявку на восстановление'}
+            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending'}
+              className="primary-button w-full justify-center !py-3.5">
+              {state === 'sending' ? 'Отправка…' : 'Отправить заявку на восстановление'}
+              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
             </button>
-            <p className="text-[11px] text-gray-600 text-center !mb-0">Отправляется от вашего Discord-аккаунта: {(user.user_metadata as Record<string, string | undefined>)?.full_name || 'пользователь'}</p>
+            <p className="application-note text-center">Отправляется от вашего Discord-аккаунта: {(user.user_metadata as Record<string, string | undefined>)?.full_name || 'пользователь'}</p>
           </div>
         </section>
       )}

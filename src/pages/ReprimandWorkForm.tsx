@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRight, CheckCircle2, Hammer, Send, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -14,7 +15,7 @@ const initialForm = {
   evidence: '',
 };
 
-const inputClass = 'mt-1.5 w-full px-3 py-2.5 rounded-lg bg-white/5 border border-purple-500/20 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-600';
+const inputClass = 'mt-2 w-full px-4 py-3 text-sm outline-none';
 
 export default function ReprimandWorkForm() {
   const { user, loading, signInWithDiscord } = useAuth();
@@ -47,63 +48,78 @@ export default function ReprimandWorkForm() {
   };
 
   return (
-    <PageTransition className="wiki-content">
-      <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">🛠️ Отработка выговора</h2>
+    <PageTransition className="wiki-content application-panel">
+      <div className="glass rounded-2xl mb-6 application-heading">
+        <span className="application-heading-icon" aria-hidden="true"><Hammer size={26} /></span>
+        <div>
+          <p className="eyebrow">КАДРОВЫЕ ЗАЯВКИ · ДИСЦИПЛИНА</p>
+          <h2 className="!mt-0 !mb-2">Отработка выговора</h2>
+          <p className="!m-0 text-sm text-slate-300">Опишите выполненную работу и приложите подтверждающие материалы.</p>
+        </div>
       </div>
 
       {loading ? <FormLoader /> : !user ? (
-        <section className="glass rounded-2xl p-8 border border-purple-500/15 text-center">
-          <p className="text-gray-400 text-sm mb-4">Для отправки заявки войдите через Discord.</p>
-          <button onClick={() => signInWithDiscord()}
-            className="px-5 py-2.5 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/40 text-[#8b9aff] hover:bg-[#5865F2]/25 hover:text-white transition-all text-sm font-medium">
-            Войти через Discord
+        <section className="glass rounded-2xl border border-sky-300/20 text-center">
+          <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
+          <p className="text-slate-200 text-sm mb-5">Для отправки заявки войдите через Discord.</p>
+          <button type="button" onClick={() => signInWithDiscord()} className="primary-button mx-auto">
+            Войти через Discord <ArrowRight size={16} aria-hidden="true" />
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl p-8 border border-green-500/20 text-center">
-          <p className="text-green-300 text-sm mb-4">Заявка на отработку выговора отправлена.</p>
-          <button onClick={() => { setForm(initialForm); setState('idle'); }}
-            className="px-5 py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-gray-300 hover:text-white transition-all text-sm font-mono">
+        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
+          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
+          <p className="text-emerald-200 text-base font-semibold mb-5">Заявка на отработку выговора отправлена</p>
+          <button type="button" onClick={() => { setForm(initialForm); setState('idle'); }} className="secondary-button mx-auto">
             Отправить ещё одну
           </button>
         </section>
       ) : (
-        <section className="glass rounded-2xl p-8 border border-purple-500/10">
-          <div className="space-y-4">
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Ваш никнейм | статик <span className="text-red-400">*</span></span>
-              <input value={form.nick} onChange={set('nick')} maxLength={100} placeholder="Например: Kira_Comis | 155" className={inputClass} />
-            </label>
+        <section className="glass rounded-2xl border border-sky-300/15">
+          <div className="space-y-6">
+            <div>
+              <p className="eyebrow mb-2">01 · ДАННЫЕ СОТРУДНИКА</p>
+              <label className="block">
+                <span>Ваш никнейм | статик <span className="text-rose-300">*</span></span>
+                <input value={form.nick} onChange={set('nick')} maxLength={100} placeholder="Например: Kira_Comis | 155" className={inputClass} />
+              </label>
+            </div>
 
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Скрин вашего личного дела (планшета) с выданным выговором <span className="text-red-400">*</span></span>
-              <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} maxLength={300} placeholder="https://..." className={inputClass} />
-            </label>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">02 · ВЫГОВОР И ОТРАБОТКА</p>
+              <label className="block">
+                <span>Скрин вашего личного дела (планшета) с выданным выговором <span className="text-rose-300">*</span></span>
+                <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} maxLength={300} placeholder="https://..." className={inputClass} />
+              </label>
 
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Каким действием отрабатываете выговор <span className="text-red-400">*</span></span>
-              <textarea value={form.action} onChange={set('action')} rows={4} maxLength={1000}
-                placeholder="Опишите действие, которым отрабатываете выговор..." className={`${inputClass} resize-none`} />
-            </label>
+              <label className="block mt-5">
+                <span>Каким действием отрабатываете выговор <span className="text-rose-300">*</span></span>
+                <textarea value={form.action} onChange={set('action')} rows={4} maxLength={1000}
+                  placeholder="Опишите действие, которым отрабатываете выговор..." className={`${inputClass} resize-y`} />
+              </label>
+            </div>
 
-            <label className="block">
-              <span className="text-xs font-bold text-gray-100">Доказательства отработки (видеозапись / скрин) <span className="text-red-400">*</span></span>
-              <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
-                placeholder="Ссылка на видеозапись или скриншот..." className={`${inputClass} resize-none`} />
-            </label>
+            <div className="border-t border-sky-300/15 pt-6">
+              <p className="eyebrow mb-2">03 · ПОДТВЕРЖДЕНИЕ</p>
+              <label className="block">
+                <span>Доказательства отработки (видеозапись / скрин) <span className="text-rose-300">*</span></span>
+                <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
+                  placeholder="Ссылка на видеозапись или скриншот..." className={`${inputClass} resize-y`} />
+              </label>
+            </div>
 
             {state === 'error' && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                ❌ {errorMessage}
+              <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                {errorMessage}
               </p>
             )}
 
-            <button onClick={submit} disabled={!allFilled || state === 'sending'}
-              className="w-full py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-200 hover:bg-purple-500/30 transition-all font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-              {state === 'sending' ? 'Отправка...' : '🛠️ Отправить заявку'}
+            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending'}
+              className="primary-button w-full justify-center !py-3.5">
+              {state === 'sending' ? 'Отправка…' : 'Отправить заявку'}
+              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
             </button>
-            <p className="text-[11px] text-gray-600 text-center !mb-0">Discord ID будет добавлен в карточку автоматически.</p>
+            <p className="application-note text-center">Discord ID будет добавлен в карточку автоматически.</p>
           </div>
         </section>
       )}
