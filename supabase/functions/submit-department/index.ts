@@ -7,12 +7,24 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const THREAD_ID = '1540874839471165520';
-const NOTIFICATION_ROLE_ID = '1540269592927019038';
+type Route = { webhookSecret: string; threadId: string; notificationRoleId: string };
+const DEFAULT_ROUTE: Route = {
+  webhookSecret: 'DISCORD_DEPARTMENT_WEBHOOK_URL',
+  threadId: '1540874839471165520',
+  notificationRoleId: '1540269592927019038',
+};
+const ROUTES: Record<string, Route> = {
+  mb: { webhookSecret: 'DISCORD_DEPARTMENT_MB_WEBHOOK_URL', threadId: '1542235723921498184', notificationRoleId: '1542235140611379260' },
+  sdb: { webhookSecret: 'DISCORD_DEPARTMENT_SDB_WEBHOOK_URL', threadId: '1540875016298565723', notificationRoleId: '1540268801193672755' },
+  uku: { webhookSecret: 'DISCORD_DEPARTMENT_UKU_WEBHOOK_URL', threadId: '1540875076554203296', notificationRoleId: '1540268884987478096' },
+  ugk: { webhookSecret: 'DISCORD_DEPARTMENT_UGK_WEBHOOK_URL', threadId: '1540874785364377610', notificationRoleId: '1540269700443799583' },
+  uor: { webhookSecret: 'DISCORD_DEPARTMENT_UOR_WEBHOOK_URL', threadId: '1540874929795240080', notificationRoleId: '1540268999718342656' },
+  dps: { webhookSecret: 'DISCORD_DEPARTMENT_DPS_WEBHOOK_URL', threadId: '1542223019639046144', notificationRoleId: '1540268712282562610' },
+};
 const DEPARTMENTS: Record<string, string> = {
   ugk: 'УГК | Управление грузового контроля',
   usb: 'УСБ | Управление собственной безопасности',
-  udo: 'УДО | Управление дорожных ситуаций',
+  mb: 'МБ | Мотоциклетный Батальон',
   uor: 'УОР | Управление оперативного розыска',
   sdb: 'СДБ | Специальный дорожный батальон',
   uku: 'УКУ | Учебно-кадровое управление',
@@ -77,7 +89,8 @@ Deno.serve(async (req) => {
     return json(400, { error: 'Выберите разные отделы из списка' });
   }
 
-  const webhook = getWebhookUrl(Deno.env.get('DISCORD_DEPARTMENT_WEBHOOK_URL'));
+  const route = ROUTES[targetDepartment] ?? DEFAULT_ROUTE;
+  const webhook = getWebhookUrl(Deno.env.get(route.webhookSecret));
   if (!webhook) return json(503, { error: 'Отправка заявок в отдел временно не настроена' });
   try {
     const lookup = await fetch(webhook);
@@ -100,14 +113,14 @@ Deno.serve(async (req) => {
   }).replace(',', '');
   const destination = new URL(webhook);
   destination.searchParams.set('wait', 'true');
-  destination.searchParams.set('thread_id', THREAD_ID);
+  destination.searchParams.set('thread_id', route.threadId);
 
   try {
     const response = await fetch(destination, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: '📋 Новая заявка в отдел\n<@&' + NOTIFICATION_ROLE_ID + '>',
+        content: '📋 Заявка в отдел | Заявка от <@' + discordId + '>\n<@&' + route.notificationRoleId + '>',
         embeds: [{
           title: 'Заявка в отдел',
           color: 3840255,
@@ -121,7 +134,7 @@ Deno.serve(async (req) => {
           footer: { text: 'Отправил ДС ' + discordName + ' • ' + dateStr },
           timestamp: new Date().toISOString(),
         }],
-        allowed_mentions: { parse: [], roles: [NOTIFICATION_ROLE_ID] },
+        allowed_mentions: { parse: [], roles: [route.notificationRoleId], users: [discordId] },
       }),
     });
     if (!response.ok) {
