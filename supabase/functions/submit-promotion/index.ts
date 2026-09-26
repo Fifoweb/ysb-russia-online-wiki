@@ -64,7 +64,8 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   let report: URL;
   try {
     report = new URL(reportUrl);
-    if (report.protocol !== 'https:' || report.hostname !== 'discord.com' ||
+    if (report.protocol !== 'https:' || !['discord.com', 'discordapp.com'].includes(report.hostname) ||
+      report.port || report.username || report.password ||
       !/^\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/.test(report.pathname) || report.search || report.hash) {
       throw new Error('Invalid Discord message URL');
     }

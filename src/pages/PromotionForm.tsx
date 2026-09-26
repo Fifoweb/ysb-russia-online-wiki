@@ -23,7 +23,7 @@ export default function PromotionForm() {
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.targetRank);
-  const reportUrlValid = /^https:\/\/discord\.com\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/i.test(form.reportUrl.trim());
+  const reportUrlValid = /^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/i.test(form.reportUrl.trim());
   const allFilled = Boolean(form.fullNameStatic.trim() && rankValid && reportUrlValid);
 
   const submit = async () => {
@@ -96,7 +96,13 @@ export default function PromotionForm() {
               <p className="eyebrow mb-2">02 · ПОДТВЕРЖДЕНИЕ</p>
               <label className="block">
                 <span>Ссылка на отчёт (сообщение Discord) <span className="text-rose-300">*</span></span>
-                <input type="url" value={form.reportUrl} onChange={set('reportUrl')} maxLength={300} placeholder="https://discord.com/channels/..." className={inputClass} />
+                <input type="url" value={form.reportUrl} onChange={set('reportUrl')} maxLength={300} placeholder="https://discord.com/channels/..." className={inputClass}
+                  aria-invalid={Boolean(form.reportUrl.trim()) && !reportUrlValid} aria-describedby="promotion-report-url-hint" />
+                <span id="promotion-report-url-hint" className={form.reportUrl.trim() && !reportUrlValid ? 'mt-2 block text-xs text-amber-200' : 'mt-2 block text-xs text-slate-400'}>
+                  {form.reportUrl.trim() && !reportUrlValid
+                    ? 'Нужна ссылка на конкретное сообщение Discord: discord.com/channels/... или discordapp.com/channels/...'
+                    : 'Скопируйте ссылку на сообщение с отчётом в Discord.'}
+                </span>
               </label>
             </div>
             <div className="border-t border-sky-300/15 pt-5">
