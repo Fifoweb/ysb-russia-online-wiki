@@ -5,6 +5,8 @@ import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
+import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
+import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -33,6 +35,7 @@ export default function DepartmentApplicationForm() {
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const remainingSeconds = useApplicationCooldown(user?.id);
   const discordId = (user?.identities?.find((identity) => identity.provider === 'discord')?.identity_data as
     Record<string, unknown> | null)?.sub;
 
@@ -53,11 +56,11 @@ export default function DepartmentApplicationForm() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!supabase || !user || state === 'sending' || !allFilled) return;
+    if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
     setState('sending');
     setErrorMessage('');
     try {
-      const { error } = await supabase.functions.invoke('submit-department', { body: form });
+      const { error } = await invokeApplication('submit-department', { body: form }, user.id);
       if (error) {
         setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить заявку. Попробуйте ещё раз.'));
         setState('error');
@@ -81,6 +84,7 @@ export default function DepartmentApplicationForm() {
         </div>
       </div>
 
+      {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
           <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
@@ -153,7 +157,7 @@ export default function DepartmentApplicationForm() {
                 {errorMessage}
               </p>
             )}
-            <button type="submit" disabled={!allFilled || state === 'sending'}
+            <button type="submit" disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявку в отдел'}
               {state !== 'sending' && <Send size={17} aria-hidden="true" />}

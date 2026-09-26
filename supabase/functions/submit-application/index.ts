@@ -2,6 +2,7 @@
 // Сессия пользователя проверяется шлюзом Supabase (JWT обязателен),
 // здесь дополнительно достаём пользователя для подписи в сообщении.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -108,7 +109,7 @@ async function checkVerifiedRole(botToken: string, channelId: string, discordId:
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withSubmissionCooldown(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -245,4 +246,4 @@ Deno.serve(async (req) => {
   });
   if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status + ': ' + t.slice(0, 200) }); }
   return json(200, { ok: true });
-});
+}, cors));

@@ -1,5 +1,6 @@
 // Edge Function: приём заявки на перевод в ГИБДД и отправка в Discord webhook.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ const isHttpUrl = (value: string) => {
   }
 };
 
-Deno.serve(async (req) => {
+Deno.serve(withSubmissionCooldown(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -135,4 +136,4 @@ Deno.serve(async (req) => {
     return json(502, { error: `Discord ответил ${res.status}` });
   }
   return json(200, { ok: true });
-});
+}, cors));

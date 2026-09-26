@@ -1,6 +1,7 @@
 // Edge Function: приём «Заявки на восстановление сотрудника» с сайта и отправка в Discord webhook.
 // JWT обязателен (шлюз Supabase проверяет сессию), здесь достаём пользователя для подписи.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ const restoreNotificationRoleIds = ['1538937566273732637', '1540380882601251007'
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-Deno.serve(async (req) => {
+Deno.serve(withSubmissionCooldown(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -104,4 +105,4 @@ Deno.serve(async (req) => {
   });
   if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: `Discord ответил ${res.status}` }); }
   return json(200, { ok: true });
-});
+}, cors));

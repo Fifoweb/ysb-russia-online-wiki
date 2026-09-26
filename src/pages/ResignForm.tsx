@@ -5,6 +5,8 @@ import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
+import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
+import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -20,6 +22,7 @@ export default function ResignForm() {
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -30,14 +33,14 @@ export default function ResignForm() {
   const allFilled = Object.values(form).every(v => v.trim().length > 0) && rankValid && screenshotValid;
 
   const submit = async () => {
-    if (!supabase || state === 'sending' || !allFilled) return;
+    if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
     setState('sending');
     setErrorMessage('');
 
     try {
-      const { error } = await supabase.functions.invoke('submit-resign', {
+      const { error } = await invokeApplication('submit-resign', {
         body: { ...form, discordAccessToken: providerToken },
-      });
+      }, user.id);
       if (error) {
         setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить заявление. Проверьте поля и попробуйте ещё раз.'));
         setState('error');
@@ -69,6 +72,7 @@ export default function ResignForm() {
         </div>
       </div>
 
+      {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
           <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
@@ -131,7 +135,7 @@ export default function ResignForm() {
               </div>
             )}
 
-            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending'}
+            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявление на увольнение'}
               {state !== 'sending' && <Send size={17} aria-hidden="true" />}

@@ -379,6 +379,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .application-heading-icon { width: 54px; height: 54px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(125,211,252,.4); border-radius: 15px; color: #7dd3fc; background: rgba(59,130,246,.17); box-shadow: 0 0 28px rgba(59,130,246,.12); }
 .application-heading .eyebrow { margin-bottom: 7px; color: #7dd3fc; }
 .application-panel { max-width: 780px; margin-inline: auto; }
+.application-cooldown { display: flex; align-items: center; gap: 16px; margin: -4px 0 24px; padding: 17px 20px; border: 1px solid rgba(125,211,252,.34); border-radius: 16px; background: radial-gradient(circle at 100% 0, rgba(56,189,248,.14), transparent 42%), linear-gradient(120deg, rgba(9,43,82,.96), rgba(5,24,51,.95)); box-shadow: 0 12px 36px rgba(2,6,23,.22), inset 0 1px rgba(255,255,255,.06); }
+.application-cooldown-icon { display: grid; place-items: center; width: 45px; height: 45px; flex: 0 0 auto; border: 1px solid rgba(125,211,252,.35); border-radius: 13px; color: #7dd3fc; background: rgba(14,165,233,.13); }
+.application-cooldown-copy { min-width: 0; flex: 1; }
+.application-cooldown-label { color: #7dd3fc; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.wiki-content .application-cooldown-copy p { margin: 3px 0 10px; color: #e2efff; font-size: 13px; line-height: 1.45; }
+.application-cooldown-copy strong { color: #fff; font-variant-numeric: tabular-nums; }
+.application-cooldown-track { height: 4px; overflow: hidden; border-radius: 10px; background: rgba(148,163,184,.2); }
+.application-cooldown-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2563eb, #7dd3fc); transition: width .25s linear; }
+.application-cooldown-clock { color: #e0f2fe; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+@media (max-width: 520px) { .application-cooldown { gap: 12px; padding: 14px; } .application-cooldown-icon { width: 40px; height: 40px; } .application-cooldown-clock { display: none; } }
 .application-note { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: #a6bcd8; font-size: 12px; }
 .form-loader { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 148px; padding: 28px; border: 1px solid var(--wiki-border); border-radius: 16px; background: rgba(8,27,54,.8); color: #c3d9f2; font-size: 13px; }
 .form-loader-spinner { width: 22px; height: 22px; flex: 0 0 auto; border: 2px solid rgba(125,211,252,.3); border-top-color: #7dd3fc; border-radius: 50%; animation: loader-spin .8s linear infinite; }

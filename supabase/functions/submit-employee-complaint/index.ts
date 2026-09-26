@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,7 @@ async function getWebhookTarget(raw: string | undefined) {
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withSubmissionCooldown(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -149,4 +150,4 @@ Deno.serve(async (req) => {
     return json(502, { error: 'Не удалось связаться с Discord. Попробуйте позже.' });
   }
   return json(200, { ok: true });
-});
+}, cors));

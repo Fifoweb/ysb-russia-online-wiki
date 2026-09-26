@@ -1,5 +1,6 @@
 // Edge Function: accepts a resignation request and sends it through a Discord webhook.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -62,7 +63,7 @@ async function sendWebhookMessage(target: { url: URL }, content: string, embeds:
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withSubmissionCooldown(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
@@ -138,4 +139,4 @@ Deno.serve(async (req) => {
     return json(502, { error: `Discord ответил ${response.status}` });
   }
   return json(200, { ok: true });
-});
+}, cors));
