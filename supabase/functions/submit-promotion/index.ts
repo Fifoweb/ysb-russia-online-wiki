@@ -6,12 +6,9 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const CHANNEL_ID = '1538937568429740200';
-const VERIFIED_ROLE_ID = '1538937566156300351';
 const NOTIFICATION_ROLE_IDS = ['1538937566273732632'];
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-
-type RoleCheck = 'allowed' | 'denied' | 'authorization-needed' | 'unavailable';
 
 function getWebhookUrl(raw: string | undefined) {
   if (!raw) return null;
@@ -30,25 +27,8 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
     if (!response.ok) { console.error('Discord webhook lookup failed', response.status); return null; }
     const webhook = await response.json();
     return String(webhook.channel_id) === expectedChannelId && typeof webhook.guild_id === 'string'
-      ? { url, guildId: webhook.guild_id } : null;
+      ? { url } : null;
   } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
-}
-
-async function checkDiscordRole(discordId: string, accessToken: string, guildId: string, roleId: string): Promise<RoleCheck> {
-  if (!accessToken || accessToken.length > 4096) return 'authorization-needed';
-  try {
-    const headers = { Authorization: `Bearer ${accessToken}` };
-    const userResponse = await fetch('https://discord.com/api/v10/users/@me', { headers });
-    if (userResponse.status === 401 || userResponse.status === 403) return 'authorization-needed';
-    if (!userResponse.ok) return 'unavailable';
-    if ((await userResponse.json()).id !== discordId) return 'denied';
-    const memberResponse = await fetch(`https://discord.com/api/v10/users/@me/guilds/${guildId}/member`, { headers });
-    if (memberResponse.status === 401 || memberResponse.status === 403) return 'authorization-needed';
-    if (memberResponse.status === 404) return 'denied';
-    if (!memberResponse.ok) return 'unavailable';
-    const member = await memberResponse.json();
-    return Array.isArray(member.roles) && member.roles.includes(roleId) ? 'allowed' : 'denied';
-  } catch (error) { console.error('Discord role lookup failed', error); return 'unavailable'; }
 }
 
 async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[]) {
@@ -101,13 +81,6 @@ Deno.serve(async (req) => {
   }
   const target = await getWebhookTarget(Deno.env.get('DISCORD_PROMOTION_WEBHOOK_URL'), CHANNEL_ID);
   if (!target) return json(500, { error: 'Вебхук запросов на повышение не настроен для нужного канала' });
-
-  const roleCheck = await checkDiscordRole(discordId, readText('discordAccessToken'), target.guildId, VERIFIED_ROLE_ID);
-  if (roleCheck !== 'allowed') {
-    if (roleCheck === 'denied') return json(403, { error: 'Для подачи запроса нужна роль «Верифицированный» на сервере Discord.' });
-    if (roleCheck === 'authorization-needed') return json(401, { error: 'Повторно войдите через Discord и разрешите доступ к сведениям о членстве на сервере.' });
-    return json(503, { error: 'Не удалось проверить роль в Discord. Попробуйте позже.' });
-  }
 
   const dateStr = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
