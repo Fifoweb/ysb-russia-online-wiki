@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -51,8 +52,14 @@ export default function DepartmentApplicationForm() {
     };
 
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.currentRank);
-  const allFilled = Boolean(form.fullNameStatic.trim() && rankValid && form.sourceDepartment &&
-    form.targetDepartment && form.sourceDepartment !== form.targetDepartment);
+  const incompleteReason = [
+    !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
+    !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
+    !form.sourceDepartment && 'Выберите текущий отдел.',
+    !form.targetDepartment && 'Выберите отдел назначения.',
+    form.sourceDepartment === form.targetDepartment && 'Выберите другой отдел назначения.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,6 +164,7 @@ export default function DepartmentApplicationForm() {
                 {errorMessage}
               </p>
             )}
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="submit" disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявку в отдел'}

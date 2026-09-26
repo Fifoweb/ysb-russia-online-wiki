@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -27,7 +28,11 @@ export default function AppealForm() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const allFilled = form.reason.trim().length > 0 && form.evidence.trim().length > 0;
+  const incompleteReason = [
+    !form.reason.trim() && 'Опишите основания для обжалования.',
+    !form.evidence.trim() && 'Добавьте доказательства.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -114,6 +119,7 @@ export default function AppealForm() {
               </p>
             )}
 
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить обжалование'}

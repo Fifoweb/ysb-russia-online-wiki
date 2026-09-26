@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 const initialForm = { fullNameStatic: '', targetRank: '', reportUrl: '' };
@@ -24,7 +25,12 @@ export default function PromotionForm() {
     (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.targetRank);
   const reportUrlValid = /^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/i.test(form.reportUrl.trim());
-  const allFilled = Boolean(form.fullNameStatic.trim() && rankValid && reportUrlValid);
+  const incompleteReason = [
+    !form.fullNameStatic.trim() && 'Укажите имя, фамилию и StaticID.',
+    !form.targetRank.trim() ? 'Укажите желаемый ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
+    !form.reportUrl.trim() ? 'Добавьте ссылку на сообщение с отчётом.' : !reportUrlValid && 'Проверьте ссылку на сообщение Discord.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -117,6 +123,7 @@ export default function PromotionForm() {
                 <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</p>
               </div>
             )}
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить запрос на повышение'}

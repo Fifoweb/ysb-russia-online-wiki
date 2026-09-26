@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -21,7 +22,14 @@ export default function ReportForm() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const allFilled = Object.values(form).every(v => v.trim().length > 0);
+  const incompleteReason = [
+    !form.nick.trim() && 'Укажите ник и статик.',
+    !form.currentRank.trim() && 'Укажите текущее звание.',
+    !form.targetRank.trim() && 'Укажите желаемое звание.',
+    !form.points.trim() && 'Укажите количество баллов.',
+    !form.evidence.trim() && 'Добавьте доказательства.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -109,6 +117,7 @@ export default function ReportForm() {
               </p>
             )}
 
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? <><span className="form-loader-spinner !w-4 !h-4" aria-hidden="true" /> Отправка…</> : <>Отправить заявление <Send size={17} aria-hidden="true" /></>}

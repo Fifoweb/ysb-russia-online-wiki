@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -30,7 +31,13 @@ export default function ResignForm() {
 
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.currentRank);
   const screenshotValid = /^https?:\/\/\S+$/i.test(form.recordScreenshot.trim());
-  const allFilled = Object.values(form).every(v => v.trim().length > 0) && rankValid && screenshotValid;
+  const incompleteReason = [
+    !form.fullNameStatic.trim() && 'Укажите имя, фамилию и StaticID.',
+    !form.department.trim() && 'Укажите отдел.',
+    !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
+    !form.recordScreenshot.trim() ? 'Добавьте ссылку на личное дело.' : !screenshotValid && 'Проверьте ссылку на скрин личного дела.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -135,6 +142,7 @@ export default function ResignForm() {
               </div>
             )}
 
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявление на увольнение'}

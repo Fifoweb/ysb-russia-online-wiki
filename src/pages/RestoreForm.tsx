@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -24,8 +25,13 @@ export default function RestoreForm() {
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   // Скриншот из гос.фракций — опционально (только после ban/warn), остальные обязательны
-  const requiredKeys: (keyof typeof form)[] = ['fullNameStatic', 'rankEvidence', 'dismissReason', 'previousRank'];
-  const allFilled = requiredKeys.every(k => form[k].trim().length > 0);
+  const incompleteReason = [
+    !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
+    !form.rankEvidence.trim() && 'Добавьте доказательства прежнего ранга.',
+    !form.dismissReason.trim() && 'Укажите причину увольнения.',
+    !form.previousRank.trim() && 'Укажите прежний ранг.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -116,6 +122,7 @@ export default function RestoreForm() {
               </p>
             )}
 
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявку на восстановление'}

@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -23,7 +24,12 @@ export default function ComplaintForm() {
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((current) => ({ ...current, [key]: event.target.value }));
-  const allFilled = Boolean(form.offender.trim() && form.description.trim() && form.contactDiscord.trim());
+  const incompleteReason = [
+    !form.offender.trim() && 'Укажите нарушителя.',
+    !form.description.trim() && 'Опишите ситуацию.',
+    !form.contactDiscord.trim() && 'Укажите ваш Discord для связи.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -105,6 +111,7 @@ export default function ComplaintForm() {
               <p className="application-note">Discord-ник и ID из авторизации будут видны сотрудникам канала; автора не упоминает.</p>
             </div>
             {state === 'error' && <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</p>}
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить жалобу'}

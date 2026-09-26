@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -32,8 +33,14 @@ export default function TransferForm() {
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.currentRank);
   const screenshotValid = /^https?:\/\/\S+$/i.test(form.personalFileScreenshot.trim());
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(form.joinDate);
-  const allFilled = Object.values(form).every((value) => value.trim().length > 0) &&
-    rankValid && screenshotValid && dateValid;
+  const incompleteReason = [
+    !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
+    !form.sourceFaction.trim() && 'Укажите исходную фракцию.',
+    !form.joinDate.trim() ? 'Укажите дату вступления.' : !dateValid && 'Дата должна быть в формате ГГГГ-ММ-ДД.',
+    !form.personalFileScreenshot.trim() ? 'Добавьте ссылку на личное дело.' : !screenshotValid && 'Проверьте ссылку на скрин личного дела.',
+    !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || !allFilled) return;
@@ -133,6 +140,7 @@ export default function TransferForm() {
               </p>
             )}
 
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить заявку на перевод'}

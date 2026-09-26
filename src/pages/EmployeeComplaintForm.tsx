@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
+import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
@@ -48,9 +49,16 @@ export default function EmployeeComplaintForm() {
   const incidentAge = Date.now() - incidentTime;
   const incidentValid = Number.isFinite(incidentTime) && incidentAge >= -5 * 60 * 1000 &&
     incidentAge <= validityWindowMs;
-  const allFilled = Boolean(form.reporterNicknameStatic.trim() && form.offenderNicknameStatic.trim() &&
-    form.faction && (form.faction !== 'other' || form.otherFaction.trim()) &&
-    form.description.trim() && form.evidence.trim() && incidentValid);
+  const incompleteReason = [
+    !form.reporterNicknameStatic.trim() && 'Укажите ваш никнейм и статик.',
+    !form.offenderNicknameStatic.trim() && 'Укажите никнейм или статик нарушителя.',
+    !form.faction && 'Выберите фракцию нарушителя.',
+    form.faction === 'other' && !form.otherFaction.trim() && 'Укажите название фракции.',
+    !form.description.trim() && 'Опишите ситуацию.',
+    !form.incidentAt ? 'Укажите дату и время происшествия.' : !incidentValid && 'Дата должна быть за последние 48 часов и не более 5 минут в будущем.',
+    !form.evidence.trim() && 'Добавьте доказательства нарушения.',
+  ].find(Boolean) || undefined;
+  const allFilled = !incompleteReason;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -178,6 +186,7 @@ export default function EmployeeComplaintForm() {
                 {errorMessage}
               </p>
             )}
+            <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
             <button type="submit" disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
               className="primary-button w-full justify-center !py-3.5">
               {state === 'sending' ? 'Отправка…' : 'Отправить жалобу'}
