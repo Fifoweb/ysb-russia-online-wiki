@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
-const DURATION_MS = 60_000;
+const DURATION_MS = 150_000;
 const STORAGE_PREFIX = 'application-cooldown:';
 const CHANGE_EVENT = 'application-cooldown-change';
 const deadlines = new Map<string, number>();
@@ -54,7 +54,7 @@ export async function invokeApplication(name: string, options: { body: Record<st
     const response = (result.error as { context?: Response }).context;
     if (response?.status === 429) {
       const retry = Number(response.headers?.get('Retry-After'));
-      setDeadline(userId, Number.isFinite(retry) && retry > 0 ? Math.min(60, retry) : 60);
+      setDeadline(userId, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : 150);
     }
   }
   return result;

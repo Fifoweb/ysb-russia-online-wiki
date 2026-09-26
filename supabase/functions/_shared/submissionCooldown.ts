@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 type Handler = (req: Request) => Response | Promise<Response>;
-const COOLDOWN_SECONDS = 60;
+const COOLDOWN_SECONDS = 150;
 
 export function withSubmissionCooldown(handler: Handler, cors: Record<string, string>): Handler {
   return async (req) => {

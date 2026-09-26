@@ -188,6 +188,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .site-header { position: fixed; inset: 0 0 auto; height: 68px; z-index: 30; background: rgba(3,16,36,.82); border-bottom: 1px solid var(--wiki-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 8px 35px rgba(0,8,27,.18); }
 .site-header-inner { width: min(1380px, calc(100% - 32px)); height: 100%; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
 .brand-lockup { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--wiki-text); font-weight: 900; letter-spacing: -.04em; cursor: pointer; white-space: nowrap; }
+.brand-emblem { width: 36px; height: 36px; object-fit: contain; margin-right: 7px; filter: drop-shadow(0 2px 7px rgba(253, 196, 86, .22)); }
 .brand-white { font-size: 17px; }
 .brand-accent { padding: 2px 5px; margin-left: 3px; color: #fff; background: linear-gradient(135deg, #2563eb, #38bdf8); border-radius: 4px; font-size: 17px; box-shadow: 0 0 20px rgba(59,130,246,.22); }
 .brand-divider { color: #8096b2; margin: 0 7px; font-weight: 500; }
@@ -405,6 +406,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 760px) { .online-pill { display: none; } .site-main { padding-top: 88px; } }
 @media (max-width: 640px) { .wiki-content table { display: block; max-width: 100%; overflow-x: auto; } .wiki-content > .glass:first-child { margin-bottom: 18px; } .site-main { padding-bottom: 50px; } .status-strip { margin-bottom: 32px; } .application-heading { align-items: flex-start; gap: 13px; } .application-heading-icon { width: 44px; height: 44px; border-radius: 12px; } }
 @media (max-width: 640px) { .family-invite { flex-wrap: wrap; gap: 14px; padding: 18px; margin: -8px 0 34px; } .family-invite-copy { flex: 1 1 calc(100% - 64px); } .family-invite-link { width: 100%; } }
-@media (max-width: 450px) { .brand-unit, .brand-divider, .profile-name { display: none; } .brand-white, .brand-accent { font-size: 14px; } .header-actions { gap: 6px; } }
+@media (max-width: 450px) { .brand-unit, .brand-divider, .profile-name { display: none; } .brand-white, .brand-accent { font-size: 14px; } .brand-emblem { width: 28px; height: 28px; margin-right: 4px; } .header-actions { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { .wiki-content > section.glass, .home-page > .section-heading, .home-page > .family-invite { animation: none !important; } .home-intro-photo, .home-intro:hover .home-intro-photo, .home-intro:hover .home-intro-photo img { transform: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

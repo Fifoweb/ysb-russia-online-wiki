@@ -90,7 +90,7 @@ export default function AppealForm() {
             <div>
               <p className="eyebrow mb-2">01 · ЗАЯВИТЕЛЬ</p>
               <label className="block">
-                <span>Ваш никнейм | статик <span className="font-normal text-slate-400">(необязательно)</span></span>
+                <span>Ваш никнейм | статик</span>
                 <input value={form.nick} onChange={set('nick')} placeholder="Например: Kira_Comis | 155" maxLength={100} className={inputClass} />
               </label>
             </div>

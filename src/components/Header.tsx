@@ -53,6 +53,7 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
       <div className="site-header-inner">
         <button onClick={onToggleSidebar} className="icon-button menu-button" title={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-label={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={sidebarOpen} aria-controls="site-navigation">{sidebarOpen ? <X size={19} /> : <Menu size={19} />}</button>
         <button className="brand-lockup" onClick={() => onNavigate('/')} aria-label="На главную">
+          <img className="brand-emblem" src={`${import.meta.env.BASE_URL}emblem.png`} alt="" aria-hidden="true" />
           <span className="brand-white">РОССИЯ</span><span className="brand-accent">ОНЛАЙН</span><span className="brand-divider">·</span><span className="brand-unit">ГИБДД</span>
         </button>
         <div className="header-title"><span>ГИБДД Вики</span>{currentTitle !== '/' && titles[currentTitle] && <span className="header-crumb">/ {titles[currentTitle]}</span>}</div>
