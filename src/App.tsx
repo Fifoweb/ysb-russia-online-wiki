@@ -20,6 +20,7 @@ import DepartmentApplicationForm from './pages/DepartmentApplicationForm';
 import ComplaintForm from './pages/ComplaintForm';
 import EmployeeComplaintForm from './pages/EmployeeComplaintForm';
 import PromotionForm from './pages/PromotionForm';
+import SeniorPromotionReportForm from './pages/SeniorPromotionReportForm';
 import Crafts from './pages/Crafts';
 import Servers from './pages/Servers';
 
@@ -76,6 +77,7 @@ export default function App() {
       case '/complaints': return <ComplaintForm />;
       case '/employee-complaint': return <EmployeeComplaintForm />;
       case '/promotion': return <PromotionForm />;
+      case '/senior-report': return <SeniorPromotionReportForm />;
       case '/crafts': return <Crafts />;
       case '/servers': return <Servers />;
       default: return <Home onNavigate={navigate} />;

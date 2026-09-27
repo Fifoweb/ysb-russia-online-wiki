@@ -18,6 +18,7 @@ export const navItems: NavItem[] = [
   { id: 'appendix', label: 'Приложения и формы', icon: '06', path: '/appendix', section: 'Курс' },
   { id: 'handbook', label: 'Памятка Россия Онлайн', icon: '07', path: '/handbook', section: 'Курс' },
   { id: 'promotion', label: 'Запрос на повышение · отчёт', icon: '↥', path: '/promotion', section: 'Заявки' },
+  { id: 'senior-report', label: 'Отчёт на повышение · старший состав', icon: '↥', path: '/senior-report', section: 'Заявки' },
   { id: 'appeal', label: 'Обжалование выговора', icon: '↪', path: '/appeal', section: 'Заявки' },
   { id: 'reprimand-work', label: 'Отработка выговора', icon: '↯', path: '/reprimand-work', section: 'Заявки' },
   { id: 'restore', label: 'Восстановление сотрудника', icon: '↻', path: '/restore', section: 'Заявки' },

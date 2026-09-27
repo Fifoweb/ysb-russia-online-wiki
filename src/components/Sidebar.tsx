@@ -20,7 +20,7 @@ const itemIcons: Record<string, LucideIcon> = {
   home: Home, crafts: Wrench, servers: Server, basics: Shield,
   check: Search, control: Eye, discipline: Gavel, practice: GraduationCap,
   appendix: FileText, handbook: BookOpen, report: ArrowUpRight,
-  promotion: TrendingUp, appeal: RotateCcw, 'reprimand-work': Hammer,
+  promotion: TrendingUp, 'senior-report': TrendingUp, appeal: RotateCcw, 'reprimand-work': Hammer,
   restore: UserCheck, transfer: ArrowRightLeft, department: UsersRound, resign: LogOut,
   complaints: MessageSquare, 'employee-complaint': MessageSquareText,
 };
