@@ -132,9 +132,9 @@ export default function SeniorPromotionReportForm() {
                   {people.map((value, index) => (
                     <div key={index} className="flex items-end gap-2">
                       <label className="block min-w-0 flex-1">
-                        <span>Discord-ник человека {index + 1}</span>
+                        <span>Ник Discord человека {index + 1}</span>
                         <input value={value} onChange={event => setPeople(current => current.map((entry, i) => i === index ? event.target.value : entry))}
-                          maxLength={80} placeholder="Точный ник на сервере или Discord ID" className={inputClass} />
+                          maxLength={80} placeholder="Имя пользователя Discord или Discord ID" className={inputClass} />
                       </label>
                       {people.length > 1 && <button type="button" className="icon-button mb-1" title="Удалить строку"
                         aria-label={`Удалить человека ${index + 1}`} onClick={() => setPeople(current => current.filter((_, i) => i !== index))}>
@@ -142,7 +142,7 @@ export default function SeniorPromotionReportForm() {
                       </button>}
                     </div>
                   ))}
-                  <p className="application-note">Один человек в каждой строке. Ник должен точно совпадать с ником на сервере; при совпадении нескольких людей укажите Discord ID. Если ник не вписан, отметим старший состав.</p>
+                  <p className="application-note">Укажите имя пользователя Discord из профиля человека, который должен вас повысить, — по одному в строке. Если человека не удаётся найти, укажите его Discord ID. Без заполненных строк отметим старший состав.</p>
                   {people.length < 5 && <button type="button" className="secondary-button" onClick={() => setPeople(current => [...current, ''])}>
                     <Plus size={16} aria-hidden="true" /> Добавить человека
                   </button>}

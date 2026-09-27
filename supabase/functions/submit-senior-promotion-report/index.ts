@@ -31,18 +31,19 @@ function parseWebhook(raw: string | undefined): URL | null {
   } catch { return null; }
 }
 
-type Member = { nick?: string | null; user?: { id?: string; username?: string; global_name?: string | null; discriminator?: string } };
+type Member = { user?: { id?: string; username?: string; discriminator?: string } };
 
 async function resolveMember(guildId: string, name: string, botToken: string): Promise<{ id?: string; error?: string }> {
   const headers = { Authorization: `Bot ${botToken}` };
   const byId = /^\d{17,20}$/.test(name);
+  const searchName = /#\d{4}$/.test(name) ? name.slice(0, name.lastIndexOf('#')) : name;
   const endpoint = byId
     ? `https://discord.com/api/v10/guilds/${guildId}/members/${name}`
-    : `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(name)}&limit=1000`;
+    : `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(searchName)}&limit=1000`;
   let response: Response;
   try { response = await fetch(endpoint, { headers }); }
   catch { return { error: 'Discord недоступен для поиска сотрудников. Попробуйте позже.' }; }
-  if (response.status === 404 && byId) return { error: `Discord ID ${name} не найден на сервере.` };
+  if (response.status === 404 && byId) return { error: `Discord ID ${name} не найден.` };
   if (!response.ok) {
     console.error('Discord member lookup failed', response.status);
     return { error: 'Не удалось проверить Discord-ники. Попробуйте позже.' };
@@ -59,12 +60,12 @@ async function resolveMember(guildId: string, name: string, botToken: string): P
   const normalized = name.toLowerCase();
   const exact = members.filter(member => {
     const user = member.user;
-    const names = [member.nick, user?.username, user?.global_name,
+    const names = [user?.username,
       user?.discriminator && user.discriminator !== '0' ? `${user.username}#${user.discriminator}` : null];
     return byId ? user?.id === name : names.some(value => value?.toLowerCase() === normalized);
   });
   const ids = [...new Set(exact.map(member => member.user?.id).filter((id): id is string => typeof id === 'string'))];
-  if (ids.length === 0) return { error: `Ник «${name}» не найден на сервере. Проверьте точное написание или укажите Discord ID.` };
+  if (ids.length === 0) return { error: `Ник Discord «${name}» не найден. Проверьте имя пользователя в профиле или укажите Discord ID.` };
   if (ids.length > 1) return { error: `Ник «${name}» совпадает у нескольких людей. Укажите Discord ID.` };
   return { id: ids[0] };
 }
