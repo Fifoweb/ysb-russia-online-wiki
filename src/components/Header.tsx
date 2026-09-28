@@ -24,6 +24,7 @@ const titles: Record<string, string> = {
   '/resign': 'Заявление на увольнение',
   '/promotion': 'Запрос на повышение',
   '/senior-report': 'Отчёт на повышение · старший состав',
+  '/academy-report': 'Отчёт на повышение',
   '/complaints': 'Жалобы',
   '/crafts': 'Крафты ГИБДД',
   '/servers': 'Онлайн Тверского',

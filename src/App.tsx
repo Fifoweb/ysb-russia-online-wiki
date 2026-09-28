@@ -21,6 +21,7 @@ import ComplaintForm from './pages/ComplaintForm';
 import EmployeeComplaintForm from './pages/EmployeeComplaintForm';
 import PromotionForm from './pages/PromotionForm';
 import SeniorPromotionReportForm from './pages/SeniorPromotionReportForm';
+import AcademyPromotionReportForm from './pages/AcademyPromotionReportForm';
 import Crafts from './pages/Crafts';
 import Servers from './pages/Servers';
 
@@ -78,6 +79,7 @@ export default function App() {
       case '/employee-complaint': return <EmployeeComplaintForm />;
       case '/promotion': return <PromotionForm />;
       case '/senior-report': return <SeniorPromotionReportForm />;
+      case '/academy-report': return <AcademyPromotionReportForm />;
       case '/crafts': return <Crafts />;
       case '/servers': return <Servers />;
       default: return <Home onNavigate={navigate} />;
