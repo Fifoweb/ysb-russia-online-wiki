@@ -6,19 +6,20 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-const WEBHOOK_ID = '1553922705936617472';
-const CHANNEL_ID = '1538937581432078451';
-const NOTIFICATION_ROLE_ID = '1540267213578043434';
+const TARGETS = {
+  academy: { webhookId: '1553922705936617472', channelId: '1538937581432078451', roleId: '1540267213578043434', secret: 'DISCORD_ACADEMY_PROMOTION_WEBHOOK_URL' },
+  uku: { webhookId: '1554442409205563452', channelId: '1538937582400966689', roleId: '1540268884987478096', secret: 'DISCORD_UKU_PROMOTION_WEBHOOK_URL' },
+} as const;
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-function webhookUrl(raw: string | undefined): URL | null {
+function webhookUrl(raw: string | undefined, webhookId: string): URL | null {
   if (!raw) return null;
   try {
     const url = new URL(raw);
     return url.protocol === 'https:' && url.hostname === 'discord.com' && !url.port &&
       !url.username && !url.password && !url.search && !url.hash &&
-      new RegExp(`^/api/webhooks/${WEBHOOK_ID}/[\\w.-]+$`).test(url.pathname) ? url : null;
+      new RegExp(`^/api/webhooks/${webhookId}/[\\w.-]+$`).test(url.pathname) ? url : null;
   } catch { return null; }
 }
 
@@ -55,57 +56,84 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) return json(400, { error: 'Некорректные данные формы' });
   const body = rawBody as Record<string, unknown>;
   const nickStatic = typeof body.nickStatic === 'string' ? body.nickStatic.trim() : '';
-  const rankTransition = body.rankTransition;
   if (!nickStatic || nickStatic.length > 100) return json(400, { error: 'Укажите никнейм и #статик (до 100 символов)' });
-  if (rankTransition !== '1-2' && rankTransition !== '2-3') {
-    return json(400, { error: 'Выберите повышение с 1 на 2 или с 2 на 3' });
-  }
-  if (!body.evidence || typeof body.evidence !== 'object' || Array.isArray(body.evidence)) {
-    return json(400, { error: 'Добавьте доказательства выполнения заданий' });
-  }
-  const evidence = body.evidence as Record<string, unknown>;
-  const required = rankTransition === '1-2'
-    ? ['governmentId', 'exam', 'practice', 'stateFractionRole']
-    : ['exam', 'practice'];
-  const links = Object.fromEntries(required.map(key => [key, evidenceUrl(evidence[key])]));
-  if (required.some(key => !links[key])) {
-    return json(400, { error: 'Приложите ко всем заданиям ссылки HTTPS на Imgur, Fotora или Япикс' });
+  const department = body.department === undefined ? 'academy' : body.department;
+  if (department !== 'academy' && department !== 'uku') return json(400, { error: 'Выберите подразделение из списка' });
+  const targetConfig = TARGETS[department];
+  let title: string;
+  let rankLabel: string;
+  let fields: { name: string; value: string }[];
+  if (department === 'uku') {
+    const { fromRank, toRank } = body;
+    const workEvidence = typeof body.evidence === 'string' ? body.evidence.trim() : '';
+    if (typeof fromRank !== 'number' || typeof toRank !== 'number' ||
+      !Number.isInteger(fromRank) || !Number.isInteger(toRank) ||
+      fromRank < 1 || toRank > 15 || fromRank >= toRank) {
+      return json(400, { error: 'Укажите повышение: ранги от 1 до 15, целевой ранг выше исходного' });
+    }
+    if (!workEvidence || workEvidence.length > 1000) return json(400, { error: 'Добавьте доказательства проделанной работы (до 1000 символов)' });
+    rankLabel = `${fromRank} → ${toRank}`;
+    title = `Отчёт на повышение · УКУ · ${rankLabel}`;
+    fields = [
+      { name: 'С какого ранга', value: String(fromRank) },
+      { name: 'На какой ранг', value: String(toRank) },
+      { name: 'Доказательства проделанной работы', value: workEvidence },
+    ];
+  } else {
+    const rankTransition = body.rankTransition;
+    if (rankTransition !== '1-2' && rankTransition !== '2-3') {
+      return json(400, { error: 'Выберите повышение с 1 на 2 или с 2 на 3' });
+    }
+    if (!body.evidence || typeof body.evidence !== 'object' || Array.isArray(body.evidence)) {
+      return json(400, { error: 'Добавьте доказательства выполнения заданий' });
+    }
+    const evidence = body.evidence as Record<string, unknown>;
+    const required = rankTransition === '1-2'
+      ? ['governmentId', 'exam', 'practice', 'stateFractionRole']
+      : ['exam', 'practice'];
+    const links = Object.fromEntries(required.map(key => [key, evidenceUrl(evidence[key])]));
+    if (required.some(key => !links[key])) {
+      return json(400, { error: 'Приложите ко всем заданиям ссылки HTTPS на Imgur, Fotora или Япикс' });
+    }
+    rankLabel = rankTransition;
+    title = rankTransition === '1-2'
+      ? 'Отчёт Академии · Рядовой (1) → Младший сержант (2)'
+      : 'Отчёт Академии · Младший сержант (2) → Сержант (3)';
+    fields = rankTransition === '1-2' ? [
+      { name: 'Удостоверение в Правительстве', value: links.governmentId! },
+      { name: 'Экзамен: строевая, субординация, радиообмен, устав', value: links.exam! },
+      { name: 'Практика: трафик-стоп, статьи, штраф', value: links.practice! },
+      { name: 'Роль State Fraction', value: links.stateFractionRole! },
+    ] : [
+      { name: 'Экзамен по КоАП, УК и УПК', value: links.exam! },
+      { name: 'Практика по УПК', value: links.practice! },
+    ];
   }
 
-  const webhook = webhookUrl(Deno.env.get('DISCORD_ACADEMY_PROMOTION_WEBHOOK_URL'));
-  if (!webhook) return json(503, { error: 'Вебхук отчётов Академии не настроен' });
+  const webhook = webhookUrl(Deno.env.get(targetConfig.secret), targetConfig.webhookId);
+  if (!webhook) return json(503, { error: `Вебхук отчётов ${department === 'uku' ? 'УКУ' : 'Академии'} не настроен` });
   try {
     const targetResponse = await fetch(webhook);
     if (!targetResponse.ok) {
-      console.error('Academy promotion webhook lookup failed', targetResponse.status);
-      return json(503, { error: 'Не удалось проверить канал отчётов Академии' });
+      console.error('Promotion report webhook lookup failed', targetResponse.status);
+      return json(503, { error: 'Не удалось проверить канал отчётов' });
     }
     const target = await targetResponse.json();
-    if (String(target.id) !== WEBHOOK_ID || String(target.channel_id) !== CHANNEL_ID) {
-      return json(503, { error: 'Вебхук Академии привязан не к ожидаемому каналу' });
+    if (String(target.id) !== targetConfig.webhookId || String(target.channel_id) !== targetConfig.channelId) {
+      return json(503, { error: 'Вебхук привязан не к ожидаемому каналу' });
     }
-  } catch { return json(503, { error: 'Не удалось проверить канал отчётов Академии' }); }
+  } catch { return json(503, { error: 'Не удалось проверить канал отчётов' }); }
 
   const discordName = String(identityData.username || identityData.global_name || metadata.user_name || metadata.full_name || 'неизвестно').slice(0, 80);
   const dateStr = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }).replace(',', '');
-  const fields = rankTransition === '1-2' ? [
-    { name: 'Удостоверение в Правительстве', value: links.governmentId },
-    { name: 'Экзамен: строевая, субординация, радиообмен, устав', value: links.exam },
-    { name: 'Практика: трафик-стоп, статьи, штраф', value: links.practice },
-    { name: 'Роль State Fraction', value: links.stateFractionRole },
-  ] : [
-    { name: 'Экзамен по КоАП, УК и УПК', value: links.exam },
-    { name: 'Практика по УПК', value: links.practice },
-  ];
   const embed = {
-    title: rankTransition === '1-2'
-      ? 'Отчёт Академии · Рядовой (1) → Младший сержант (2)'
-      : 'Отчёт Академии · Младший сержант (2) → Сержант (3)',
+    title,
     color: 3447003,
     fields: [
       { name: 'Ваш никнейм и #статик', value: nickStatic },
+      ...(department === 'uku' ? [{ name: 'Ник Discord', value: discordName }] : []),
       ...fields,
       { name: 'Discord ID', value: discordId },
     ],
@@ -120,14 +148,14 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `📤 Новый отчёт Академии · ${rankTransition}\nЗаявка от <@${discordId}> · <@&${NOTIFICATION_ROLE_ID}>`,
+        content: `📤 Новый отчёт ${department === 'uku' ? 'УКУ' : 'Академии'} · ${rankLabel}\nЗаявка от <@${discordId}> · <@&${targetConfig.roleId}>`,
         embeds: [embed],
-        allowed_mentions: { parse: [], roles: [NOTIFICATION_ROLE_ID], users: [discordId] },
+        allowed_mentions: { parse: [], roles: [targetConfig.roleId], users: [discordId] },
       }),
     });
   } catch { return json(502, { error: 'Discord временно недоступен' }); }
   if (!response.ok) {
-    console.error('Academy promotion webhook send failed', response.status);
+    console.error('Promotion report webhook send failed', response.status);
     return json(502, { error: `Discord ответил ${response.status}` });
   }
   return json(200, { ok: true });

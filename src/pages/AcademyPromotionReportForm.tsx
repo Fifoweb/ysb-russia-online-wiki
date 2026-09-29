@@ -10,6 +10,7 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
+type Department = 'academy' | 'uku';
 type RankTransition = '' | '1-2' | '2-3';
 type EvidenceKey = 'governmentId' | 'exam' | 'practice' | 'stateFractionRole';
 const blankEvidence = { governmentId: '', exam: '', practice: '', stateFractionRole: '' };
@@ -27,8 +28,12 @@ function validEvidenceUrl(value: string): boolean {
 export default function AcademyPromotionReportForm() {
   const { user, loading, signInWithDiscord } = useAuth();
   const [nickStatic, setNickStatic] = useState('');
+  const [department, setDepartment] = useState<Department>('academy');
   const [rankTransition, setRankTransition] = useState<RankTransition>('');
   const [evidence, setEvidence] = useState(blankEvidence);
+  const [fromRank, setFromRank] = useState('');
+  const [toRank, setToRank] = useState('');
+  const [workEvidence, setWorkEvidence] = useState('');
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const remainingSeconds = useApplicationCooldown(user?.id);
@@ -46,19 +51,26 @@ export default function AcademyPromotionReportForm() {
     { key: 'practice', label: 'Практика по УПК' },
   ] : [];
   const incompleteReason = !nickStatic.trim() ? 'Укажите никнейм и #статик.'
-    : !rankTransition ? 'Выберите повышение: с 1 на 2 или с 2 на 3.'
-    : fields.find(field => !evidence[field.key].trim()) ? 'Приложите ссылки ко всем заданиям.'
-    : fields.find(field => !validEvidenceUrl(evidence[field.key])) ? 'Ссылки должны вести на Imgur, Fotora или Япикс по HTTPS.'
-    : undefined;
+    : department === 'uku'
+      ? !fromRank || !toRank ? 'Выберите исходный и целевой ранги.'
+        : Number(fromRank) >= Number(toRank) ? 'Целевой ранг должен быть выше исходного.'
+        : !workEvidence.trim() ? 'Добавьте доказательства проделанной работы.' : undefined
+      : !rankTransition ? 'Выберите повышение: с 1 на 2 или с 2 на 3.'
+        : fields.find(field => !evidence[field.key].trim()) ? 'Приложите ссылки ко всем заданиям.'
+        : fields.find(field => !validEvidenceUrl(evidence[field.key])) ? 'Ссылки должны вести на Imgur, Fotora или Япикс по HTTPS.'
+        : undefined;
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || incompleteReason) return;
     setState('sending');
     setErrorMessage('');
     try {
-      const selectedEvidence = Object.fromEntries(fields.map(field => [field.key, evidence[field.key].trim()]));
+      const body = department === 'uku'
+        ? { department, nickStatic: nickStatic.trim(), fromRank: Number(fromRank), toRank: Number(toRank), evidence: workEvidence.trim() }
+        : { department, nickStatic: nickStatic.trim(), rankTransition,
+          evidence: Object.fromEntries(fields.map(field => [field.key, evidence[field.key].trim()])) };
       const { error } = await invokeApplication('submit-academy-promotion-report', {
-        body: { nickStatic: nickStatic.trim(), rankTransition, evidence: selectedEvidence },
+        body,
       }, user.id);
       if (error) {
         setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить отчёт. Проверьте данные и попробуйте снова.'));
@@ -79,7 +91,7 @@ export default function AcademyPromotionReportForm() {
         <div>
           <p className="eyebrow">КАДРОВЫЕ ЗАЯВКИ · ПОВЫШЕНИЕ</p>
           <h2 className="!mt-0 !mb-2">Отчёт на повышение</h2>
-          <p className="!m-0 text-sm text-slate-300">Выберите подразделение и повышение — ниже появятся задания для выбранного ранга.</p>
+          <p className="!m-0 text-sm text-slate-300">Выберите подразделение и повышение — ниже появятся нужные поля отчёта.</p>
         </div>
       </div>
 
@@ -96,7 +108,7 @@ export default function AcademyPromotionReportForm() {
         <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
           <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
           <p className="text-emerald-200 text-base font-semibold mb-5">Отчёт на повышение отправлен</p>
-          <button type="button" onClick={() => { setNickStatic(''); setRankTransition(''); setEvidence(blankEvidence); setState('idle'); }} className="secondary-button mx-auto">
+          <button type="button" onClick={() => { setNickStatic(''); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); setState('idle'); }} className="secondary-button mx-auto">
             Заполнить новый отчёт
           </button>
         </section>
@@ -112,11 +124,12 @@ export default function AcademyPromotionReportForm() {
                 </label>
                 <label className="block">
                   <span>Подразделение</span>
-                  <select defaultValue="academy" className={inputClass}>
+                  <select value={department} onChange={event => { setDepartment(event.target.value as Department); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); }} className={inputClass}>
                     <option value="academy">Академия</option>
+                    <option value="uku">УКУ · Учебное и кадровое управление</option>
                   </select>
-                  <span className="mt-2 block text-xs text-slate-400">Пока доступна только Академия.</span>
                 </label>
+                {department === 'academy' ? (
                 <label className="block">
                   <span>На какой ранг повышаетесь <span className="text-rose-300">*</span></span>
                   <select value={rankTransition} onChange={event => { setRankTransition(event.target.value as RankTransition); setEvidence(blankEvidence); }} className={inputClass}>
@@ -125,10 +138,26 @@ export default function AcademyPromotionReportForm() {
                     <option value="2-3">Младший сержант (2) → Сержант (3)</option>
                   </select>
                 </label>
+                ) : <>
+                  <label className="block">
+                    <span>С какого ранга <span className="text-rose-300">*</span></span>
+                    <select value={fromRank} onChange={event => setFromRank(event.target.value)} className={inputClass}>
+                      <option value="">Выберите ранг</option>
+                      {Array.from({ length: 14 }, (_, index) => index + 1).map(rank => <option key={rank} value={rank}>{rank}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span>На какой ранг <span className="text-rose-300">*</span></span>
+                    <select value={toRank} onChange={event => setToRank(event.target.value)} className={inputClass}>
+                      <option value="">Выберите ранг</option>
+                      {Array.from({ length: 14 }, (_, index) => index + 2).map(rank => <option key={rank} value={rank}>{rank}</option>)}
+                    </select>
+                  </label>
+                </>}
               </div>
             </div>
 
-            {rankTransition && (
+            {department === 'academy' && rankTransition && (
               <div className="border-t border-sky-300/15 pt-6">
                 <p className="eyebrow mb-2">02 · ДОКАЗАТЕЛЬСТВА</p>
                 <div className="space-y-4">
@@ -144,6 +173,16 @@ export default function AcademyPromotionReportForm() {
                 <p className="application-note">Во время выполнения заданий включайте бодикамеру, иначе отчёт отклонят. Скриншоты принимаются только через Imgur, Fotora или Япикс.</p>
                 <p className="application-note">Запись на экзамен и практику — в канале «📝・запись-на-экзамен».</p>
                 {rankTransition === '1-2' && <p className="application-note">Для роли State Fraction сначала <a href="https://discord.gg/DUYKbzwG2" target="_blank" rel="noopener noreferrer">вступите на сервер</a>, затем перейдите в канал «получение-роли» и приложите скриншот полученной роли.</p>}
+              </div>
+            )}
+            {department === 'uku' && (
+              <div className="border-t border-sky-300/15 pt-6">
+                <p className="eyebrow mb-2">02 · ПРОДЕЛАННАЯ РАБОТА</p>
+                <label className="block">
+                  <span>Доказательства проделанной работы <span className="text-rose-300">*</span></span>
+                  <textarea value={workEvidence} onChange={event => setWorkEvidence(event.target.value)} maxLength={1000} rows={4}
+                    placeholder="Ссылки на выполненную работу или описание с доказательствами" className={`${inputClass} resize-y`} />
+                </label>
               </div>
             )}
 
