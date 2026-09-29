@@ -75,9 +75,9 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     rankLabel = `${fromRank} → ${toRank}`;
     title = `Отчёт на повышение · УКУ · ${rankLabel}`;
     fields = [
-      { name: 'С какого ранга', value: String(fromRank) },
-      { name: 'На какой ранг', value: String(toRank) },
-      { name: 'Доказательства проделанной работы', value: workEvidence },
+      { name: '🎖️ С какого ранга', value: String(fromRank) },
+      { name: '📈 На какой ранг', value: String(toRank) },
+      { name: '📎 Доказательства проделанной работы', value: workEvidence },
     ];
   } else {
     const rankTransition = body.rankTransition;
@@ -100,13 +100,13 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       ? 'Отчёт Академии · Рядовой (1) → Младший сержант (2)'
       : 'Отчёт Академии · Младший сержант (2) → Сержант (3)';
     fields = rankTransition === '1-2' ? [
-      { name: 'Удостоверение в Правительстве', value: links.governmentId! },
-      { name: 'Экзамен: строевая, субординация, радиообмен, устав', value: links.exam! },
-      { name: 'Практика: трафик-стоп, статьи, штраф', value: links.practice! },
-      { name: 'Роль State Fraction', value: links.stateFractionRole! },
+      { name: '🪪 Удостоверение в Правительстве', value: links.governmentId! },
+      { name: '📚 Экзамен: строевая, субординация, радиообмен, устав', value: links.exam! },
+      { name: '🚓 Практика: трафик-стоп, статьи, штраф', value: links.practice! },
+      { name: '🛡️ Роль State Fraction', value: links.stateFractionRole! },
     ] : [
-      { name: 'Экзамен по КоАП, УК и УПК', value: links.exam! },
-      { name: 'Практика по УПК', value: links.practice! },
+      { name: '📚 Экзамен по КоАП, УК и УПК', value: links.exam! },
+      { name: '🚓 Практика по УПК', value: links.practice! },
     ];
   }
 
@@ -132,10 +132,10 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     title,
     color: 3447003,
     fields: [
-      { name: 'Ваш никнейм и #статик', value: nickStatic },
-      ...(department === 'uku' ? [{ name: 'Ник Discord', value: discordName }] : []),
+      { name: '👤 Ваш никнейм и #статик', value: nickStatic },
+      ...(department === 'uku' ? [{ name: '💬 Ник Discord', value: discordName }] : []),
       ...fields,
-      { name: 'Discord ID', value: discordId },
+      { name: '🆔 Discord ID', value: discordId },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),

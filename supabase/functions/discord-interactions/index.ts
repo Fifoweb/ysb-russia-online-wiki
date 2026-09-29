@@ -34,6 +34,11 @@ function forbiddenApprovalResponse() {
   });
 }
 
+// Старые сообщения остаются доступны для решений после смены подписей полей.
+function fieldValue(embed: { fields?: { name?: string; value?: string }[] }, name: string): string {
+  return embed.fields?.find((field) => field.name === name || field.name?.endsWith(` ${name}`))?.value || '—';
+}
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
@@ -88,17 +93,17 @@ Deno.serve(async (req) => {
 
     if (customId === 'approve') {
       // Компактная карточка по ТЗ: блоки по смыслу, 2×2 inline-поля
-      const f = (n: string) => ((embed.fields || []).find((x: { name?: string }) => x.name === n)?.value) || '—';
+      const f = (n: string) => fieldValue(embed, n);
       const dateStr = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
       const approved = {
         title: '✅ Заявление одобрено',
         color: 3066993, // зелёный
         fields: [
           { name: '👤 Заявитель', value: f('👤 Заявитель') },
-          { name: 'Ник / статик', value: f('Ник / статик'), inline: true },
-          { name: 'Текущее звание', value: f('Текущее звание'), inline: true },
-          { name: 'Новое звание', value: f('Новое звание'), inline: true },
-          { name: 'Набрано баллов', value: f('Набрано баллов'), inline: true },
+          { name: '🪪 Ник / статик', value: f('Ник / статик'), inline: true },
+          { name: '🎖️ Текущее звание', value: f('Текущее звание'), inline: true },
+          { name: '📈 Новое звание', value: f('Новое звание'), inline: true },
+          { name: '🧮 Набрано баллов', value: f('Набрано баллов'), inline: true },
           { name: '📎 Доказательства', value: f('📎 Доказательства') },
           { name: '✅ Одобрил', value: whoTag },
         ],
@@ -188,7 +193,7 @@ Deno.serve(async (req) => {
 
       const promotedId =
         (interaction.message?.content?.match(/<@(\d+)>/) || [])[1] ||
-        ((embed.fields || []).find((x: { name?: string }) => x.name === '👤 Заявитель')?.value || '').match(/<@(\d+)>/)?.[1];
+        fieldValue(embed, '👤 Заявитель').match(/<@(\d+)>/)?.[1];
       if (!promotedId) {
         return json(200, { type: 4, data: { content: 'Не удалось определить автора заявления.', flags: 64 } });
       }
@@ -218,19 +223,18 @@ Deno.serve(async (req) => {
           console.error('Member lookup failed', error);
         }
 
-        const fieldVal = (name: string) =>
-          ((embed.fields || []).find((x: { name?: string }) => x.name === name)?.value) || '—';
+        const fieldVal = (name: string) => fieldValue(embed, name);
         const tick = String.fromCharCode(96);
         destinationEmbed = {
           title: '📕 Отчет о повышении сотрудника',
           description: `> Причина повышения: <#${interaction.channel_id}>\n> Повышен'а с ранга ${tick}${fieldVal('Текущее звание')}${tick} на ${tick}${fieldVal('Новое звание')}${tick} ранг`,
           fields: [
-            { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
-            { name: 'Имя Фамилия :', value: promotedNick || '—', inline: true },
-            { name: 'Discord ID :', value: String(promotedId), inline: true },
-            { name: 'Повышает :', value: `<@${clickerId}>`, inline: true },
-            { name: 'Имя Фамилия :', value: who, inline: true },
-            { name: 'Discord ID :', value: String(clickerId), inline: true },
+            { name: "👤 Повышен'а", value: `<@${promotedId}>`, inline: true },
+            { name: '🪪 Имя Фамилия', value: promotedNick || '—', inline: true },
+            { name: '🆔 Discord ID', value: String(promotedId), inline: true },
+            { name: '🎖️ Повышает', value: `<@${clickerId}>`, inline: true },
+            { name: '🪪 Имя Фамилия', value: who, inline: true },
+            { name: '🆔 Discord ID', value: String(clickerId), inline: true },
           ],
           footer: { text: `Дата: ${nowStr}` },
           timestamp: new Date().toISOString(),
@@ -243,7 +247,7 @@ Deno.serve(async (req) => {
           ...destinationEmbed,
           fields: [
             ...(destinationEmbed.fields || []),
-            { name: 'Источник заявления', value: `[Открыть заявку](${sourceUrl})` },
+            { name: '🔗 Источник заявления', value: `[Открыть заявку](${sourceUrl})` },
           ],
         };
         destinationComponents = [{
@@ -295,8 +299,7 @@ Deno.serve(async (req) => {
         return json(200, { type: 4, data: { content: 'Не удалось определить сотрудника, который одобрил запрос.', flags: 64 } });
       }
 
-      const fieldVal = (name: string) =>
-        ((embed.fields || []).find((x: { name?: string }) => x.name === name)?.value) || '—';
+      const fieldVal = (name: string) => fieldValue(embed, name);
       const promotedId =
         (fieldVal('👤 Заявитель').match(/<@!?([0-9]+)>/) || [])[1] ||
         (interaction.message?.content?.match(/<@!?([0-9]+)>/) || [])[1];
@@ -324,12 +327,12 @@ Deno.serve(async (req) => {
         title: '📕 Отчет о повышении сотрудника',
         description: `> Причина повышения: <#${sourceChannelId}>\n> Повышен'а с ранга ${tick}${fieldVal('Текущее звание')}${tick} на ${tick}${fieldVal('Новое звание')}${tick} ранг`,
         fields: [
-          { name: "Повышен'а :", value: `<@${promotedId}>`, inline: true },
-          { name: 'Имя Фамилия :', value: promotedNick || fieldVal('Ник / статик'), inline: true },
-          { name: 'Discord ID :', value: String(promotedId), inline: true },
-          { name: 'Повышает :', value: `<@${clickerId}>`, inline: true },
-          { name: 'Имя Фамилия :', value: who, inline: true },
-          { name: 'Discord ID :', value: String(clickerId), inline: true },
+          { name: "👤 Повышен'а", value: `<@${promotedId}>`, inline: true },
+          { name: '🪪 Имя Фамилия', value: promotedNick || fieldVal('Ник / статик'), inline: true },
+          { name: '🆔 Discord ID', value: String(promotedId), inline: true },
+          { name: '🎖️ Повышает', value: `<@${clickerId}>`, inline: true },
+          { name: '🪪 Имя Фамилия', value: who, inline: true },
+          { name: '🆔 Discord ID', value: String(clickerId), inline: true },
         ],
         footer: { text: `Дата: ${nowStr}` },
         timestamp: new Date().toISOString(),
@@ -421,8 +424,8 @@ Deno.serve(async (req) => {
         color: 3066993, // зелёный
         fields: [
           ...(embed.fields || []),
-          { name: 'Восстановлен на ранг', value: `${rank} ранг`, inline: true },
-          { name: 'Одобрил', value: whoTag, inline: true },
+          { name: '🎖️ Восстановлен на ранг', value: `${rank} ранг`, inline: true },
+          { name: '✅ Одобрил', value: whoTag, inline: true },
         ],
         footer: { text: `Дата: ${nowStr}` },
         timestamp: new Date().toISOString(),
@@ -472,7 +475,7 @@ Deno.serve(async (req) => {
       color: 12597547, // приглушённый тёмно-красный (#c0392b)
       fields: [
         ...(embed.fields || []),
-        { name: 'Отклонил', value: whoTag, inline: true },
+        { name: '❌ Отклонил', value: whoTag, inline: true },
       ],
     };
     // На месте кнопок — серая неактивная плашка «Отклонено: причина» (кнопки в Discord живут только внизу)
@@ -504,8 +507,8 @@ Deno.serve(async (req) => {
       color: 12597547,
       fields: [
         ...(embed.fields || []),
-        { name: 'Причина отказа', value: reason },
-        { name: 'Отклонил', value: whoTag, inline: true },
+        { name: '📝 Причина отказа', value: reason },
+        { name: '❌ Отклонил', value: whoTag, inline: true },
       ],
       footer: { text: `Решение: ${who} • ${nowStr}` },
       timestamp: new Date().toISOString(),
@@ -539,8 +542,8 @@ Deno.serve(async (req) => {
       color: 12597547, // приглушённый тёмно-красный
       fields: [
         ...(embed.fields || []),
-        { name: 'Причина отказа', value: reason },
-        { name: 'Отказал', value: whoTag, inline: true },
+        { name: '📝 Причина отказа', value: reason },
+        { name: '❌ Отказал', value: whoTag, inline: true },
       ],
       footer: { text: `Дата: ${nowStr}` },
       timestamp: new Date().toISOString(),

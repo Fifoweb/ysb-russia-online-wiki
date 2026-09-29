@@ -79,12 +79,12 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     title: 'Восстановление',
     color: 440020, // бирюзово-голубой акцент сайта (#06b6d4)
     fields: [
-      { name: 'Имя Фамилия | static', value: fullNameStatic },
-      { name: 'Скриншот на одобренный запрос из дискорда гос.фракций (если после ban/warn)', value: factionScreenshot || '—' },
-      { name: 'Доказательства пребывания на ранге', value: rankEvidence },
-      { name: 'Причина увольнения', value: dismissReason },
-      { name: 'Ранг до увольнения', value: previousRank },
-      { name: 'Discord ID', value: discordId, inline: true },
+      { name: '👤 Имя Фамилия | static', value: fullNameStatic },
+      { name: '📷 Одобренный запрос гос.фракций (после ban/warn)', value: factionScreenshot || '—' },
+      { name: '📎 Доказательства прежнего ранга', value: rankEvidence },
+      { name: '📝 Причина увольнения', value: dismissReason },
+      { name: '🎖️ Ранг до увольнения', value: previousRank },
+      { name: '🆔 Discord ID', value: discordId, inline: true },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
     timestamp: new Date().toISOString(),
