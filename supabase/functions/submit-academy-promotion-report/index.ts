@@ -61,7 +61,6 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   if (department !== 'academy' && department !== 'uku') return json(400, { error: 'Выберите подразделение из списка' });
   const targetConfig = TARGETS[department];
   let title: string;
-  let rankLabel: string;
   let fields: { name: string; value: string }[];
   if (department === 'uku') {
     const { fromRank, toRank } = body;
@@ -72,11 +71,10 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       return json(400, { error: 'Укажите повышение: ранги от 1 до 15, целевой ранг выше исходного' });
     }
     if (!workEvidence || workEvidence.length > 1000) return json(400, { error: 'Добавьте доказательства проделанной работы (до 1000 символов)' });
-    rankLabel = `${fromRank} → ${toRank}`;
-    title = `Отчёт на повышение · УКУ · ${rankLabel}`;
+    title = '📚 Отчёт на повышение · УКУ';
     fields = [
-      { name: '🎖️ С какого ранга', value: String(fromRank) },
-      { name: '📈 На какой ранг', value: String(toRank) },
+      { name: '🎖️ Исходный ранг', value: String(fromRank) },
+      { name: '📈 Целевой ранг', value: String(toRank) },
       { name: '📎 Доказательства проделанной работы', value: workEvidence },
     ];
   } else {
@@ -95,16 +93,17 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     if (required.some(key => !links[key])) {
       return json(400, { error: 'Приложите ко всем заданиям ссылки HTTPS на Imgur, Fotora или Япикс' });
     }
-    rankLabel = rankTransition;
-    title = rankTransition === '1-2'
-      ? 'Отчёт Академии · Рядовой (1) → Младший сержант (2)'
-      : 'Отчёт Академии · Младший сержант (2) → Сержант (3)';
+    title = '🎓 Отчёт на повышение · Академия';
     fields = rankTransition === '1-2' ? [
+      { name: '🎖️ Исходный ранг', value: 'Рядовой (1)' },
+      { name: '📈 Целевой ранг', value: 'Младший сержант (2)' },
       { name: '🪪 Удостоверение в Правительстве', value: links.governmentId! },
       { name: '📚 Экзамен: строевая, субординация, радиообмен, устав', value: links.exam! },
       { name: '🚓 Практика: трафик-стоп, статьи, штраф', value: links.practice! },
       { name: '🛡️ Роль State Fraction', value: links.stateFractionRole! },
     ] : [
+      { name: '🎖️ Исходный ранг', value: 'Младший сержант (2)' },
+      { name: '📈 Целевой ранг', value: 'Сержант (3)' },
       { name: '📚 Экзамен по КоАП, УК и УПК', value: links.exam! },
       { name: '🚓 Практика по УПК', value: links.practice! },
     ];
@@ -148,7 +147,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content: `📤 Новый отчёт ${department === 'uku' ? 'УКУ' : 'Академии'} · ${rankLabel}\nЗаявка от <@${discordId}> · <@&${targetConfig.roleId}>`,
+        content: `👤 Отчёт от <@${discordId}>\n🔔 На рассмотрение: <@&${targetConfig.roleId}>`,
         embeds: [embed],
         allowed_mentions: { parse: [], roles: [targetConfig.roleId], users: [discordId] },
       }),
