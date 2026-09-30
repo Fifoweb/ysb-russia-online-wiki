@@ -7,9 +7,14 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const TARGETS = {
-  academy: { webhookId: '1553922705936617472', channelId: '1538937581432078451', roleId: '1540267213578043434', secret: 'DISCORD_ACADEMY_PROMOTION_WEBHOOK_URL' },
-  uku: { webhookId: '1554442409205563452', channelId: '1538937582400966689', roleId: '1540268884987478096', secret: 'DISCORD_UKU_PROMOTION_WEBHOOK_URL' },
-  usb: { webhookId: '1554663195552124979', channelId: '1538937580421255241', roleId: '1540269592927019038', secret: 'DISCORD_USB_PROMOTION_WEBHOOK_URL' },
+  academy: { label: 'Академия', webhookId: '1553922705936617472', channelId: '1538937581432078451', roleId: '1540267213578043434', secret: 'DISCORD_ACADEMY_PROMOTION_WEBHOOK_URL' },
+  uku: { label: 'УКУ', webhookId: '1554442409205563452', channelId: '1538937582400966689', roleId: '1540268884987478096', secret: 'DISCORD_UKU_PROMOTION_WEBHOOK_URL' },
+  usb: { label: 'УСБ', webhookId: '1554663195552124979', channelId: '1538937580421255241', roleId: '1540269592927019038', secret: 'DISCORD_USB_PROMOTION_WEBHOOK_URL' },
+  dps: { label: 'ДПС', webhookId: '1554664973332906005', channelId: '1538937580937019425', roleId: '1540268712282562610', secret: 'DISCORD_DPS_PROMOTION_WEBHOOK_URL' },
+  sdb: { label: 'СДБ', webhookId: '1554665342901428274', channelId: '1540401716779024535', roleId: '1540268801193672755', secret: 'DISCORD_SDB_PROMOTION_WEBHOOK_URL' },
+  uor: { label: 'УОР', webhookId: '1554665977621258313', channelId: '1540370399789981706', roleId: '1540268999718342656', secret: 'DISCORD_UOR_PROMOTION_WEBHOOK_URL' },
+  ugk: { label: 'УГК', webhookId: '1554666247520526388', channelId: '1540368207943180468', roleId: '1540269700443799583', secret: 'DISCORD_UGK_PROMOTION_WEBHOOK_URL' },
+  mb: { label: 'МБ', webhookId: '1554666481394913370', channelId: '1542284020673679481', roleId: '1542235140611379260', secret: 'DISCORD_MB_PROMOTION_WEBHOOK_URL' },
 } as const;
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
@@ -59,7 +64,10 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const nickStatic = typeof body.nickStatic === 'string' ? body.nickStatic.trim() : '';
   if (!nickStatic || nickStatic.length > 100) return json(400, { error: 'Укажите никнейм и #статик (до 100 символов)' });
   const department = body.department === undefined ? 'academy' : body.department;
-  if (department !== 'academy' && department !== 'uku' && department !== 'usb') return json(400, { error: 'Выберите подразделение из списка' });
+  if (department !== 'academy' && department !== 'uku' && department !== 'usb' &&
+    department !== 'dps' && department !== 'sdb' && department !== 'uor' && department !== 'ugk' && department !== 'mb') {
+    return json(400, { error: 'Выберите подразделение из списка' });
+  }
   const targetConfig = TARGETS[department];
   let title: string;
   let fields: { name: string; value: string }[];
@@ -72,7 +80,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       return json(400, { error: 'Укажите повышение: ранги от 1 до 15, целевой ранг выше исходного' });
     }
     if (!workEvidence || workEvidence.length > 1000) return json(400, { error: 'Добавьте доказательства проделанной работы (до 1000 символов)' });
-    title = `📚 Отчёт на повышение · ${department === 'uku' ? 'УКУ' : 'УСБ'}`;
+    title = `📚 Отчёт на повышение · ${targetConfig.label}`;
     fields = [
       { name: '🎖️ Исходный ранг', value: String(fromRank) },
       { name: '📈 Целевой ранг', value: String(toRank) },
@@ -111,7 +119,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   }
 
   const webhook = webhookUrl(Deno.env.get(targetConfig.secret), targetConfig.webhookId);
-  if (!webhook) return json(503, { error: `Вебхук отчётов ${department === 'academy' ? 'Академии' : department === 'uku' ? 'УКУ' : 'УСБ'} не настроен` });
+  if (!webhook) return json(503, { error: `Вебхук отчётов подразделения «${targetConfig.label}» не настроен` });
   try {
     const targetResponse = await fetch(webhook);
     if (!targetResponse.ok) {

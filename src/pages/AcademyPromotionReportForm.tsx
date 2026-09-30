@@ -10,7 +10,7 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
-type Department = 'academy' | 'uku' | 'usb';
+type Department = 'academy' | 'uku' | 'usb' | 'dps' | 'sdb' | 'uor' | 'ugk' | 'mb';
 type RankTransition = '' | '1-2' | '2-3';
 type EvidenceKey = 'governmentId' | 'exam' | 'practice' | 'stateFractionRole';
 const blankEvidence = { governmentId: '', exam: '', practice: '', stateFractionRole: '' };
@@ -128,6 +128,11 @@ export default function AcademyPromotionReportForm() {
                     <option value="academy">Академия</option>
                     <option value="uku">УКУ · Учебное и кадровое управление</option>
                     <option value="usb">УСБ · Управление собственной безопасности</option>
+                    <option value="dps">ДПС · Дорожно-патрульная служба</option>
+                    <option value="sdb">СДБ · Специальный дорожный батальон</option>
+                    <option value="uor">УОР · Управление оперативного розыска</option>
+                    <option value="ugk">УГК · Управление грузового контроля</option>
+                    <option value="mb">МБ · Мотоциклетный Батальон</option>
                   </select>
                 </label>
                 {department === 'academy' ? (
