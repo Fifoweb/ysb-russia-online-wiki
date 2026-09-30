@@ -145,7 +145,7 @@ export default function Appendix() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="!mt-0 !mb-1">🚀 Конструктор документов V2</h2>
-            <p className="text-sm text-gray-400">Динамический редактор: секции, подписанты, закладки</p>
+            <p className="text-sm text-gray-400">Полное редактирование: шапка, реквизиты, текст и подписанты</p>
           </div>
           <button onClick={() => setEditorOpen(true)}
             className="px-5 py-3 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30 transition-all font-mono text-sm flex items-center gap-2">
@@ -153,14 +153,14 @@ export default function Appendix() {
             Открыть редактор
           </button>
         </div>
-        <p className="text-xs text-gray-500">Добавляйте и удаляйте секции, подписантов, закладки. Скачайте готовый PNG.</p>
+        <p className="text-xs text-gray-500">Изменяйте любой текст бланка, добавляйте и удаляйте разделы и подписантов. Сохраните личную копию для дальнейшей работы или скачайте PNG.</p>
       </section>
 
       {/* Альбом форм */}
       <section className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
         <h2 className="!mt-0">📋 Альбом служебных документов</h2>
         <p className="mb-2">Полный перечень из <strong>44 форм</strong>, применяемых в работе УСБ. <span className="text-purple-300">Кликните на код — откроется редактируемый бланк.</span></p>
-        <p className="text-xs text-gray-500 mb-4">Заполните поля и скачайте готовый PNG с белым фоном.</p>
+        <p className="text-xs text-gray-500 mb-4">Все 44 бланка полностью редактируются. Нажмите на текст для изменения; сохранённые личные копии можно открыть повторно. Готовый документ скачивается в PNG с белым фоном.</p>
         <div className="overflow-x-auto">
           <table>
             <thead><tr><th>Код</th><th>Наименование</th><th>Назначение</th><th>Этап</th></tr></thead>

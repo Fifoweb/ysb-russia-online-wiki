@@ -41,11 +41,12 @@ export async function loadRemoteBookmarks(userId: string, code: string, local: S
   return local;
 }
 
-export async function saveRemoteBookmarks(userId: string, code: string, items: StoredBookmark[]): Promise<void> {
-  if (!supabase) return;
-  await supabase
+export async function saveRemoteBookmarks(userId: string, code: string, items: StoredBookmark[]): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
     .from('bookmarks')
     .upsert({ user_id: userId, doc_code: code, items, updated_at: new Date().toISOString() });
+  return !error;
 }
 
 // ── Favorites (handbook articles): one row per user, ids = jsonb array ──

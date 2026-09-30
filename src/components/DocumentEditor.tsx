@@ -8,21 +8,38 @@ import { loadRemoteBookmarks, saveRemoteBookmarks } from '../lib/db';
 
 interface Section { id: number; heading: string; }
 interface Signatory { id: number; name: string; title: string; }
-interface Draft { title: string; sections: Section[]; signatories: Signatory[]; fields: string[]; }
+interface Draft {
+  title: string; sections: Section[]; signatories: Signatory[]; fields: string[];
+  textBlocks?: Record<string, string>;
+  fieldValues?: Record<string, string>;
+  signatureOverrides?: number[];
+}
 interface Bookmark { name: string; sectionId: number; snapshot?: Draft; }
 
 interface DocEditorProps { doc: DocConfig | null; onClose: () => void; }
 
-const E = ({ ph, mono, onText, hidden, mark }: { ph?: string; mono?: boolean; onText?: (v: string) => void; hidden?: boolean; mark?: string }) => (
-  <span contentEditable suppressContentEditableWarning data-placeholder={ph || ''} data-mark={mark}
+const readText = (el: HTMLElement) => (el.innerText ?? el.textContent ?? '').replace(/\r\n?/g, '\n');
+
+const editableTextProps = (key: string, label: string) => ({
+  contentEditable: 'plaintext-only' as const,
+  suppressContentEditableWarning: true,
+  'data-doc-text': key,
+  role: 'textbox',
+  'aria-label': label,
+  'aria-multiline': true,
+});
+
+const E = ({ ph, onText, hidden, mark, fieldKey }: { ph?: string; onText?: (v: string) => void; hidden?: boolean; mark?: string; fieldKey: string }) => (
+  <span contentEditable="plaintext-only" suppressContentEditableWarning data-placeholder={ph || ''} data-mark={mark} data-field-key={fieldKey}
+    role="textbox" aria-label={ph || 'Поле документа'} aria-multiline="true"
     onInput={e => {
       // Hide the dashed underline once the field is filled
       const el = e.currentTarget;
-      const v = el.textContent || '';
+      const v = readText(el);
       el.classList.toggle('filled', v.trim().length > 0);
       onText?.(v);
     }}
-    className="inline-block border-b border-dashed border-gray-400 outline-none focus:border-gray-600 focus:bg-gray-100 rounded px-1 -mx-0.5 min-w-[50px] transition-all empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:italic"
+    className="inline-block whitespace-pre-wrap border-b border-dashed border-gray-400 outline-none focus:border-gray-600 focus:bg-gray-100 rounded px-1 -mx-0.5 min-w-[50px] transition-all empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:italic"
     // `hidden` via inline style: the inline-block class would override the [hidden] attribute
     style={{ color: '#000', ...(hidden ? { display: 'none' } : {}) }} />
 );
@@ -81,16 +98,22 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
   const [sections, setSections] = useState<Section[]>(() => buildInitialSections(doc));
   const [signatories, setSignatories] = useState<Signatory[]>(() => [{ ...DEFAULT_SIGNATORY }]);
   const [docTitle, setDocTitle] = useState(() => doc?.title || 'НАЗВАНИЕ ДОКУМЕНТА');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => loadBookmarks(code));
+  const [draftRevision, setDraftRevision] = useState(0);
+  const [sectionEditor, setSectionEditor] = useState<{ id: number; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null);
   // Typed names per signatory — drives the generated signature
   const [sigTexts, setSigTexts] = useState<Record<number, string>>({});
-  const nextSecId = useRef(doc ? doc.body.length + 1 : 2);
+  const [signatureOverrides, setSignatureOverrides] = useState<number[]>([]);
+  const signatureOverridesRef = useRef(signatureOverrides);
+  signatureOverridesRef.current = signatureOverrides;
+  const nextSecId = useRef(Math.max(0, ...sections.map(section => section.id)) + 1);
   const nextSigId = useRef(2);
   const signatoriesRef = useRef(signatories);
   signatoriesRef.current = signatories;
   // Snapshot waiting to be applied after React re-renders the restored structure
-  const pendingSnapshotRef = useRef<{ fields: string[]; sectionId: number } | null>(null);
+  const pendingSnapshotRef = useRef<Draft & { sectionId: number } | null>(null);
 
   const { user } = useAuth();
 
@@ -99,44 +122,71 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
     if (!user) return;
     let cancelled = false;
     loadRemoteBookmarks(user.id, code, loadBookmarks(code))
-      .then(items => { if (!cancelled) setBookmarks(items as Bookmark[]); });
+      .then(items => { if (!cancelled) setBookmarks(items as Bookmark[]); })
+      .catch(() => { if (!cancelled) setNotice({ error: true, text: 'Не удалось загрузить копии из аккаунта. Копии в браузере доступны.' }); });
     return () => { cancelled = true; };
   }, [user, code]);
 
-  const syncBookmarks = useCallback((items: Bookmark[]) => {
+  const syncBookmarks = useCallback(async (items: Bookmark[]) => {
+    try {
+      saveBookmarksToStorage(code, items);
+    } catch {
+      setNotice({ error: true, text: 'Не удалось сохранить копию в браузере. Проверьте свободное место.' });
+      return;
+    }
     setBookmarks(items);
-    saveBookmarksToStorage(code, items);
-    if (user) void saveRemoteBookmarks(user.id, code, items);
+    if (user) {
+      try {
+        if (!await saveRemoteBookmarks(user.id, code, items)) {
+          setNotice({ error: true, text: 'Копия сохранена в браузере, но синхронизация с аккаунтом не удалась. Попробуйте сохранить ещё раз.' });
+          return;
+        }
+      } catch {
+        setNotice({ error: true, text: 'Копия сохранена в браузере. Аккаунт временно недоступен для синхронизации.' });
+        return;
+      }
+    }
+    setNotice({ error: false, text: user ? 'Личные копии сохранены в браузере и аккаунте.' : 'Личные копии сохранены в этом браузере.' });
   }, [code, user]);
 
   const addSection = () => setSections(s => [...s, { id: nextSecId.current++, heading: 'Текст раздела' }]);
-  const removeSection = (id: number) => { if (sections.length > 1) setSections(s => s.filter(x => x.id !== id)); };
+  const removeSection = (id: number) => {
+    setSections(s => s.filter(x => x.id !== id));
+    if (sectionEditor?.id === id) setSectionEditor(null);
+  };
 
   const addSignatory = () => setSignatories(s => [...s, { id: nextSigId.current++, name: 'ФИО', title: 'Должность' }]);
-  const removeSignatory = (id: number) => { if (signatories.length > 1) setSignatories(s => s.filter(x => x.id !== id)); };
+  const removeSignatory = (id: number) => setSignatories(s => s.filter(x => x.id !== id));
 
   // Snapshot everything the user typed: field values, sections, title, signatories
   const captureDraft = useCallback((): Draft | undefined => {
     const root = docRef.current;
     if (!root) return undefined;
-    const fields = Array.from(root.querySelectorAll('[data-placeholder]')).map(sp => sp.textContent || '');
+    const spans = Array.from(root.querySelectorAll<HTMLElement>('[data-placeholder]'));
+    const fields = spans.map(readText);
+    const fieldValues = Object.fromEntries(spans.map(sp => [sp.dataset.fieldKey || '', readText(sp)]).filter(([key]) => key));
+    const textBlocks = Object.fromEntries(Array.from(root.querySelectorAll<HTMLElement>('[data-doc-text]'))
+      .map(el => [el.dataset.docText!, readText(el)]));
     const secs = Array.from(root.querySelectorAll('[id^="sec-"]')).map(d => ({
       id: Number(d.id.replace('sec-', '')),
       // Rebuild section text: data-seg spans = editable text, data-placeholder = [FIELD]
-      heading: Array.from(d.querySelectorAll('[data-seg], [data-placeholder]'))
-        .map(el => el.hasAttribute('data-seg') ? (el.textContent || '') : `[${el.getAttribute('data-placeholder') || ''}]`)
+      heading: Array.from(d.querySelectorAll<HTMLElement>('[data-seg], [data-placeholder]'))
+        .map(el => el.hasAttribute('data-seg') ? readText(el) : `[${el.getAttribute('data-placeholder') || ''}]`)
         .join(''),
     }));
     return {
-      title: root.querySelector('[data-doc-title]')?.textContent ?? '',
+      title: root.querySelector<HTMLElement>('[data-doc-title]') ? readText(root.querySelector<HTMLElement>('[data-doc-title]')!) : '',
       sections: secs,
       signatories: signatoriesRef.current,
       fields,
+      fieldValues,
+      textBlocks,
+      signatureOverrides: signatureOverridesRef.current,
     };
   }, []);
 
   const addBookmark = () => {
-    const name = prompt('Название закладки:');
+    const name = prompt('Название личной копии:');
     if (!name) return;
     // Bind the bookmark to the section closest to the current scroll position
     const container = document.getElementById('doc-scroll');
@@ -152,19 +202,40 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
       }
     }
     // Save a full snapshot of the document into the bookmark
-    syncBookmarks([...bookmarks, { name, sectionId: targetId, snapshot: captureDraft() }]);
+    void syncBookmarks([...bookmarks, { name, sectionId: targetId, snapshot: captureDraft() }]);
   };
-  const removeBookmark = (i: number) => syncBookmarks(bookmarks.filter((_, idx) => idx !== i));
+  const removeBookmark = (i: number) => void syncBookmarks(bookmarks.filter((_, idx) => idx !== i));
+
+  const editSection = (id: number) => {
+    const section = captureDraft()?.sections.find(item => item.id === id);
+    if (section) setSectionEditor({ id, text: section.heading });
+  };
+
+  const applySectionText = () => {
+    if (!sectionEditor) return;
+    const snapshot = captureDraft();
+    if (!snapshot) return;
+    setSections(snapshot.sections.map(section => section.id === sectionEditor.id ? { ...section, heading: sectionEditor.text } : section));
+    setDocTitle(snapshot.title);
+    pendingSnapshotRef.current = { ...snapshot, sectionId: sectionEditor.id };
+    setDraftRevision(revision => revision + 1);
+    setSectionEditor(null);
+  };
 
   // Restore the document content saved in a bookmark
   const applyBookmark = (b: Bookmark) => {
     if (!b.snapshot) { scrollTo(b.sectionId); return; }
-    setSections(b.snapshot.sections.length ? b.snapshot.sections : buildInitialSections(doc));
-    setSignatories(b.snapshot.signatories.length ? b.snapshot.signatories : [{ ...DEFAULT_SIGNATORY }]);
-    setDocTitle(b.snapshot.title || doc?.title || 'НАЗВАНИЕ ДОКУМЕНТА');
+    setSections(b.snapshot.sections);
+    setSignatories(b.snapshot.signatories);
+    setDocTitle(b.snapshot.title);
+    setSigTexts({});
+    setSignatureOverrides(b.snapshot.signatureOverrides || []);
+    setSectionEditor(null);
     nextSecId.current = Math.max(0, ...b.snapshot.sections.map(s => s.id)) + 1;
     nextSigId.current = Math.max(0, ...b.snapshot.signatories.map(s => s.id)) + 1;
-    pendingSnapshotRef.current = { fields: b.snapshot.fields, sectionId: b.sectionId };
+    pendingSnapshotRef.current = { ...b.snapshot, sectionId: b.sectionId };
+    setDraftRevision(revision => revision + 1);
+    setNotice({ error: false, text: 'Сохранённая копия восстановлена.' });
   };
 
   // After a snapshot is applied, React re-renders sections/signatories first;
@@ -175,11 +246,18 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
     pendingSnapshotRef.current = null;
     const root = docRef.current;
     if (root) {
-      const spans = root.querySelectorAll('[data-placeholder]');
-      spans.forEach((sp, i) => {
-        const v = p.fields[i] || '';
+      const spans = root.querySelectorAll<HTMLElement>('[data-placeholder]');
+      let legacyIndex = 0;
+      spans.forEach(sp => {
+        // Older snapshots did not include the editable signature field.
+        const key = sp.dataset.fieldKey || '';
+        const v = p.fieldValues ? p.fieldValues[key] ?? '' : key.endsWith(':signature') ? '' : p.fields[legacyIndex++] || '';
         sp.textContent = v;
         sp.classList.toggle('filled', v.trim().length > 0);
+      });
+      root.querySelectorAll<HTMLElement>('[data-doc-text]').forEach(el => {
+        const value = p.textBlocks?.[el.dataset.docText || ''];
+        if (value !== undefined) el.textContent = value;
       });
       // Restored signatory names -> regenerate their signatures
       const names: Record<number, string> = {};
@@ -191,7 +269,7 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
       setSigTexts(names);
     }
     scrollTo(p.sectionId);
-  }, [sections, signatories, docTitle]);
+  }, [sections, signatories, docTitle, draftRevision]);
 
   const handleDownload = useCallback(async () => {
     const src = docRef.current;
@@ -208,6 +286,14 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
     clone.style.minHeight = 'auto';
     clone.style.boxShadow = 'none';
     clone.querySelectorAll('[data-ui]').forEach(el => el.remove());
+    clone.querySelectorAll('[data-optional-text]').forEach(el => {
+      if (!(el.textContent || '').trim()) el.remove();
+    });
+    clone.querySelectorAll<HTMLElement>('[contenteditable]').forEach(el => {
+      el.removeAttribute('contenteditable');
+      el.style.outline = 'none';
+      el.removeAttribute('data-empty-label');
+    });
     stage.appendChild(clone);
     document.body.appendChild(stage);
     try {
@@ -216,7 +302,10 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
       const a = document.createElement('a');
       a.download = `${code}_${new Date().toISOString().slice(0, 10)}.png`;
       a.href = u; a.click();
-    } catch (e) { console.error('PNG export failed:', e); }
+    } catch (e) {
+      console.error('PNG export failed:', e);
+      setNotice({ error: true, text: 'Не удалось скачать PNG. Попробуйте ещё раз.' });
+    }
     stage.remove();
     setDownloading(false);
   }, [code]);
@@ -251,12 +340,12 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
         onClick={onClose}>
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          onClick={e => e.stopPropagation()} className="w-full h-full flex">
+          onClick={e => e.stopPropagation()} className="w-full h-full flex relative" role="dialog" aria-modal="true" aria-label="Редактор документа">
 
           {/* Main */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Toolbar */}
-            <div className="flex items-center gap-3 px-6 py-3 border-b border-purple-500/20 bg-[#0a0a12] shrink-0">
+            <div className="flex flex-wrap items-center gap-2 px-3 sm:px-6 py-3 border-b border-purple-500/20 bg-[#0a0a12] shrink-0">
               <button onClick={onClose} title="Вернуться к выбору документов"
                 className="px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/25 text-xs text-purple-300 hover:bg-purple-500/25 hover:text-white transition-all font-mono flex items-center gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -269,71 +358,72 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
               {doc && <span className="text-xs font-mono px-2 py-1 rounded bg-purple-500/15 text-purple-300 border border-purple-500/20">{cyrCode}</span>}
               {doc && <span className="text-xs text-gray-500 truncate max-w-[200px] hidden sm:inline">{title}</span>}
               <div className="flex-1" />
-              {user && (
-                <button onClick={addBookmark}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 border border-purple-500/15 text-xs text-gray-400 hover:text-white transition-all font-mono flex items-center gap-1.5">
+                <button onClick={addBookmark} disabled={Boolean(sectionEditor)} title={sectionEditor ? 'Сначала примените текст раздела' : 'Сохранить весь документ в личных копиях'}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 border border-purple-500/15 text-xs text-gray-400 hover:text-white transition-all font-mono flex items-center gap-1.5 disabled:opacity-50">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                  Закладка
+                  Сохранить копию
                 </button>
-              )}
-              <button onClick={handleDownload} disabled={downloading}
+              <button onClick={handleDownload} disabled={downloading || Boolean(sectionEditor)} title={sectionEditor ? 'Сначала примените текст раздела' : 'Скачать документ в PNG'}
                 className="px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-xs text-purple-300 hover:bg-purple-500/30 transition-all font-mono flex items-center gap-1.5 disabled:opacity-50">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 {downloading ? '...' : 'Скачать'}
               </button>
-              <button onClick={onClose}
+              <button onClick={onClose} aria-label="Закрыть редактор"
                 className="w-8 h-8 rounded-lg bg-white/5 border border-purple-500/15 flex items-center justify-center text-gray-400 hover:text-white transition-all">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
+            <div className="px-3 sm:px-6 py-2 text-xs text-slate-300 bg-[#0a0a12] border-b border-sky-300/10">
+              Нажмите на любой текст бланка, чтобы изменить его. Для раздела целиком используйте «Изменить текст».
+              {sectionEditor && <span className="block mt-1 text-sky-300">Примените текст раздела перед сохранением копии или скачиванием.</span>}
+              {notice && <p className={`mt-1 ${notice.error ? 'text-rose-300' : 'text-emerald-300'}`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
+            </div>
 
             {/* Document */}
-            <div id="doc-scroll" className="flex-1 overflow-y-auto bg-[#111118] p-6">
+            <div id="doc-scroll" className="flex-1 overflow-y-auto bg-[#111118] p-3 sm:p-6">
               <div ref={docRef} className="bg-white mx-auto max-w-[620px] shadow-2xl" style={{ fontFamily: "'Times New Roman', serif", minHeight: '100%' }}>
-                <style>{`.ed,.ed *{color:#000!important}.ed .dim{color:#555!important}.ed [data-placeholder].filled{border-bottom-color:transparent;min-width:0;padding-left:0;padding-right:0;margin-left:0;margin-right:0}`}</style>
-                <div className="ed px-12 py-10">
+                <style>{`.ed,.ed *{color:#000!important}.ed .dim{color:#555!important}.ed [data-placeholder].filled{border-bottom-color:transparent;min-width:0;padding-left:0;padding-right:0;margin-left:0;margin-right:0}.ed [data-doc-text],.ed [data-doc-title],.ed [data-seg]{white-space:pre-wrap;overflow-wrap:anywhere;outline:none}.ed [contenteditable]:focus{outline:2px solid #0284c7;outline-offset:2px;background:#f0f9ff;border-radius:3px}.ed [data-empty-label]:empty:before{content:attr(data-empty-label);color:#64748b;font-style:italic}.ed [data-doc-text]:empty{min-height:1em;min-width:2em;display:inline-block}`}</style>
+                <div key={draftRevision} className="ed px-4 sm:px-12 py-10">
 
                   <div className="flex justify-center mb-3"><img src={import.meta.env.BASE_URL + 'emblem.png'} alt="" className="w-[60px] h-auto" /></div>
-                  <p className="text-[11px] leading-tight tracking-[0.1em] uppercase font-semibold text-center border-b border-[#7f7f7f] pb-3">
-                    ГОСУДАРСТВЕННАЯ ИНСПЕКЦИЯ БЕЗОПАСНОСТИ ДОРОЖНОГО<br/>ДВИЖЕНИЯ МВД РОССИЙСКОГО ОКРУГА
+                  <p {...editableTextProps('header', 'Шапка документа')} data-optional-text className="text-[11px] leading-tight tracking-[0.1em] uppercase font-semibold text-center border-b border-[#7f7f7f] pb-3">
+                    {'ГОСУДАРСТВЕННАЯ ИНСПЕКЦИЯ БЕЗОПАСНОСТИ ДОРОЖНОГО\nДВИЖЕНИЯ МВД РОССИЙСКОГО ОКРУГА'}
                   </p>
-                  <p className="text-[12px] text-center mt-2 font-semibold tracking-[0.08em]">{formType}</p>
+                  <p {...editableTextProps('documentType', 'Тип документа')} data-optional-text className="text-[12px] text-center mt-2 font-semibold tracking-[0.08em]">{formType}</p>
 
                   <div className="text-center mt-6 mb-8">
-                    <div contentEditable suppressContentEditableWarning data-doc-title
-                      onBlur={e => { const v = e.currentTarget.textContent || ''; setDocTitle(v); }}
+                    <div contentEditable="plaintext-only" suppressContentEditableWarning data-doc-title role="textbox" aria-label="Название документа" aria-multiline="true"
                       className="text-lg font-bold uppercase tracking-wider outline-none min-w-[200px] inline-block" style={{ color: '#000' }}>{docTitle}</div>
                   </div>
 
-                  <div className="border-t border-b border-[#7f7f7f] py-2 mb-4 flex gap-6 text-[13px]">
-                    <span>«<E ph="___" />» <E ph="__________" /> 2026 г.</span>
-                    <span>г. <E ph="Москва" /></span>
-                    <span className="ml-auto">№ <span className="font-mono">{doc ? `${cyrCode}-` : ''}<E ph="____" /></span></span>
+                  <div className="border-t border-b border-[#7f7f7f] py-2 mb-4 flex flex-wrap gap-3 text-[13px]">
+                    <span>«<E ph="День" fieldKey="date-day" />» <E ph="Месяц" fieldKey="date-month" /> <span {...editableTextProps('year', 'Год документа')}>2026 г.</span></span>
+                    <span><span {...editableTextProps('cityLabel', 'Подпись города')}>г. </span><E ph="Москва" fieldKey="city" /></span>
+                    <span className="ml-auto"><span {...editableTextProps('numberLabel', 'Подпись номера')}>№ </span><span className="font-mono"><span {...editableTextProps('codePrefix', 'Код документа')} data-empty-label="Код">{doc ? `${cyrCode}-` : ''}</span><E ph="Номер" fieldKey="number" /></span></span>
                   </div>
 
                   <div className="flex border border-[#7f7f7f] mb-6">
                     <div className="w-[55%] border-r border-[#7f7f7f] p-2 text-[11px] leading-relaxed">
-                      <span className="font-bold">УПРАВЛЕНИЕ СОБСТВЕННОЙ БЕЗОПАСНОСТИ ГИБДД</span><br/>
-                      ГУ МВД РОССИИ ПО Г. МОСКВЕ И МОСКОВСКОЙ ОБЛАСТИ<br/>
-                      Российского Округа, 119021, г. Москва, ул. Остоженка, 53/2
+                      <div {...editableTextProps('organisation', 'Название организации')} className="font-bold">УПРАВЛЕНИЕ СОБСТВЕННОЙ БЕЗОПАСНОСТИ ГИБДД</div>
+                      <div {...editableTextProps('address', 'Ведомство и адрес')}>{'ГУ МВД РОССИИ ПО Г. МОСКВЕ И МОСКОВСКОЙ ОБЛАСТИ\nРоссийского Округа, 119021, г. Москва, ул. Остоженка, 53/2'}</div>
                     </div>
                     <div className="w-[45%] text-center p-2 bg-gray-50">
                       <img src={import.meta.env.BASE_URL + 'emblem.png'} alt="" className="w-[22px] h-auto mx-auto mb-1 opacity-80" />
-                      <p className="text-[11px] font-bold">{regType === 'form' ? 'СЛУЖЕБНАЯ ФОРМА' : 'ЗАРЕГИСТРИРОВАНО'}</p>
-                      <p className="text-[10px] dim">Рег. № <E ph="____" /> от «<E ph="___" />»</p>
+                      <p {...editableTextProps('registrationType', 'Регистрационная надпись')} className="text-[11px] font-bold">{regType === 'form' ? 'СЛУЖЕБНАЯ ФОРМА' : 'ЗАРЕГИСТРИРОВАНО'}</p>
+                      <p className="text-[10px] dim"><span {...editableTextProps('registrationNumberLabel', 'Подпись регистрационного номера')}>Рег. № </span><E ph="Регистрационный номер" fieldKey="registration-number" /> <span {...editableTextProps('registrationDateLabel', 'Подпись даты регистрации')}>от </span>«<E ph="Дата регистрации" fieldKey="registration-date" />»</p>
                     </div>
                   </div>
 
-                  {subject && (
-                    <div className="text-center mb-4">
-                      <p className="text-[13px] font-bold border-b border-[#b7b7b7] pb-2">{subject}</p>
+                  <div className="flex gap-4 text-[12px] leading-relaxed mb-4">
+                    <div {...editableTextProps('recipient', 'Адресат документа')} data-empty-label="Адресат (можно заполнить)" data-optional-text className="flex-1 min-w-0">{doc?.recipient || ''}</div>
+                    <div {...editableTextProps('sender', 'Автор документа')} data-empty-label="Автор (можно заполнить)" data-optional-text className="flex-1 min-w-0 text-right">{doc?.signer || ''}</div>
+                  </div>
+                    <div className="text-center mb-4" data-optional-text>
+                      <p {...editableTextProps('subject', 'Тема документа')} data-empty-label="Тема документа" className="text-[13px] font-bold border-b border-[#b7b7b7] pb-2">{subject}</p>
                     </div>
-                  )}
-                  {action && (
-                    <div className="text-center mb-4">
-                      <p className="text-[13px] font-bold uppercase">{action}</p>
+                    <div className="text-center mb-4" data-optional-text>
+                      <p {...editableTextProps('action', 'Вводная надпись документа')} data-empty-label="Вводная надпись" className="text-[13px] font-bold uppercase">{action}</p>
                     </div>
-                  )}
 
                   {/* Sections */}
                   <div className="space-y-2 mb-8">
@@ -345,27 +435,36 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
                             {(() => {
                               // Section text: editable text segments + [BRACKETED] parts as fillable fields
                               const parts = sec.heading.split(/(\[[^\]]*\])/g);
-                              const commitSeg = (idx: number, v: string) => {
-                                const next = [...parts];
-                                next[idx] = v;
-                                setSections(s => s.map(x => x.id === sec.id ? { ...x, heading: next.join('') } : x));
-                              };
+                              const occurrences: Record<string, number> = {};
                               return parts.map((part, pi) => {
                                 if (part.startsWith('[') && part.endsWith(']')) {
-                                  return <E key={pi} ph={part.slice(1, -1) || '___'} />;
+                                  const placeholder = part.slice(1, -1) || '___';
+                                  const occurrence = occurrences[placeholder] || 0;
+                                  occurrences[placeholder] = occurrence + 1;
+                                  return <E key={pi} ph={placeholder} fieldKey={`section:${sec.id}:${placeholder}:${occurrence}`} />;
                                 }
                                 return (
-                                  <span key={pi} data-seg contentEditable suppressContentEditableWarning
+                                  <span key={pi} data-seg contentEditable="plaintext-only" suppressContentEditableWarning role="textbox" aria-label={`Текст раздела ${i + 1}, фрагмент ${pi + 1}`} aria-multiline="true"
                                     className="outline-none focus:bg-gray-100 rounded"
-                                    onBlur={e => commitSeg(pi, e.currentTarget.textContent || '')}
                                   >{part}</span>
                                 );
                               });
                             })()}
                           </div>
-                          {sections.length > 1 && (
                             <button onClick={() => removeSection(sec.id)} data-ui
                               className="opacity-50 hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 text-sm font-bold mt-0.5 px-1" title="Удалить секцию">×</button>
+                        </div>
+                        <div data-ui className="mt-1 mb-3">
+                          <button type="button" onClick={() => editSection(sec.id)} className="text-[11px] underline underline-offset-2" aria-label={`Изменить текст раздела ${i + 1} целиком`}>Изменить текст</button>
+                          {sectionEditor?.id === sec.id && (
+                            <div className="mt-2 rounded-lg border border-sky-500 p-3 bg-sky-50">
+                              <label htmlFor={`section-text-${sec.id}`} className="block text-[12px] mb-2">Текст раздела целиком. Поля в квадратных скобках можно добавлять, менять и удалять.</label>
+                              <textarea id={`section-text-${sec.id}`} value={sectionEditor.text} onChange={event => setSectionEditor({ id: sec.id, text: event.target.value })} rows={5} className="w-full p-2 text-[13px] bg-white border border-slate-400 rounded resize-y" />
+                              <div className="flex gap-3 mt-2 text-[12px]">
+                                <button type="button" onClick={applySectionText} className="px-3 py-1 rounded border border-sky-600">Применить текст</button>
+                                <button type="button" onClick={() => setSectionEditor(null)} className="px-3 py-1 rounded border border-slate-400">Отмена</button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -384,23 +483,21 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
                     return (
                     <div key={sig.id} className="flex items-end gap-8 mb-4 group">
                       <div className="flex-1 text-[12px] leading-relaxed">
-                        <p><E ph={sig.title} /></p>
-                        <E ph={sig.name} mark={`sig-${sig.id}`} onText={v => setSigTexts(t => ({ ...t, [sig.id]: v }))} />
+                        <p><E ph={sig.title} fieldKey={`signatory:${sig.id}:title`} /></p>
+                        <E ph={sig.name} fieldKey={`signatory:${sig.id}:name`} mark={`sig-${sig.id}`} onText={v => setSigTexts(t => ({ ...t, [sig.id]: v }))} />
                       </div>
                       <div className="text-[11px] dim text-right">
                         <div>
-                          {typedName && <Signature name={typedName} />}
-                          {/* Static label — not editable; the signature is generated from the name */}
-                          <span data-placeholder="подпись"
-                            className="inline-block border-b border-dashed border-gray-400 rounded px-1 -mx-0.5 min-w-[50px] empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:italic"
-                            style={{ color: '#000', display: typedName ? 'none' : 'inline-block' }} />
+                          {typedName && !signatureOverrides.includes(sig.id) && <Signature name={typedName} />}
+                          <E ph="подпись" fieldKey={`signatory:${sig.id}:signature`} hidden={Boolean(typedName) && !signatureOverrides.includes(sig.id)} />
                         </div>
-                        <p><E ph="расшифровка подписи" /></p>
+                        <p><E ph="расшифровка подписи" fieldKey={`signatory:${sig.id}:decoding`} /></p>
+                        <button type="button" data-ui onClick={() => setSignatureOverrides(current => current.includes(sig.id) ? current.filter(id => id !== sig.id) : [...current, sig.id])} className="mt-1 text-[11px] underline" aria-label={`Изменить способ подписи ${sig.id}`}>
+                          {signatureOverrides.includes(sig.id) ? 'Подпись по имени' : 'Своя подпись'}
+                        </button>
                       </div>
-                      {signatories.length > 1 && (
                         <button onClick={() => removeSignatory(sig.id)} data-ui
                           className="opacity-50 hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 text-sm font-bold mb-1 px-1" title="Удалить подписанта">×</button>
-                      )}
                     </div>
                     );
                   })}
@@ -409,7 +506,7 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
                     + Добавить подписанта
                   </button>
                   <div className="border-t border-[#8c8c8c] pt-4 mt-4">
-                    <p className="text-center text-[9px] dim tracking-wider">СЛУЖЕБНОЕ ИСПОЛЬЗОВАНИЕ · УСБ ГИБДД · СТР.</p>
+                    <p {...editableTextProps('footer', 'Нижний колонтитул')} data-optional-text className="text-center text-[9px] dim tracking-wider">СЛУЖЕБНОЕ ИСПОЛЬЗОВАНИЕ · УСБ ГИБДД · СТР.</p>
                   </div>
                 </div>
               </div>
@@ -421,24 +518,20 @@ export default function DocumentEditor({ doc, onClose }: DocEditorProps) {
             {sidebarOpen && (
               <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                className="border-l border-purple-500/20 bg-[#0a0a12] overflow-hidden shrink-0">
+                className="absolute right-0 top-0 bottom-0 z-10 md:static border-l border-purple-500/20 bg-[#0a0a12] overflow-y-auto shrink-0">
                 <div className="w-[260px] p-5">
-                  <h3 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-4">Закладки <span className="text-[10px] text-gray-600">({cyrCode})</span></h3>
-                  {!user ? (
-                    <div className="rounded-lg border border-purple-500/15 bg-white/[0.02] p-3">
-                      <p className="text-[11px] text-gray-500 leading-relaxed">
-                        🔒 Закладки доступны после входа через Discord — кнопка «Войти через Discord» вверху сайта.
-                      </p>
-                    </div>
-                  ) : bookmarks.length === 0 ? (
-                    <p className="text-[11px] text-gray-600 italic">Нет закладок</p>
+                  <button type="button" onClick={() => setSidebarOpen(false)} className="text-xs text-sky-300 mb-4" aria-label="Закрыть панель редактора">Скрыть панель ×</button>
+                  <h3 className="text-xs font-mono text-gray-400 uppercase tracking-wider mb-4">Личные копии <span className="text-[10px] text-gray-600">({cyrCode})</span></h3>
+                  {!user && <p className="text-[11px] text-gray-400 mb-3">Копии хранятся в этом браузере. Вход через Discord включает синхронизацию с аккаунтом.</p>}
+                  {bookmarks.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 italic">Пока нет сохранённых копий</p>
                   ) : (
                     <div className="space-y-1">
                       {bookmarks.map((b, i) => (
                         <div key={i} className="flex items-center justify-between group px-2 py-1.5 rounded-lg hover:bg-white/5">
                           <button onClick={() => applyBookmark(b)} title="Восстановить сохранённый текст"
                             className="text-xs text-gray-400 hover:text-purple-300 transition-colors text-left flex-1">📑 {b.name}</button>
-                          <button onClick={() => removeBookmark(i)} className="opacity-0 group-hover:opacity-100 text-red-400 text-xs">×</button>
+                          <button onClick={() => removeBookmark(i)} aria-label={`Удалить копию ${b.name}`} className="opacity-50 hover:opacity-100 focus:opacity-100 text-red-400 text-xs">×</button>
                         </div>
                       ))}
                     </div>
