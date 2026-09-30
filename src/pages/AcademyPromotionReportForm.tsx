@@ -10,7 +10,7 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
-type Department = 'academy' | 'uku';
+type Department = 'academy' | 'uku' | 'usb';
 type RankTransition = '' | '1-2' | '2-3';
 type EvidenceKey = 'governmentId' | 'exam' | 'practice' | 'stateFractionRole';
 const blankEvidence = { governmentId: '', exam: '', practice: '', stateFractionRole: '' };
@@ -51,7 +51,7 @@ export default function AcademyPromotionReportForm() {
     { key: 'practice', label: 'Практика по УПК' },
   ] : [];
   const incompleteReason = !nickStatic.trim() ? 'Укажите никнейм и #статик.'
-    : department === 'uku'
+    : department !== 'academy'
       ? !fromRank || !toRank ? 'Выберите исходный и целевой ранги.'
         : Number(fromRank) >= Number(toRank) ? 'Целевой ранг должен быть выше исходного.'
         : !workEvidence.trim() ? 'Добавьте доказательства проделанной работы.' : undefined
@@ -65,7 +65,7 @@ export default function AcademyPromotionReportForm() {
     setState('sending');
     setErrorMessage('');
     try {
-      const body = department === 'uku'
+      const body = department !== 'academy'
         ? { department, nickStatic: nickStatic.trim(), fromRank: Number(fromRank), toRank: Number(toRank), evidence: workEvidence.trim() }
         : { department, nickStatic: nickStatic.trim(), rankTransition,
           evidence: Object.fromEntries(fields.map(field => [field.key, evidence[field.key].trim()])) };
@@ -127,6 +127,7 @@ export default function AcademyPromotionReportForm() {
                   <select value={department} onChange={event => { setDepartment(event.target.value as Department); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); }} className={inputClass}>
                     <option value="academy">Академия</option>
                     <option value="uku">УКУ · Учебное и кадровое управление</option>
+                    <option value="usb">УСБ · Управление собственной безопасности</option>
                   </select>
                 </label>
                 {department === 'academy' ? (
@@ -175,7 +176,7 @@ export default function AcademyPromotionReportForm() {
                 {rankTransition === '1-2' && <p className="application-note">Для роли State Fraction сначала <a href="https://discord.gg/DUYKbzwG2" target="_blank" rel="noopener noreferrer">вступите на сервер</a>, затем перейдите в канал «получение-роли» и приложите скриншот полученной роли.</p>}
               </div>
             )}
-            {department === 'uku' && (
+            {department !== 'academy' && (
               <div className="border-t border-sky-300/15 pt-6">
                 <p className="eyebrow mb-2">02 · ПРОДЕЛАННАЯ РАБОТА</p>
                 <label className="block">
