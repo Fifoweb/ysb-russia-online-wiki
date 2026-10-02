@@ -23,7 +23,12 @@ export default function Home({ onNavigate }: HomeProps) {
 
   return <PageTransition className="home-page">
     <section className="home-intro">
-      <div className="home-intro-copy"><p className="eyebrow">РОССИЯ ОНЛАЙН · ГИБДД</p><h1>ГИБДД Вики</h1><p className="home-lead">Рабочая энциклопедия для сотрудников ГИБДД: курс службы, формы, кадровые документы и инструменты фракции в одном месте.</p><div className="home-actions"><button className="primary-button" onClick={() => onNavigate('/basics')}>Начать курс <ArrowRight size={17} /></button><button className="secondary-button" onClick={() => onNavigate('/crafts')}>Открыть крафты</button></div></div>
+      <div className="home-intro-copy">
+        <p className="eyebrow home-intro-kicker"><ShieldCheck size={14} aria-hidden="true" /> РОССИЯ ОНЛАЙН · ГИБДД</p>
+        <h1 className="home-title"><span className="home-title-name">ГИБДД</span>{' '}<span className="home-title-wiki">Вики</span></h1>
+        <p className="home-lead">Рабочая энциклопедия для сотрудников ГИБДД: курс службы, формы, кадровые документы и инструменты фракции в одном месте.</p>
+        <div className="home-actions"><button className="primary-button" onClick={() => onNavigate('/basics')}>Начать курс <ArrowRight size={17} /></button><button className="secondary-button" onClick={() => onNavigate('/crafts')}>Открыть крафты</button></div>
+      </div>
       <figure className="home-intro-photo">
         <img src={`${import.meta.env.BASE_URL}gibdd-hero.webp`}
           alt="Патрульный автомобиль дорожной полиции на вечерней городской улице"

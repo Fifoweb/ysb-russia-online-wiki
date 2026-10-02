@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Menu, Search, UserRound, X } from 'lucide-react';
+import { BookOpen, Menu, Search, UserRound, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import ProfileModal from './ProfileModal';
 import { fetchTverskoyOnline } from '../lib/online';
@@ -58,7 +58,13 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
           <img className="brand-emblem" src={`${import.meta.env.BASE_URL}emblem.png`} alt="" aria-hidden="true" />
           <span className="brand-white">РОССИЯ</span><span className="brand-accent">ОНЛАЙН</span><span className="brand-divider">·</span><span className="brand-unit">ГИБДД</span>
         </button>
-        <div className="header-title"><span>ГИБДД Вики</span>{currentTitle !== '/' && titles[currentTitle] && <span className="header-crumb">/ {titles[currentTitle]}</span>}</div>
+        <div className="header-title">
+          <span className="header-wordmark">
+            <span className="header-wordmark-icon" aria-hidden="true"><BookOpen size={15} /></span>
+            <span className="header-wordmark-name">ГИБДД</span>{' '}<span className="header-wordmark-wiki">Вики</span>
+          </span>
+          {currentTitle !== '/' && titles[currentTitle] && <span className="header-crumb">/ {titles[currentTitle]}</span>}
+        </div>
         <div className="header-actions">
           <button className="online-pill" onClick={() => onNavigate('/servers')} title="Открыть онлайн Тверского"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /> <span>{online === null ? 'Тверской' : `${online.toLocaleString('ru-RU')} · Тверской`}</span></button>
           <button className="icon-button" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))} title="Поиск" aria-label="Поиск"><Search size={18} /></button>
