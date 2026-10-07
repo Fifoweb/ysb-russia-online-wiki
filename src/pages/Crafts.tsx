@@ -46,7 +46,10 @@ export default function Crafts() {
   ), [category, query]);
   const selectedItems = craftItems.filter(item => selected[item.id]);
   const totalItems = selectedItems.reduce((sum, item) => sum + (selected[item.id] || 0), 0);
-  const totalWeight = selectedItems.reduce((sum, item) => sum + item.weightKg * (selected[item.id] || 0), 0);
+  const totalWeight = selectedItems.reduce((sum, item) => sum + (item.weightKg ?? 0) * (selected[item.id] || 0), 0);
+  const hasUnknownWeight = selectedItems.some(item => item.weightKg === null);
+  const weightLabel = hasUnknownWeight ? 'Известный вес' : 'Общий вес';
+  const weightSummary = hasUnknownWeight ? 'вес уточняется' : `${totalWeight.toFixed(2)} кг`;
   const materialTotals = useMemo(() => (Object.keys(craftCategoryLabels) as CraftCategory[]).reduce((totals, key) => {
     totals[key] = selectedItems
       .filter(item => item.category === key)
@@ -95,7 +98,7 @@ export default function Crafts() {
       context.fillText('Калькулятор крафта', padding, 45);
       context.fillStyle = '#968b87';
       context.font = '500 15px Inter, Arial, sans-serif';
-      context.fillText(`${totalItems} шт.  ·  ${totalMaterials.toLocaleString('ru-RU')} мат.  ·  ${totalWeight.toFixed(2)} кг`, padding, 72);
+      context.fillText(`${totalItems} шт.  ·  ${totalMaterials.toLocaleString('ru-RU')} мат.  ·  ${weightSummary}`, padding, 72);
 
       let y = 105;
       for (const item of selectedItems) {
@@ -137,10 +140,15 @@ export default function Crafts() {
       }
       context.fillStyle = '#968b87';
       context.font = '600 14px Inter, Arial, sans-serif';
-      context.fillText('Общий вес', padding, y);
+      context.fillText(weightLabel, padding, y);
       context.fillStyle = '#f0e9e7';
       context.font = '800 14px Inter, Arial, sans-serif';
       context.fillText(`${totalWeight.toFixed(2)} кг`, width - padding - 65, y);
+      if (hasUnknownWeight) {
+        context.fillStyle = '#968b87';
+        context.font = '500 12px Inter, Arial, sans-serif';
+        context.fillText('Предметы с неуказанным весом не включены в расчёт веса.', padding, y + 28);
+      }
 
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
       if (!blob) return;
@@ -187,7 +195,7 @@ export default function Crafts() {
               return <article className={`craft-card ${quantity ? 'selected' : ''}`} key={item.id}>
                 <div className="craft-card-title"><span>{item.name}</span>{quantity > 0 && <span className="quantity-badge">×{quantity}</span>}</div>
                 <div className="craft-image-wrap"><span className="craft-fallback" aria-hidden="true"><Package size={24} /></span><img src={item.image} alt={item.name} loading="lazy" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /></div>
-                <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><MaterialIcon category={item.category} size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg.toFixed(3)} кг</span></div>
+                <div className="craft-meta"><span style={{ color: categoryColors[item.category] }}><MaterialIcon category={item.category} size={15} /> {item.materials}</span><span><Package size={14} /> {item.weightKg === null ? 'Вес не указан' : `${item.weightKg.toFixed(3)} кг`}</span></div>
                 {quantity ? <div className="quantity-control"><button onClick={() => changeQuantity(item, -1)} aria-label={`Уменьшить ${item.name}`}><Minus size={16} /></button><input type="number" min="1" max={MAX_QUANTITY} value={quantity} onChange={event => setQuantity(item, event.target.value)} aria-label={`Количество ${item.name}`} /><button onClick={() => changeQuantity(item, 1)} aria-label={`Увеличить ${item.name}`}><Plus size={16} /></button></div> : <button className="add-craft" onClick={() => changeQuantity(item, 1)}><Plus size={16} /> В калькулятор</button>}
               </article>;
             })}
@@ -195,7 +203,7 @@ export default function Crafts() {
         </div>
 
         <aside className={`craft-calculator ${selectedItems.length ? 'has-items' : ''}`} aria-label="Калькулятор крафта">
-          <div className="calculator-heading"><div><p className="eyebrow">ИНСТРУМЕНТ</p><h2><Calculator size={18} /> Калькулятор крафта</h2>{selectedItems.length > 0 && <p className="calculator-subtitle">{totalItems} шт. · {totalMaterials.toLocaleString('ru-RU')} мат. · {totalWeight.toFixed(2)} кг</p>}</div></div>
+          <div className="calculator-heading"><div><p className="eyebrow">ИНСТРУМЕНТ</p><h2><Calculator size={18} /> Калькулятор крафта</h2>{selectedItems.length > 0 && <p className="calculator-subtitle">{totalItems} шт. · {totalMaterials.toLocaleString('ru-RU')} мат. · {weightSummary}</p>}</div></div>
           {selectedItems.length ? <>
             <div className="calculator-items">{selectedItems.map(item => { const quantity = selected[item.id] || 0; return <div className="calculator-item" key={item.id}>
               <div className="calculator-item-main"><div className="calculator-item-image"><img src={item.image} alt="" loading="eager" onError={event => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('image-error'); }} /><Package size={16} aria-hidden="true" /></div><strong>{item.name}</strong></div>
@@ -203,7 +211,8 @@ export default function Crafts() {
             </div>; })}</div>
             <div className="calculator-summary" aria-live="polite"><div className="calculator-summary-title">ИТОГО</div>
               {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => <div className="calculator-summary-row" key={key} style={{ color: categoryColors[key] }}><MaterialIcon category={key} size={16} /><span>{craftCategoryLabels[key]} материалы</span><strong>{materialTotals[key].toLocaleString('ru-RU')}</strong></div>)}
-              <div className="calculator-summary-row calculator-weight"><Package size={16} /><span>Общий вес</span><strong>{totalWeight.toFixed(2)} кг</strong></div>
+              <div className="calculator-summary-row calculator-weight"><Package size={16} /><span>{weightLabel}</span><strong>{totalWeight.toFixed(2)} кг</strong></div>
+              {hasUnknownWeight && <p className="calculator-subtitle">Предметы с неуказанным весом не включены в расчёт веса.</p>}
             </div>
             <div className="calculator-actions"><button className="calculator-export" onClick={exportCalculator} disabled={isExporting}><Download size={16} /> {isExporting ? 'Подготовка...' : 'Экспорт'}</button><button className="calculator-clear" onClick={() => setSelected({})}><Trash2 size={16} /> Очистить</button></div>
           </> : <div className="calculator-empty"><Calculator size={24} /><p>Добавьте предметы в список, чтобы увидеть итог.</p></div>}

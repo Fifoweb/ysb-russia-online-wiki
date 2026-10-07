@@ -5,9 +5,9 @@ export interface CraftItem {
   name: string;
   category: CraftCategory;
   materials: number;
-  weightKg: number;
+  weightKg: number | null;
   image: string;
-  sourcePath: string;
+  sourcePath?: string;
 }
 
 const cdn = 'https://cdn.majestic-files.net/public/master/static/img/inventory/items/';
@@ -22,6 +22,11 @@ export const craftCategoryLabels: Record<CraftCategory, string> = {
 const item = (id: string, name: string, category: CraftCategory, materials: number, weightKg: number, type: string, imageId = id): CraftItem => ({
   id, name, category, materials, weightKg, image: localCraftIds.has(id) ? `${import.meta.env.BASE_URL}crafts/${id}.png` : `${cdn}${['168', '169', '170', '5002', '5004', '5005', '5006', '5009', '5011', '5012', '5016', '5017', '5018', '5019', '5028', '5500', '5502', '5504', '5506', '5508', '334', '347', '456', '5000'].includes(imageId) ? 'ro/' : ''}${imageId}.webp`,
   sourcePath: `/ru/items/${type}/${id}`,
+});
+
+const technicalItem = (id: string, name: string, materials: number): CraftItem => ({
+  id, name, category: 'technical', materials, weightKg: null,
+  image: `${import.meta.env.BASE_URL}crafts/${id}.png`,
 });
 
 export const craftItems: CraftItem[] = [
@@ -56,7 +61,13 @@ export const craftItems: CraftItem[] = [
   item('347', 'Тяжелый бронежилет служебный', 'technical', 30, 4, 'ammunition'),
   item('456', 'Легкий бронежилет служебный', 'technical', 15, 2, 'ammunition'),
   item('833', 'Камера контроля скорости', 'technical', 100, 5, 'tool'),
-  item('834', 'Радар измерения скорости', 'technical', 150, 0.7, 'tool'),
+  item('834', 'Радар измерения скорости', 'technical', 10, 0.7, 'tool'),
   item('1006', 'Электрическая дубинка', 'technical', 10, 0.58, 'ammunition'),
   item('5000', 'Жезл ДПС', 'technical', 10, 0.5, 'ammunition'),
+  technicalItem('breathalyzer', 'Алкотестер', 5),
+  technicalItem('taumeter', 'Тауметр', 5),
+  technicalItem('beacon-stand', 'Маячковый стенд', 3),
+  technicalItem('traffic-cone', 'Конус', 3),
+  technicalItem('road-fence', 'Дорожное ограждение', 3),
+  technicalItem('concrete-barrier', 'Бетонный отбойник', 3),
 ];
