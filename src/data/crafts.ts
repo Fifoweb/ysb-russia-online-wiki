@@ -24,9 +24,9 @@ const item = (id: string, name: string, category: CraftCategory, materials: numb
   sourcePath: `/ru/items/${type}/${id}`,
 });
 
-const technicalItem = (id: string, name: string, materials: number): CraftItem => ({
-  id, name, category: 'technical', materials, weightKg: null,
-  image: `${import.meta.env.BASE_URL}crafts/${id}.png`,
+const technicalItem = (id: string, name: string, materials: number, weightKg: number, imageVersion?: string): CraftItem => ({
+  id, name, category: 'technical', materials, weightKg,
+  image: `${import.meta.env.BASE_URL}crafts/${id}.png${imageVersion ? `?v=${imageVersion}` : ''}`,
 });
 
 export const craftItems: CraftItem[] = [
@@ -64,10 +64,10 @@ export const craftItems: CraftItem[] = [
   item('834', 'Радар измерения скорости', 'technical', 10, 0.7, 'tool'),
   item('1006', 'Электрическая дубинка', 'technical', 10, 0.58, 'ammunition'),
   item('5000', 'Жезл ДПС', 'technical', 10, 0.5, 'ammunition'),
-  technicalItem('breathalyzer', 'Алкотестер', 5),
-  technicalItem('taumeter', 'Тауметр', 5),
-  technicalItem('beacon-stand', 'Маячковый стенд', 3),
-  technicalItem('traffic-cone', 'Конус', 3),
-  technicalItem('road-fence', 'Дорожное ограждение', 3),
-  technicalItem('concrete-barrier', 'Бетонный отбойник', 3),
+  technicalItem('breathalyzer', 'Алкотестер', 5, 0.2, 'd1f9543f'),
+  technicalItem('taumeter', 'Тауметр', 5, 0.2, '6851c6d4'),
+  technicalItem('beacon-stand', 'Маячковый стенд', 3, 2),
+  technicalItem('traffic-cone', 'Конус', 3, 0.3),
+  technicalItem('road-fence', 'Дорожное ограждение', 3, 1),
+  technicalItem('concrete-barrier', 'Бетонный отбойник', 3, 5),
 ];
