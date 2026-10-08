@@ -128,4 +128,9 @@ test('GitHub Pages HTML uses a real meta CSP without inline JavaScript', () => {
     assert.match(html, /script-src 'self'/);
     assert.doesNotMatch(html, /<script\b[^>]*>\s*[^<\s]/);
   }
+  const homepage = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(homepage, /frame-guard\.js/);
+  const guard = readFileSync(new URL('../public/frame-guard.js', import.meta.url), 'utf8');
+  assert.match(guard, /window\.self !== window\.top/);
+  assert.match(guard, /style\.setProperty\('display', 'none', 'important'\)/);
 });
