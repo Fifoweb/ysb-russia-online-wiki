@@ -35,7 +35,7 @@ async function getWebhook(raw: string | undefined) {
     const webhook = await response.json();
     return typeof webhook.channel_id === 'string' ? { url } : null;
   } catch (error) {
-    console.error('Discord reprimand-work webhook lookup failed', error);
+    console.error('Discord reprimand-work webhook lookup failed');
     return null;
   }
 }
@@ -62,6 +62,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json(400, { error: 'Некорректные данные формы' }); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'Некорректные данные формы' });
   const readText = (key: string) => typeof body[key] === 'string' ? body[key].trim() : '';
   const nick = readText('nick');
   const reprimandScreenshot = readText('reprimandScreenshot');
@@ -118,8 +119,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     }),
   });
   if (!response.ok) {
-    const details = await response.text();
-    console.error('Discord reprimand-work webhook error', response.status, details);
+    console.error('Discord reprimand-work webhook error', response.status);
     return json(502, { error: `Discord ответил ${response.status}` });
   }
   return json(200, { ok: true });

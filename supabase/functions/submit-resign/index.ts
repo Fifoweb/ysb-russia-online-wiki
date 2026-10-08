@@ -33,7 +33,7 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
     const webhook = await response.json();
     return String(webhook.channel_id) === expectedChannelId && typeof webhook.guild_id === 'string'
       ? { url, guildId: webhook.guild_id } : null;
-  } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
+  } catch (error) { console.error('Discord webhook lookup failed'); return null; }
 }
 
 async function checkDiscordRole(discordId: string, botToken: string | undefined, guildId: string, roleId: string): Promise<RoleCheck> {
@@ -46,7 +46,7 @@ async function checkDiscordRole(discordId: string, botToken: string | undefined,
     if (!memberResponse.ok) return 'unavailable';
     const member = await memberResponse.json();
     return Array.isArray(member.roles) && member.roles.includes(roleId) ? 'allowed' : 'denied';
-  } catch (error) { console.error('Discord role lookup failed', error); return 'unavailable'; }
+  } catch (error) { console.error('Discord role lookup failed'); return 'unavailable'; }
 }
 
 async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[]) {
@@ -71,6 +71,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json(400, { error: 'Некорректные данные формы' }); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'Некорректные данные формы' });
   const readText = (key: string) => typeof body[key] === 'string' ? body[key].trim() : '';
   const fullNameStatic = readText('fullNameStatic');
   const department = readText('department');
@@ -130,7 +131,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     NOTIFICATION_ROLE_IDS,
   );
   if (!response.ok) {
-    console.error('Discord resignation webhook error', response.status, await response.text());
+    console.error('Discord resignation webhook error', response.status);
     return json(502, { error: `Discord ответил ${response.status}` });
   }
   return json(200, { ok: true });

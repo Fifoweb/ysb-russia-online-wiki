@@ -28,14 +28,17 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return json(401, { error: 'Не авторизован' });
 
-  let body: Record<string, string>;
-  try { body = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
+  let rawBody: unknown;
+  try { rawBody = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) return json(400, { error: 'Некорректные данные формы' });
+  const body = rawBody as Record<string, unknown>;
+  const readText = (key: string) => typeof body[key] === 'string' ? body[key].trim() : '';
 
-  const fullNameStatic = (body.fullNameStatic || '').trim();
-  const factionScreenshot = (body.factionScreenshot || '').trim(); // опционально (после ban/warn)
-  const rankEvidence = (body.rankEvidence || '').trim();
-  const dismissReason = (body.dismissReason || '').trim();
-  const previousRank = (body.previousRank || '').trim();
+  const fullNameStatic = readText('fullNameStatic');
+  const factionScreenshot = readText('factionScreenshot'); // опционально (после ban/warn)
+  const rankEvidence = readText('rankEvidence');
+  const dismissReason = readText('dismissReason');
+  const previousRank = readText('previousRank');
 
   if (!fullNameStatic || !rankEvidence || !dismissReason || !previousRank) {
     return json(400, { error: 'Заполните все обязательные поля' });
@@ -103,6 +106,6 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       },
     }),
   });
-  if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: `Discord ответил ${res.status}` }); }
+  if (!res.ok) { console.error('Discord error', res.status); return json(502, { error: `Discord ответил ${res.status}` }); }
   return json(200, { ok: true });
 }, cors));

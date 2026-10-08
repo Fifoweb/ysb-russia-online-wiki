@@ -82,7 +82,7 @@ function interactions(db: 'ok' | 'down' = 'ok') {
       seen.add(params.p_interaction_id);
       return { data: fresh, error: null };
     } }),
-    Response, Headers, URL, TextEncoder, console: { error: () => {} },
+    Response, Headers, URL, TextEncoder, TextDecoder, Uint8Array, console: { error: () => {} },
   });
   const submit = (body: unknown, age = 0, signature = 'aa'.repeat(64)) => handle(new Request('https://example.test/discord-interactions', {
     method: 'POST', headers: {
@@ -120,6 +120,14 @@ test('replayed Discord interaction ID is processed once and duplicates get an ep
 test('replay protection fails closed when database RPC is unavailable', async () => {
   const app = interactions('down');
   assert.equal((await app.submit({ id: '123456789012345678', type: 3 })).status, 503);
+});
+
+test('Discord interaction bodies have a byte limit and must be JSON objects', async () => {
+  const app = interactions();
+  assert.equal((await app.submit(null)).status, 400);
+  assert.equal((await app.submit([])).status, 400);
+  assert.equal((await app.submit({ type: 1, extra: 'a'.repeat(65_536) })).status, 413);
+  assert.equal(app.getClaims(), 0);
 });
 
 test('GitHub Pages HTML uses a real meta CSP without inline JavaScript', () => {

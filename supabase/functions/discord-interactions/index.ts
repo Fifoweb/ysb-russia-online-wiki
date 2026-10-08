@@ -6,6 +6,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const PUB_KEY = Deno.env.get('DISCORD_PUBLIC_KEY') || '';
 const MAX_SIGNATURE_AGE_SECONDS = 300;
+const MAX_INTERACTION_BYTES = 65_536;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -52,13 +53,33 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
 
   // 1. Проверка подписи Discord — чужой запрос не пройдёт
-  const rawBody = await req.text();
   const sig = req.headers.get('X-Signature-Ed25519') || '';
   const ts = req.headers.get('X-Signature-Timestamp') || '';
   // A valid signature must also be recent. Discord timestamps are Unix seconds.
   if (!/^\d{10}$/.test(ts) || Math.abs(Date.now() / 1000 - Number(ts)) > MAX_SIGNATURE_AGE_SECONDS) {
     return json(401, { error: 'expired signature' });
   }
+  if (!/^[a-f0-9]{128}$/i.test(sig)) return json(401, { error: 'bad signature' });
+  if (Number(req.headers.get('Content-Length')) > MAX_INTERACTION_BYTES) return json(413, { error: 'body too large' });
+  if (!req.body) return json(400, { error: 'missing body' });
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  let rawBody: string;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_INTERACTION_BYTES) { await reader.cancel(); return json(413, { error: 'body too large' }); }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    rawBody = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch { return json(400, { error: 'bad body' }); }
+  finally { reader.releaseLock(); }
   let valid = false;
   try {
     valid = nacl.sign.detached.verify(
@@ -71,6 +92,7 @@ Deno.serve(async (req) => {
 
   let interaction: Record<string, any>;
   try { interaction = JSON.parse(rawBody); } catch { return json(400, { error: 'bad JSON' }); }
+  if (!interaction || typeof interaction !== 'object' || Array.isArray(interaction)) return json(400, { error: 'bad JSON' });
 
   // 2. PING → PONG (Discord проверяет эндпоинт при сохранении URL в портале)
   if (interaction.type === 1) return json(200, { type: 1 });
@@ -91,14 +113,14 @@ Deno.serve(async (req) => {
       p_interaction_id: interaction.id,
     });
     if (claimError || typeof claimed !== 'boolean') {
-      console.error('Discord replay claim failed', claimError);
+      console.error('Discord replay claim failed');
       return json(503, { error: 'Replay protection unavailable' });
     }
     if (!claimed) return json(200, {
       type: 4, data: { content: 'Это действие уже обработано.', flags: 64 },
     });
   } catch (error) {
-    console.error('Discord replay claim error', error);
+    console.error('Discord replay claim error');
     return json(503, { error: 'Replay protection unavailable' });
   }
 
@@ -254,7 +276,7 @@ Deno.serve(async (req) => {
             promotedNick = member.nick || member.user?.username || '';
           }
         } catch (error) {
-          console.error('Member lookup failed', error);
+          console.error('Member lookup failed');
         }
 
         const fieldVal = (name: string) => fieldValue(embed, name);
@@ -302,11 +324,11 @@ Deno.serve(async (req) => {
           }),
         });
         if (!postRes.ok) {
-          console.error('Promotion routing failed', postRes.status, await postRes.text());
+          console.error('Promotion routing failed', postRes.status);
           return json(200, { type: 4, data: { content: 'Не удалось отправить карточку в выбранный канал.', flags: 64 } });
         }
       } catch (error) {
-        console.error('Promotion routing error', error);
+        console.error('Promotion routing error');
         return json(200, { type: 4, data: { content: 'Не удалось отправить карточку в выбранный канал.', flags: 64 } });
       }
 
@@ -353,7 +375,7 @@ Deno.serve(async (req) => {
           promotedNick = member.nick || member.user?.username || '';
         }
       } catch (error) {
-        console.error('Member lookup failed', error);
+        console.error('Member lookup failed');
       }
 
       const tick = String.fromCharCode(96);
@@ -383,11 +405,11 @@ Deno.serve(async (req) => {
           }),
         });
         if (!postRes.ok) {
-          console.error('Promotion audit approval failed', postRes.status, await postRes.text());
+          console.error('Promotion audit approval failed', postRes.status);
           return json(200, { type: 4, data: { content: 'Не удалось отправить запрос в кадровый аудит.', flags: 64 } });
         }
       } catch (error) {
-        console.error('Promotion audit approval error', error);
+        console.error('Promotion audit approval error');
         return json(200, { type: 4, data: { content: 'Не удалось отправить запрос в кадровый аудит.', flags: 64 } });
       }
 

@@ -100,7 +100,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       return json(503, { error: 'Вебхук заявок в отдел недоступен' });
     }
   } catch (error) {
-    console.error('Discord department webhook lookup failed', error);
+    console.error('Discord department webhook lookup failed');
     return json(503, { error: 'Вебхук заявок в отдел недоступен' });
   }
 
@@ -143,7 +143,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       return json(502, { error: 'Discord ответил ' + response.status });
     }
   } catch (error) {
-    console.error('Discord department webhook request failed', error);
+    console.error('Discord department webhook request failed');
     return json(502, { error: 'Не удалось отправить заявку в Discord. Попробуйте позже.' });
   }
   return json(200, { ok: true });

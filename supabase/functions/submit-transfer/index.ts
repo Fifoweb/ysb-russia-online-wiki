@@ -57,6 +57,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json(400, { error: 'Некорректные данные формы' }); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'Некорректные данные формы' });
   const readText = (key: string) => typeof body[key] === 'string' ? body[key].trim() : '';
 
   const fullNameStatic = readText('fullNameStatic');
@@ -131,8 +132,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     }),
   });
   if (!res.ok) {
-    const text = await res.text();
-    console.error('Discord error', res.status, text);
+    console.error('Discord error', res.status);
     return json(502, { error: `Discord ответил ${res.status}` });
   }
   return json(200, { ok: true });

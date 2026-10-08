@@ -37,7 +37,7 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
     const webhook = await response.json();
     return String(webhook.channel_id) === expectedChannelId && typeof webhook.guild_id === 'string'
       ? { url, guildId: webhook.guild_id } : null;
-  } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
+  } catch (error) { console.error('Discord webhook lookup failed'); return null; }
 }
 
 async function getWebhookForThread(raw: string | undefined) {
@@ -48,7 +48,7 @@ async function getWebhookForThread(raw: string | undefined) {
     if (!response.ok) { console.error('Discord thread webhook lookup failed', response.status); return null; }
     const webhook = await response.json();
     return typeof webhook.channel_id === 'string' ? { url } : null;
-  } catch (error) { console.error('Discord thread webhook lookup failed', error); return null; }
+  } catch (error) { console.error('Discord thread webhook lookup failed'); return null; }
 }
 
 async function sendWebhookMessage(target: { url: URL }, content: string, embeds: unknown[], roleIds: string[], components?: unknown[], threadId?: string) {
@@ -81,7 +81,7 @@ async function checkVerifiedRoleInGuild(botToken: string, guildId: string, disco
     const member = await memberRes.json();
     return Array.isArray(member.roles) && member.roles.includes(VERIFIED_ROLE_ID) ? 'allowed' : 'denied';
   } catch (error) {
-    console.error('Discord role lookup failed', error);
+    console.error('Discord role lookup failed');
     return 'unavailable';
   }
 }
@@ -104,7 +104,7 @@ async function checkVerifiedRole(botToken: string, channelId: string, discordId:
     }
     return checkVerifiedRoleInGuild(botToken, channel.guild_id, discordId);
   } catch (error) {
-    console.error('Discord channel lookup failed', error);
+    console.error('Discord channel lookup failed');
     return 'unavailable';
   }
 }
@@ -124,8 +124,11 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   if (error || !user) return json(401, { error: 'Не авторизован' });
 
   // Поля формы
-  let body: Record<string, string>;
-  try { body = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
+  let rawBody: unknown;
+  try { rawBody = await req.json(); } catch { return json(400, { error: 'Bad JSON' }); }
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) return json(400, { error: 'Некорректные данные формы' });
+  const body = rawBody as Record<string, unknown>;
+  const readText = (key: string) => typeof body[key] === 'string' ? body[key].trim() : '';
 
   const meta = (user.user_metadata || {}) as Record<string, string | undefined>;
   const identity = (user.identities || []).find((i: { provider?: string }) => i.provider === 'discord') as
@@ -142,10 +145,10 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   }
   const mention = `<@${discordId}>`;
 
-  if ((body.type || '').trim() === 'appeal') {
-    const nick = (body.nick || '').trim();
-    const reason = (body.reason || '').trim();
-    const evidence = (body.evidence || '').trim();
+  if (readText('type') === 'appeal') {
+    const nick = readText('nick');
+    const reason = readText('reason');
+    const evidence = readText('evidence');
 
     if (!reason || !evidence) {
       return json(400, { error: 'Заполните обязательные поля обжалования' });
@@ -185,15 +188,15 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       }],
       APPEAL_THREAD_ID,
     );
-    if (!res.ok) { const t = await res.text(); console.error('Discord appeal webhook error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status }); }
+    if (!res.ok) { console.error('Discord appeal webhook error', res.status); return json(502, { error: 'Discord ответил ' + res.status }); }
     return json(200, { ok: true });
   }
 
-  const nick = (body.nick || '').trim();
-  const currentRank = (body.currentRank || '').trim();
-  const targetRank = (body.targetRank || '').trim();
-  const points = (body.points || '').trim();
-  const evidence = (body.evidence || '').trim();
+  const nick = readText('nick');
+  const currentRank = readText('currentRank');
+  const targetRank = readText('targetRank');
+  const points = readText('points');
+  const evidence = readText('evidence');
 
   if (!nick || !currentRank || !targetRank || !points || !evidence) {
     return json(400, { error: 'Заполните все поля' });
@@ -247,6 +250,6 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       }],
     }),
   });
-  if (!res.ok) { const t = await res.text(); console.error('Discord error', res.status, t); return json(502, { error: 'Discord ответил ' + res.status + ': ' + t.slice(0, 200) }); }
+  if (!res.ok) { console.error('Discord error', res.status); return json(502, { error: 'Discord ответил ' + res.status }); }
   return json(200, { ok: true });
 }, cors));

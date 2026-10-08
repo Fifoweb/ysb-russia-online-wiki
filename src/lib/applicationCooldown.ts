@@ -52,6 +52,12 @@ export async function invokeApplication(name: string, options: { body: Record<st
     setDeadline(userId, DURATION_MS / 1000);
   } else {
     const response = (result.error as { context?: Response }).context;
+    if (response?.status === 401) {
+      try {
+        const body = await response.clone().json();
+        if (body?.code === 'SESSION_EXPIRED') await supabase.auth.signOut({ scope: 'local' });
+      } catch { /* The original error response remains available to the form. */ }
+    }
     if (response?.status === 429) {
       const retry = Number(response.headers?.get('Retry-After'));
       setDeadline(userId, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : 150);
