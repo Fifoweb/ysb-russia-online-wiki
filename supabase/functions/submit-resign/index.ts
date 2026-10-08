@@ -13,7 +13,7 @@ const NOTIFICATION_ROLE_IDS = ['1538937566273732632'];
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-type RoleCheck = 'allowed' | 'denied' | 'authorization-needed' | 'unavailable';
+type RoleCheck = 'allowed' | 'denied' | 'unavailable';
 
 function getWebhookUrl(raw: string | undefined) {
   if (!raw) return null;
@@ -36,16 +36,12 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
   } catch (error) { console.error('Discord webhook lookup failed', error); return null; }
 }
 
-async function checkDiscordRole(discordId: string, accessToken: string, guildId: string, roleId: string): Promise<RoleCheck> {
-  if (!accessToken || accessToken.length > 4096) return 'authorization-needed';
+async function checkDiscordRole(discordId: string, botToken: string | undefined, guildId: string, roleId: string): Promise<RoleCheck> {
+  if (!botToken) return 'unavailable';
   try {
-    const headers = { Authorization: `Bearer ${accessToken}` };
-    const userResponse = await fetch('https://discord.com/api/v10/users/@me', { headers });
-    if (userResponse.status === 401 || userResponse.status === 403) return 'authorization-needed';
-    if (!userResponse.ok) return 'unavailable';
-    if ((await userResponse.json()).id !== discordId) return 'denied';
-    const memberResponse = await fetch(`https://discord.com/api/v10/users/@me/guilds/${guildId}/member`, { headers });
-    if (memberResponse.status === 401 || memberResponse.status === 403) return 'authorization-needed';
+    const memberResponse = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
     if (memberResponse.status === 404) return 'denied';
     if (!memberResponse.ok) return 'unavailable';
     const member = await memberResponse.json();
@@ -105,10 +101,9 @@ Deno.serve(withSubmissionCooldown(async (req) => {
 
   const target = await getWebhookTarget(Deno.env.get('DISCORD_RESIGN_WEBHOOK_URL'), CHANNEL_ID);
   if (!target) return json(500, { error: 'Вебхук увольнений не настроен для нужного канала' });
-  const roleCheck = await checkDiscordRole(discordId, readText('discordAccessToken'), target.guildId, VERIFIED_ROLE_ID);
+  const roleCheck = await checkDiscordRole(discordId, Deno.env.get('DISCORD_BOT_TOKEN'), target.guildId, VERIFIED_ROLE_ID);
   if (roleCheck !== 'allowed') {
     if (roleCheck === 'denied') return json(403, { error: 'Для использования формы нужна роль «Верифицированный».' });
-    if (roleCheck === 'authorization-needed') return json(401, { error: 'Повторно войдите через Discord и разрешите доступ к сведениям о членстве на сервере.' });
     return json(503, { error: 'Не удалось проверить роль в Discord. Попробуйте позже.' });
   }
 

@@ -19,7 +19,7 @@ const initialForm = {
 };
 
 export default function ResignForm() {
-  const { user, providerToken, loading, signInWithDiscord } = useAuth();
+  const { user, loading, signInWithDiscord } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -46,7 +46,7 @@ export default function ResignForm() {
 
     try {
       const { error } = await invokeApplication('submit-resign', {
-        body: { ...form, discordAccessToken: providerToken },
+        body: form,
       }, user.id);
       if (error) {
         setErrorMessage(await getFunctionErrorMessage(error, 'Не удалось отправить заявление. Проверьте поля и попробуйте ещё раз.'));
@@ -84,16 +84,8 @@ export default function ResignForm() {
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
           <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
           <p className="text-slate-200 text-sm mb-5">Заявления могут отправлять только авторизованные через Discord пользователи.</p>
-          <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')} className="primary-button mx-auto">
+          <button type="button" onClick={() => signInWithDiscord()} className="primary-button mx-auto">
             Войти через Discord <ArrowRight size={16} aria-hidden="true" />
-          </button>
-        </section>
-      ) : !providerToken ? (
-        <section className="glass rounded-2xl border border-sky-300/20 text-center">
-          <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
-          <p className="text-slate-200 text-sm mb-5">Для проверки роли нужно повторно войти через Discord и разрешить доступ к сведениям о членстве на сервере.</p>
-          <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')} className="primary-button mx-auto">
-            Продолжить через Discord <ArrowRight size={16} aria-hidden="true" />
           </button>
         </section>
       ) : state === 'ok' ? (
@@ -137,8 +129,6 @@ export default function ResignForm() {
             {state === 'error' && (
               <div className="space-y-3">
                 <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</p>
-                <button type="button" onClick={() => signInWithDiscord('identify guilds.members.read')}
-                  className="text-sm text-sky-300 hover:text-white underline underline-offset-4">Повторно подключить Discord для проверки роли</button>
               </div>
             )}
 
