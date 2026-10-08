@@ -90,7 +90,7 @@ export default function App() {
     <div className="min-h-screen site-shell text-gray-200">
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
-      <main className="site-main pt-20 px-4 md:px-8 pb-20 min-h-screen relative z-10">
+      <main className={`site-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={path}
             initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
