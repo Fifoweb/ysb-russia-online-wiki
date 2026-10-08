@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import type { User } from '@supabase/supabase-js';
 import { emptyProfile, loadProfile, saveProfile, Profile } from '../lib/db';
+import { trustedDiscordAvatar } from '../lib/trustedDiscordAvatar';
 
 interface ProfileModalProps {
   user: User;
@@ -16,7 +17,7 @@ export default function ProfileModal({ user, onClose, onSignOut }: ProfileModalP
   const [saved, setSaved] = useState(false);
 
   const meta = (user.user_metadata || {}) as Record<string, string | undefined>;
-  const avatar = meta.avatar_url;
+  const avatar = trustedDiscordAvatar(meta.avatar_url);
   const discordName = meta.full_name || meta.name || user.email || 'Пользователь';
 
   useEffect(() => { loadProfile(user.id).then(setP); }, [user.id]);

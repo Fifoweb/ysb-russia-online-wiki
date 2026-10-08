@@ -3,6 +3,7 @@ import { BookOpen, Menu, Search, UserRound, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import ProfileModal from './ProfileModal';
 import { fetchTverskoyOnline } from '../lib/online';
+import { trustedDiscordAvatar } from '../lib/trustedDiscordAvatar';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -42,7 +43,7 @@ export default function Header({ onToggleSidebar, currentTitle, onNavigate, side
   }, []);
 
   const meta = (user?.user_metadata || {}) as Record<string, string | undefined>;
-  const avatar = meta.avatar_url;
+  const avatar = trustedDiscordAvatar(meta.avatar_url);
   const displayName = meta.full_name || meta.name || 'Профиль';
 
   const breadcrumbs = currentTitle === '/' ? [] : [

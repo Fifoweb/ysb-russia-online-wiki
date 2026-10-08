@@ -45,26 +45,36 @@ export function createAuthStorage(
   const storage = {
     getItem(key: string): string | null {
       let raw: string | null;
-      try { raw = persistentStorage ? persistentStorage.getItem(key) : memory.get(key) ?? null; }
+      // Session-scoped storage limits how long bearer/refresh tokens remain on disk.
+      // Migrate an existing login from localStorage once, so the current page
+      // doesn't unexpectedly sign everyone out after this security update.
+      try { raw = tabStorage ? tabStorage.getItem(key) : memory.get(key) ?? null; }
       catch { raw = memory.get(key) ?? null; }
+      if (raw === null) {
+        try { raw = persistentStorage?.getItem(key) ?? null; }
+        catch { /* Old storage may be blocked. */ }
+      }
       const safe = key === sessionKey ? sanitizeSession(raw) : raw;
       if (safe === null) memory.delete(key); else memory.set(key, safe);
-      if (raw !== safe) {
-        try {
-          if (safe === null) persistentStorage?.removeItem(key);
-          else persistentStorage?.setItem(key, safe);
-        } catch { /* The returned session is sanitized even if persistent storage is unavailable. */ }
-      }
+      try {
+        if (safe === null) tabStorage?.removeItem(key);
+        else tabStorage?.setItem(key, safe);
+      } catch { /* The sanitized copy remains in memory. */ }
+      try { persistentStorage?.removeItem(key); }
+      catch { /* Never write new authentication tokens into persistent storage. */ }
       return safe;
     },
     setItem(key: string, value: string) {
       const safe = key === sessionKey ? sanitizeSession(value) : value;
       if (safe === null) { storage.removeItem(key); return; }
       memory.set(key, safe);
-      try { persistentStorage?.setItem(key, safe); } catch { /* Keep the session in memory. */ }
+      try { tabStorage?.setItem(key, safe); } catch { /* Keep the session in memory. */ }
+      try { persistentStorage?.removeItem(key); }
+      catch { /* Do not copy credentials to persistent storage. */ }
     },
     removeItem(key: string) {
       memory.delete(key);
+      try { tabStorage?.removeItem(key); } catch { /* Keep sign-out working in memory. */ }
       try { persistentStorage?.removeItem(key); } catch { /* Keep sign-out working in memory. */ }
     },
     clearLegacyTokens,
@@ -78,8 +88,8 @@ export function createBrowserAuthStorage(sessionKey: string) {
   let persistentStorage: StorageLike | null = null;
   let tabStorage: StorageLike | null = null;
   if (typeof window !== 'undefined') {
-    // Remove only Discord credentials before Supabase processes the OAuth callback.
-    // Its own access/refresh tokens and the GitHub Pages redirect path stay intact.
+    // Remove Discord provider credentials before Supabase processes the OAuth callback.
+    // Site access/refresh tokens still work, but stay in this browser tab only.
     const callback = new URL(window.location.href);
     if (removeProviderTokensFromUrl(callback)) window.history.replaceState(window.history.state, '', callback.href);
     try { persistentStorage = window.localStorage; } catch { /* Use memory when storage is blocked. */ }

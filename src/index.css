@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config '../tailwind.config.js';
 
 /* Handwriting fonts for signatures (local, CORS-free for PNG export) */
 @font-face {

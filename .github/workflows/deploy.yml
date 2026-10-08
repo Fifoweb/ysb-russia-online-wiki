@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -23,6 +21,8 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - run: npm audit --audit-level=low
+      - run: npm run test:security
       # NOTE: these are the PUBLIC publishable Supabase values (safe by design, RLS protects data)
       - run: npm run build
         env:
@@ -33,6 +33,9 @@ jobs:
           path: ./dist
 
   deploy:
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

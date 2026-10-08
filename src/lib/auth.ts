@@ -19,7 +19,7 @@ export function useAuth() {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === 'SIGNED_OUT') {
-        try { window.localStorage.removeItem(ACTIVITY_KEY); } catch { /* Private mode */ }
+        try { window.sessionStorage.removeItem(ACTIVITY_KEY); } catch { /* Private mode */ }
       }
       setSession(nextSession ? withoutProviderTokens(nextSession) : null);
     });
@@ -30,14 +30,14 @@ export function useAuth() {
     if (!supabase || !session) return;
     let lastActivity = Date.now();
     try {
-      const storedActivity = Number(window.localStorage.getItem(ACTIVITY_KEY));
+      const storedActivity = Number(window.sessionStorage.getItem(ACTIVITY_KEY));
       if (Number.isFinite(storedActivity) && storedActivity > 0) lastActivity = storedActivity;
-      else window.localStorage.setItem(ACTIVITY_KEY, String(lastActivity));
+      else window.sessionStorage.setItem(ACTIVITY_KEY, String(lastActivity));
     }
     catch { /* In-memory idle tracking still works */ }
     let endingSession = false;
     const getLastActivity = () => {
-      try { return Number(window.localStorage.getItem(ACTIVITY_KEY)) || lastActivity; }
+      try { return Number(window.sessionStorage.getItem(ACTIVITY_KEY)) || lastActivity; }
       catch { return lastActivity; }
     };
     const checkIdle = () => {
@@ -51,7 +51,7 @@ export function useAuth() {
       checkIdle(); // Don't let activity revive a session that already timed out.
       if (endingSession || Date.now() - getLastActivity() < 15_000) return;
       lastActivity = Date.now();
-      try { window.localStorage.setItem(ACTIVITY_KEY, String(lastActivity)); }
+      try { window.sessionStorage.setItem(ACTIVITY_KEY, String(lastActivity)); }
       catch { /* Private mode */ }
     };
     checkIdle();

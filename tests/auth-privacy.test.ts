@@ -36,7 +36,8 @@ test('old Discord credentials are erased while the current login, identity and u
   const tab = memoryStorage({ discord_oauth_access_token: 'old', discord_oauth_user_id: discordId, draft: 'keep' });
   const storage = createAuthStorage(sessionKey, local, tab);
   assert.deepEqual(JSON.parse(storage.getItem(sessionKey)!), siteSession);
-  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(local.getItem(sessionKey), null);
+  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
   assert.equal(local.getItem('discord_oauth_access_token'), null);
   assert.equal(tab.getItem('discord_oauth_access_token'), null);
   assert.equal(tab.getItem('discord_oauth_user_id'), null);
@@ -46,16 +47,32 @@ test('old Discord credentials are erased while the current login, identity and u
 
 test('new and externally written sessions cannot persist provider tokens; PKCE data and logout keep working', () => {
   const local = memoryStorage();
-  const storage = createAuthStorage(sessionKey, local, null);
+  const tab = memoryStorage();
+  const storage = createAuthStorage(sessionKey, local, tab);
   storage.setItem(sessionKey, JSON.stringify(oldSession));
-  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(local.getItem(sessionKey), null);
+  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
+  storage.removeItem(sessionKey);
   local.setItem(sessionKey, JSON.stringify(oldSession));
   assert.deepEqual(JSON.parse(storage.getItem(sessionKey)!), siteSession);
-  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(local.getItem(sessionKey), null);
+  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
   storage.setItem(`${sessionKey}-code-verifier`, 'test-pkce-verifier');
   assert.equal(storage.getItem(`${sessionKey}-code-verifier`), 'test-pkce-verifier');
+  assert.equal(local.getItem(`${sessionKey}-code-verifier`), null);
+  assert.equal(tab.getItem(`${sessionKey}-code-verifier`), 'test-pkce-verifier');
   storage.removeItem(sessionKey);
   assert.equal(storage.getItem(sessionKey), null);
+  assert.equal(tab.getItem(sessionKey), null);
+});
+
+test('OAuth verifier from an earlier version migrates to the current tab without staying in localStorage', () => {
+  const local = memoryStorage({ [`${sessionKey}-code-verifier`]: 'old-pkce-code-verifier' });
+  const tab = memoryStorage();
+  const storage = createAuthStorage(sessionKey, local, tab);
+  assert.equal(storage.getItem(`${sessionKey}-code-verifier`), 'old-pkce-code-verifier');
+  assert.equal(tab.getItem(`${sessionKey}-code-verifier`), 'old-pkce-code-verifier');
+  assert.equal(local.getItem(`${sessionKey}-code-verifier`), null);
 });
 
 test('the OAuth redirect retains the site tokens, path and query while removing both Discord tokens', () => {

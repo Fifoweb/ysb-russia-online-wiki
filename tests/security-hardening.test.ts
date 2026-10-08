@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
+import { trustedDiscordAvatar } from '../src/lib/trustedDiscordAvatar';
 
 function compileEdge(path: string) {
   const source = readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -133,4 +134,19 @@ test('GitHub Pages HTML uses a real meta CSP without inline JavaScript', () => {
   const guard = readFileSync(new URL('../public/frame-guard.js', import.meta.url), 'utf8');
   assert.match(guard, /window\.self !== window\.top/);
   assert.match(guard, /style\.setProperty\('display', 'none', 'important'\)/);
+});
+
+test('untrusted profile avatar URLs cannot trigger third-party requests', () => {
+  assert.equal(trustedDiscordAvatar('https://cdn.discordapp.com/avatars/123456789012345678/a.png'),
+    'https://cdn.discordapp.com/avatars/123456789012345678/a.png');
+  assert.equal(trustedDiscordAvatar('https://media.discordapp.net/avatars/123/a.png'),
+    'https://media.discordapp.net/avatars/123/a.png');
+  for (const candidate of ['https://evil.example/tracker', 'https://cdn.discordapp.com.evil.test/avatar.png',
+    'http://cdn.discordapp.com/avatar.png', 'javascript:alert(1)',
+    'https://evil.example@cdn.discordapp.com/avatar.png', null, 123]) {
+    assert.equal(trustedDiscordAvatar(candidate), null);
+  }
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /img-src[^";]*https:\s*[;'" ]/);
+  assert.match(html, /https:\/\/cdn\.majestic-files\.net/);
 });
