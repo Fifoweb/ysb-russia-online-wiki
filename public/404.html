@@ -2,17 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>РО | ГИБДД | УСБ — Wiki</title>
   <!-- SPA fallback for GitHub Pages: carry the requested route to the app shell. -->
-  <script>
-    (function () {
-      var base = '/ysb-russia-online-wiki';
-      var p = window.location.pathname;
-      var route = p.indexOf(base) === 0 ? p.slice(base.length) : p;
-      var requested = route + window.location.search + window.location.hash;
-      window.location.replace(base + '/?__spa=' + encodeURIComponent(requested));
-    })();
-  </script>
+  <script src="/ysb-russia-online-wiki/spa-redirect.js"></script>
 </head>
 <body></body>
 </html>

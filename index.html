@@ -2,31 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <!-- GitHub Pages does not serve public/_headers. This meta policy protects document loads,
+         but frame-ancestors and X-Frame-Options still require a real HTTP response header. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://wiki.russia.online; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; upgrade-insecure-requests">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ГИБДД Вики Россия Онлайн — курс службы, формы, крафты и онлайн сервера Тверской." />
     <title>ГИБДД Вики · Россия Онлайн</title>
-    <script>
-      // SPA route restore: 404.html forwards the requested path through the URL.
-      (function () {
-        var params = new URLSearchParams(window.location.search);
-        var p = params.get('__spa');
-        if (!p) {
-          try {
-            p = window.sessionStorage.getItem('spa-path');
-            if (p) window.sessionStorage.removeItem('spa-path');
-          } catch (_) {
-            p = null;
-          }
-        }
-        if (p) {
-          var base = '/ysb-russia-online-wiki';
-          window.history.replaceState(null, '', base + p);
-        }
-      })();
-    </script>
+    <script src="/ysb-russia-online-wiki/spa-restore.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">

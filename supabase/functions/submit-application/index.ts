@@ -133,7 +133,10 @@ Deno.serve(withSubmissionCooldown(async (req) => {
     | undefined;
   const identityData = identity?.identity_data || {};
   const discordName = String(identityData.username || identityData.global_name || meta.user_name || meta.preferred_username || meta.full_name || meta.name || 'неизвестно').slice(0, 80);
-  const discordId = identityData.sub || meta.sub || identity?.id || null;
+  // user_metadata is editable by the user; never use it as a Discord identity.
+  // Only the OAuth provider's verified identity claim can authorize a mention.
+  const discordId = typeof identityData.sub === 'string' && /^\d{17,20}$/.test(identityData.sub)
+    ? identityData.sub : null;
   if (!discordId) {
     return json(403, { error: 'Для отправки формы войдите через Discord.' });
   }

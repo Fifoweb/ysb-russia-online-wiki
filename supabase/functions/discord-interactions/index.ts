@@ -2,8 +2,10 @@
 // Discord шлёт сюда нажатия «Одобрить»/«Отклонить» и отправку модалки с причиной.
 // JWT тут НЕТ — запросы идут от Discord; подлинность проверяем подписью Ed25519.
 import nacl from 'https://esm.sh/tweetnacl@1.0.3';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const PUB_KEY = Deno.env.get('DISCORD_PUBLIC_KEY') || '';
+const MAX_SIGNATURE_AGE_SECONDS = 300;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +55,10 @@ Deno.serve(async (req) => {
   const rawBody = await req.text();
   const sig = req.headers.get('X-Signature-Ed25519') || '';
   const ts = req.headers.get('X-Signature-Timestamp') || '';
+  // A valid signature must also be recent. Discord timestamps are Unix seconds.
+  if (!/^\d{10}$/.test(ts) || Math.abs(Date.now() / 1000 - Number(ts)) > MAX_SIGNATURE_AGE_SECONDS) {
+    return json(401, { error: 'expired signature' });
+  }
   let valid = false;
   try {
     valid = nacl.sign.detached.verify(
@@ -63,10 +69,38 @@ Deno.serve(async (req) => {
   } catch { valid = false; }
   if (!valid) return json(401, { error: 'bad signature' });
 
-  const interaction = JSON.parse(rawBody);
+  let interaction: Record<string, any>;
+  try { interaction = JSON.parse(rawBody); } catch { return json(400, { error: 'bad JSON' }); }
 
   // 2. PING → PONG (Discord проверяет эндпоинт при сохранении URL в портале)
   if (interaction.type === 1) return json(200, { type: 1 });
+
+  // A signed request can otherwise be replayed within its five-minute lifetime.
+  // Database uniqueness makes this safe across Edge Function instances and cold starts.
+  if (typeof interaction.id !== 'string' || !/^\d{17,20}$/.test(interaction.id)) {
+    return json(400, { error: 'invalid interaction ID' });
+  }
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceKey) return json(503, { error: 'Replay protection not configured' });
+  try {
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: claimed, error: claimError } = await admin.rpc('claim_discord_interaction', {
+      p_interaction_id: interaction.id,
+    });
+    if (claimError || typeof claimed !== 'boolean') {
+      console.error('Discord replay claim failed', claimError);
+      return json(503, { error: 'Replay protection unavailable' });
+    }
+    if (!claimed) return json(200, {
+      type: 4, data: { content: 'Это действие уже обработано.', flags: 64 },
+    });
+  } catch (error) {
+    console.error('Discord replay claim error', error);
+    return json(503, { error: 'Replay protection unavailable' });
+  }
 
   // Ник на СЕРВЕРЕ (не глобальный ник Discord) — для плашек
   const who = interaction.member?.nick || interaction.member?.user?.username || 'модератор';
