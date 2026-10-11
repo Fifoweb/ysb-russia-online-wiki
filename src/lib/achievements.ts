@@ -11,6 +11,7 @@ export interface AchievementProgress {
 export interface AchievementDashboardData {
   weekStart: string;
   currentWeekStart: string;
+  availableWeeks?: string[];
   weekEndsAt: string;
   generatedAt: string;
   reports: number;

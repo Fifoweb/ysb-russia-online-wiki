@@ -19,6 +19,9 @@ export default function AchievementsDashboard() {
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const currentWeek = achievementWeekStart(now);
+  const availableWeeks = [currentWeek, ...(data?.availableWeeks ?? []).filter(start => start < currentWeek)]
+    .filter((start, index, weeks) => weeks.indexOf(start) === index)
+    .sort((left, right) => right.localeCompare(left));
   const week = selectedWeek ?? currentWeek;
   const weekOffset = (new Date(week).getTime() - new Date(currentWeek).getTime()) / (7 * 86400_000);
 
@@ -83,8 +86,8 @@ export default function AchievementsDashboard() {
     </div>
 
     <div className="achievement-toolbar">
-      <label><span>Неделя</span><select value={week} onChange={event => setSelectedWeek(event.target.value === currentWeek ? null : event.target.value)}>
-        {Array.from({ length: 8 }, (_, index) => <option key={index} value={addAchievementDays(currentWeek, -index * 7)}>{index === 0 ? 'Текущая · ' : ''}{weekLabel(addAchievementDays(currentWeek, -index * 7))}</option>)}
+      <label><span>Неделя</span><select value={week} disabled={availableWeeks.length === 1} onChange={event => setSelectedWeek(event.target.value === currentWeek ? null : event.target.value)}>
+        {availableWeeks.map(start => <option key={start} value={start}>{start === currentWeek ? 'Текущая · ' : ''}{weekLabel(start)}</option>)}
       </select></label>
       <label><span>Отдел</span><select value={department} onChange={event => setDepartment(event.target.value as AchievementDepartment | '')}>
         <option value="">Вся фракция</option>{achievementDepartments.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
