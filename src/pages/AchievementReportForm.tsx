@@ -98,10 +98,10 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
         </div>
 
         <div className="border-t border-sky-300/15 pt-6"><p className="eyebrow mb-2">03 · ДОКАЗАТЕЛЬСТВА</p>
-          <label htmlFor="achievement-evidence" className="block"><span>Ссылки на скриншоты, видео или сообщения Discord <span className="text-rose-300">*</span></span><textarea id="achievement-evidence" required rows={6} maxLength={10000} value={form.evidenceText} onChange={event => update('evidenceText', event.target.value)} className={`${inputClass} resize-y`} placeholder={'https://allwebs.ru/…\nhttps://discord.com/channels/…'} aria-describedby="achievement-evidence-help" /></label>
+          <label htmlFor="achievement-evidence" className="block"><span>Ссылки на скриншоты, видео или сообщения Discord <span className="text-rose-300">*</span></span><textarea id="achievement-evidence" required rows={6} maxLength={10000} value={form.evidenceText} onChange={event => update('evidenceText', event.target.value)} className={`${inputClass} resize-y`} placeholder={'https://fotora.ru/…\nhttps://discord.com/channels/…'} aria-describedby="achievement-evidence-help" /></label>
           <div id="achievement-evidence-help" className="achievement-evidence-help"><span><Link2 size={14} /> {evidence.links.length} / 50 ссылок</span><span>Каждая ссылка с новой строки. Можно вставить весь список сразу.</span></div>
-          <p className="achievement-host-note">Для загрузки скриншотов рекомендуем <a href="https://allwebs.ru/?lang=en" target="_blank" rel="noopener noreferrer">Allwebs <ExternalLink size={12} /></a>. Подойдут и другие хостинги.</p>
-          <p className="application-note">Первые ссылки появятся в карточке Discord, полный список — в приложенном текстовом файле.</p>
+          <p className="achievement-host-note">Для загрузки скриншотов рекомендуем <a href="https://fotora.ru/" target="_blank" rel="noopener noreferrer">Fotora <ExternalLink size={12} /></a>. Подойдут и другие хостинги.</p>
+          <p className="application-note">Все ссылки появятся в Discord столбиком в разделе «Доказательства». Очень длинный список будет продолжен в той же ветке.</p>
         </div>
 
         <details className="achievement-rules achievement-form-rules" open><summary>Правила публикации</summary><ul>{achievementPublicationRules.map(rule => <li key={rule}>{rule}</li>)}</ul></details>

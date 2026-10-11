@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
 import { achievementGoals, canonicalEvidenceLink, validateAchievementSubmission } from '../_shared/achievements.ts';
-import { buildAchievementMessage } from '../_shared/achievementMessage.ts';
+import { buildAchievementMessages } from '../_shared/achievementMessage.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -74,29 +74,33 @@ Deno.serve(withSubmissionCooldown(async req => {
   };
   webhook.searchParams.set('wait', 'true');
   webhook.searchParams.set('thread_id', goal.threadId);
-  const payload = buildAchievementMessage(body, discordId, discordName);
-  const multipart = new FormData();
-  multipart.set('payload_json', JSON.stringify(payload));
-  multipart.set('files[0]', new Blob([body.evidence.map((link, index) => `${index + 1}. ${link}`).join('\n')],
-    { type: 'text/plain;charset=utf-8' }), 'evidence.txt');
-  let response: Response;
-  try {
-    response = await fetch(webhook, { method: 'POST', body: multipart, signal: AbortSignal.timeout(15_000) });
-  } catch {
-    await settle('uncertain');
-    return json(502, { error: 'Discord не подтвердил доставку. Проверьте ветку у куратора: повторная отправка этого отчёта заблокирована для защиты от дублей.' });
+  const payloads = buildAchievementMessages(body, discordId, discordName);
+  let firstMessageId: string | null = null;
+  for (const payload of payloads) {
+    let response: Response;
+    try {
+      response = await fetch(webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), signal: AbortSignal.timeout(15_000) });
+    } catch {
+      await settle('uncertain');
+      return json(502, { error: 'Discord не подтвердил доставку. Проверьте ветку у куратора: повторная отправка этого отчёта заблокирована для защиты от дублей.' });
+    }
+    if (!response.ok) {
+      // If any earlier part was delivered, automatic retry would create duplicate reports.
+      await settle(firstMessageId ? 'uncertain' : 'failed');
+      console.error('Discord achievement delivery rejected', response.status);
+      return json(502, { error: firstMessageId
+        ? 'Отчёт отправлен частично. Проверьте доказательства в Discord у куратора; повторная отправка заблокирована.'
+        : 'Discord временно не принял отчёт. Попробуйте позже.' });
+    }
+    let message: { id?: string; channel_id?: string };
+    try { message = await response.json(); } catch { message = {}; }
+    if (!message.id || !/^\d{17,20}$/.test(message.id) || message.channel_id !== goal.threadId) {
+      await settle('uncertain');
+      return json(502, { error: 'Не удалось подтвердить доставку в нужную ветку. Обратитесь к куратору перед повторной подачей.' });
+    }
+    firstMessageId ??= message.id;
   }
-  if (!response.ok) {
-    await settle('failed');
-    console.error('Discord achievement delivery rejected', response.status);
-    return json(502, { error: 'Discord временно не принял отчёт. Попробуйте позже.' });
-  }
-  let message: { id?: string; channel_id?: string };
-  try { message = await response.json(); } catch { message = {}; }
-  if (!message.id || !/^\d{17,20}$/.test(message.id) || message.channel_id !== goal.threadId) {
-    await settle('uncertain');
-    return json(502, { error: 'Не удалось подтвердить доставку в нужную ветку. Обратитесь к куратору перед повторной подачей.' });
-  }
-  const counted = await settle('sent', message.id);
+  const counted = await settle('sent', firstMessageId);
   return json(counted ? 200 : 202, { ok: true, syncPending: !counted });
 }, cors));

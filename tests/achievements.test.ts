@@ -6,7 +6,7 @@ import { webcrypto } from 'node:crypto';
 import ts from 'typescript';
 import { achievementGoals, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
   validateAchievementSubmission } from '../supabase/functions/_shared/achievements.ts';
-import { buildAchievementMessage } from '../supabase/functions/_shared/achievementMessage.ts';
+import { buildAchievementMessage, buildAchievementMessages } from '../supabase/functions/_shared/achievementMessage.ts';
 
 const now = new Date('2026-10-11T13:00:00+03:00');
 const valid = { requestId: '00000000-0000-4000-8000-000000000001', fullName: 'Иван Иванов', staticId: '75463',
@@ -56,7 +56,41 @@ test('all nine routes match the requested threads; embeds keep Discord ID last a
   assert.match(payload.content, /<@123456789012345678>/);
   assert.deepEqual(payload.allowed_mentions, { parse: [], users: ['123456789012345678'] });
   assert.match(payload.embeds[0].footer.text, /Отправил ДС discord.user/);
-  assert.ok(payload.embeds[0].fields.every(field => !('inline' in field) && field.value.length <= 1024));
+  assert.ok(payload.embeds[0].fields.every(field => field.inline !== true && field.value.length <= 1024));
+});
+
+test('all 26 normal proof URLs appear one-per-line in Discord evidence, never above the embed or in evidence.txt', () => {
+  const evidence = Array.from({ length: 26 }, (_, i) => `https://fotora.ru/image/proof-${i + 1}.png`);
+  const payloads = buildAchievementMessages({ ...valid, evidence }, '123456789012345678', 'discord.user', now);
+  assert.equal(payloads.length, 1);
+  const msg = payloads[0];
+  const evidenceFields = msg.embeds[0].fields.filter(field => field.name.includes('Доказательства'));
+  assert.ok(evidenceFields.length > 0);
+  const allLines = evidenceFields.flatMap(field => field.value.split('\n'));
+  assert.equal(allLines.length, 26);
+  assert.deepEqual(allLines, evidence.map(link => `<${link}>`));
+  assert.ok(msg.embeds[0].fields.every(field => field.value.length <= 1024));
+  assert.equal(msg.embeds[0].fields.at(-1)?.name, '🆔 Discord ID');
+  assert.doesNotMatch(JSON.stringify(msg), /evidence\.txt|attachments/);
+  assert.doesNotMatch(msg.content, /fotora\.ru/);
+});
+
+test('large evidence sets retain every link in the same thread and within Discord embed limits', () => {
+  const evidence = Array.from({ length: 50 }, (_, i) => `https://fotora.ru/image/${i}-${'x'.repeat(710)}`);
+  const payloads = buildAchievementMessages({ ...valid, evidence }, '123456789012345678', 'discord.user', now);
+  assert.ok(payloads.length >= 2);
+  const lines = payloads.flatMap(payload => payload.embeds[0].fields
+    .filter(field => field.name.includes('Доказательства')).flatMap(field => field.value.split('\n')));
+  assert.deepEqual(lines, evidence.map(link => `<${link}>`));
+  for (const payload of payloads) {
+    const embed = payload.embeds[0];
+    assert.ok(embed.fields.length <= 25);
+    assert.ok(embed.fields.every(field => field.value.length <= 1024));
+    const total = embed.title.length + embed.fields.reduce((sum, f) => sum + f.name.length + f.value.length, 0) +
+      ('footer' in embed && embed.footer ? embed.footer.text.length : 0);
+    assert.ok(total <= 6000, `embed size ${total}`);
+  }
+  assert.deepEqual(payloads.slice(1).map(payload => payload.allowed_mentions.users), Array(payloads.length - 1).fill([]));
 });
 
 function compile(file: string) {
@@ -67,12 +101,12 @@ function compile(file: string) {
   }).outputText.replace(/export /g, '');
 }
 
-function fixture(options: { reservation?: string; http?: number; networkError?: boolean; syncDown?: boolean;
+function fixture(options: { reservation?: string; http?: number; rejectPart?: number; networkError?: boolean; syncDown?: boolean;
   identity?: boolean; active?: boolean; cooldown?: number } = {}) {
   let handler!: (req: Request) => Promise<Response>;
   const statuses: string[] = [];
   const logs: unknown[][] = [];
-  const sent: { url: string; payload: ReturnType<typeof buildAchievementMessage>; proofs: string }[] = [];
+  const sent: { url: string; payload: ReturnType<typeof buildAchievementMessage> }[] = [];
   const client = {
     auth: { getUser: async () => ({ error: null, data: { user: { id: '00000000-0000-4000-8000-000000000001',
       user_metadata: { provider_id: '999999999999999999' }, identities: options.identity === false ? [] : [
@@ -99,10 +133,10 @@ function fixture(options: { reservation?: string; http?: number; networkError?: 
     crypto: webcrypto, Request, Response, Headers, FormData, Blob, URL, AbortSignal, TextEncoder, TextDecoder, Uint8Array,
     fetch: async (url: URL, init: RequestInit) => {
       if (options.networkError) throw new Error('secret-fixture-marker');
-      const form = init.body as FormData;
-      const payload = JSON.parse(String(form.get('payload_json')));
-      sent.push({ url: url.toString(), payload, proofs: await (form.get('files[0]') as Blob).text() });
-      return Response.json({ id: '234567890123456789', channel_id: '1556659843400470598' }, { status: options.http ?? 200 });
+      const payload = JSON.parse(String(init.body));
+      sent.push({ url: url.toString(), payload });
+      return Response.json({ id: '234567890123456789', channel_id: '1556659843400470598' },
+        { status: options.rejectPart === sent.length ? 429 : options.http ?? 200 });
     },
   });
   for (const file of ['../supabase/functions/_shared/achievements.ts', '../supabase/functions/_shared/achievementMessage.ts',
@@ -112,14 +146,38 @@ function fixture(options: { reservation?: string; http?: number; networkError?: 
   })) };
 }
 
-test('delivery attaches complete proof list, confirms thread, then commits progress', async () => {
+test('delivery embeds complete proof list, confirms thread, then commits progress', async () => {
   const app = fixture();
   const response = await app.submit();
   assert.equal(response.status, 200);
   assert.deepEqual(app.statuses, ['sent']);
   assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), '1556659843400470598');
-  assert.match(app.sent[0].proofs, /https:\/\/example.test\/proof.png/);
+  assert.ok(app.sent[0].payload.embeds[0].fields.some(field => field.name.includes('Доказательства') && field.value.includes('https://example.test/proof.png')));
   assert.equal(app.sent[0].payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
+});
+
+test('50 links longer than one Discord embed are all delivered vertically in one thread before counting', async () => {
+  const app = fixture();
+  const evidence = Array.from({ length: 50 }, (_, index) =>
+    `https://fotora.ru/image/proof-${index}-${'a'.repeat(135)}`);
+  assert.ok(validateAchievementSubmission({ ...valid, evidence }, now).value);
+  assert.equal((await app.submit({ ...valid, evidence })).status, 200);
+  assert.ok(app.sent.length >= 2);
+  assert.deepEqual(app.statuses, ['sent']);
+  const lines = app.sent.flatMap(part => part.payload.embeds[0].fields
+    .filter(field => field.name.includes('Доказательства'))
+    .flatMap(field => field.value.split('\n')));
+  assert.deepEqual(lines, evidence.map(link => `<${link}>`));
+  assert.ok(app.sent.every(part => new URL(part.url).searchParams.get('thread_id') === '1556659843400470598'));
+});
+
+test('failure after the first delivered evidence part is uncertain and never counted or automatically retried', async () => {
+  const app = fixture({ rejectPart: 2 });
+  const evidence = Array.from({ length: 50 }, (_, index) =>
+    `https://fotora.ru/image/proof-${index}-${'a'.repeat(135)}`);
+  assert.equal((await app.submit({ ...valid, evidence })).status, 502);
+  assert.equal(app.sent.length, 2);
+  assert.deepEqual(app.statuses, ['uncertain']);
 });
 
 test('duplicates, invalid identities, expired sessions and cooldown do not reach Discord', async () => {
@@ -152,4 +210,11 @@ test('the submission route is omitted from menu and search; the public dashboard
   for (const file of ['../src/data/navigation.ts', '../src/data/search.ts', '../src/pages/AchievementsDashboard.tsx']) {
     assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /\/achievement-report/);
   }
+});
+
+test('achievement form recommends Fotora and explains evidence is shown vertically in Discord', () => {
+  const page = readFileSync(new URL('../src/pages/AchievementReportForm.tsx', import.meta.url), 'utf8');
+  assert.match(page, /https:\/\/fotora\.ru\//);
+  assert.match(page, /«Доказательства»/);
+  assert.doesNotMatch(page, /allwebs|evidence\.txt/i);
 });
