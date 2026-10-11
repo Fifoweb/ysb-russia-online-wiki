@@ -10,6 +10,7 @@ export const navItems: NavItem[] = [
   { id: 'home', label: 'Главная', icon: '⌂', path: '/', section: 'Обзор' },
   { id: 'crafts', label: 'Крафты ГИБДД', icon: '▦', path: '/crafts', section: 'Каталоги' },
   { id: 'servers', label: 'Онлайн Тверского', icon: '◉', path: '/servers', section: 'Каталоги' },
+  { id: 'achievements', label: 'Ачивки фракции', icon: '🏆', path: '/achievements', section: 'Обзор' },
   { id: 'basics', label: 'Основа службы', icon: '01', path: '/basics', section: 'Курс' },
   { id: 'check', label: 'Служебная проверка', icon: '02', path: '/check', section: 'Курс' },
   { id: 'control', label: 'Повседневный контроль', icon: '03', path: '/control', section: 'Курс' },

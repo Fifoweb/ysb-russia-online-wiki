@@ -1,0 +1,155 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { createContext, runInContext } from 'node:vm';
+import { webcrypto } from 'node:crypto';
+import ts from 'typescript';
+import { achievementGoals, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
+  validateAchievementSubmission } from '../supabase/functions/_shared/achievements.ts';
+import { buildAchievementMessage } from '../supabase/functions/_shared/achievementMessage.ts';
+
+const now = new Date('2026-10-11T13:00:00+03:00');
+const valid = { requestId: '00000000-0000-4000-8000-000000000001', fullName: 'Иван Иванов', staticId: '75463',
+  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-10-10', workTime: '12:00',
+  evidence: ['https://example.test/proof.png'], rulesAccepted: true };
+
+test('Moscow week switches at Monday 00:00; new work is accepted from 00:01', () => {
+  assert.equal(achievementWeekStart(new Date('2026-10-11T20:59:59Z')), '2026-10-05');
+  assert.equal(achievementWeekStart(new Date('2026-10-11T21:00:00Z')), '2026-10-12');
+  const monday = { ...valid, workDate: '2026-10-12', workTime: '00:01' };
+  assert.ok(validateAchievementSubmission(monday, new Date('2026-10-12T00:00:59+03:00')).error);
+  assert.ok(validateAchievementSubmission(monday, new Date('2026-10-12T00:01:00+03:00')).value);
+  assert.ok(validateAchievementSubmission({ ...monday, workTime: '00:00' }, new Date('2026-10-12T00:02:00+03:00')).error);
+  assert.ok(validateAchievementSubmission(valid, new Date('2026-10-12T00:02:00+03:00')).error);
+});
+
+test('quantities, dates, departments and proof requirements reject forged/invalid data', () => {
+  assert.ok(validateAchievementSubmission(valid, now).value);
+  for (const patch of [{ quantity: -1 }, { quantity: 1.5 }, { quantity: '12' }, { quantity: 100000 },
+    { workDate: '2026-10-04' }, { workDate: '2026-10-12' }, { workDate: '2026-02-31' },
+    { department: '__proto__' }, { achievementId: 'unknown' }, { staticId: 'x' },
+    { rulesAccepted: false }, { evidence: [] }, { evidence: ['javascript:alert(1)'] },
+    { evidence: ['https://discord.com/api/webhooks/123/token'] }]) {
+    assert.ok(validateAchievementSubmission({ ...valid, ...patch }, now).error, JSON.stringify(patch));
+  }
+  assert.ok(validateAchievementSubmission({ ...valid, achievementId: 'average-online', quantity: 0 }, now).value);
+  assert.ok(validateAchievementSubmission({ ...valid, achievementId: 'warehouse', quantity: 2 }, now).error);
+  assert.ok(validateAchievementSubmission({ ...valid, achievementId: 'warehouse', quantity: 1 }, now).value);
+});
+
+test('bulk proofs preserve all 50 links and reject canonical Discord duplicates', () => {
+  const links = Array.from({ length: 50 }, (_, index) => `https://example.test/${index}.png`);
+  assert.equal(parseAchievementEvidence(links.join('\n')).links.length, 50);
+  assert.ok(parseAchievementEvidence([...links, 'https://example.test/51.png'].join('\n')).error);
+  assert.equal(canonicalEvidenceLink('https://cdn.discordapp.com/attachments/1/2/p.png?ex=1&hm=a'),
+    canonicalEvidenceLink('https://cdn.discordapp.com/attachments/1/2/p.png?ex=2&hm=b'));
+  assert.ok(parseAchievementEvidence('https://example.test/a\nhttps://example.test/a#duplicate').error);
+});
+
+test('all nine routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
+  assert.deepEqual(achievementGoals.map(goal => goal.threadId), ['1556660053572853913','1556659874602033153',
+    '1556659983603474482','1556659948249808987','1556659909557362868','1556660085638307911',
+    '1556659813889478716','1556660019661901874','1556659843400470598']);
+  const checked = validateAchievementSubmission(valid, now).value!;
+  const payload = buildAchievementMessage(checked, '123456789012345678', 'discord.user', now);
+  assert.equal(payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
+  assert.match(payload.content, /<@123456789012345678>/);
+  assert.deepEqual(payload.allowed_mentions, { parse: [], users: ['123456789012345678'] });
+  assert.match(payload.embeds[0].footer.text, /Отправил ДС discord.user/);
+  assert.ok(payload.embeds[0].fields.every(field => !('inline' in field) && field.value.length <= 1024));
+});
+
+function compile(file: string) {
+  return ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    transformers: { before: [() => file => ts.factory.updateSourceFile(file,
+      file.statements.filter(statement => !ts.isImportDeclaration(statement)))] },
+  }).outputText.replace(/export /g, '');
+}
+
+function fixture(options: { reservation?: string; http?: number; networkError?: boolean; syncDown?: boolean;
+  identity?: boolean; active?: boolean; cooldown?: number } = {}) {
+  let handler!: (req: Request) => Promise<Response>;
+  const statuses: string[] = [];
+  const logs: unknown[][] = [];
+  const sent: { url: string; payload: ReturnType<typeof buildAchievementMessage>; proofs: string }[] = [];
+  const client = {
+    auth: { getUser: async () => ({ error: null, data: { user: { id: '00000000-0000-4000-8000-000000000001',
+      user_metadata: { provider_id: '999999999999999999' }, identities: options.identity === false ? [] : [
+        { provider: 'discord', identity_data: { sub: '123456789012345678', username: 'discord.user' } }],
+    } } }) },
+    rpc: async (name: string, params: Record<string, unknown> = {}) => {
+      if (name === 'claim_application_attempt') return { data: 0, error: null };
+      if (name === 'is_site_session_active') return { data: options.active !== false, error: null };
+      if (name === 'claim_application_submission') return { data: options.cooldown ?? 0, error: null };
+      if (name === 'release_application_submission') return { data: null, error: null };
+      if (name === 'reserve_achievement_report') {
+        assert.equal(params.p_discord_id, '123456789012345678');
+        return { data: { result: options.reservation ?? 'reserved', id: 'report-fixture' }, error: null };
+      }
+      if (name === 'settle_achievement_report') { statuses.push(String(params.p_status)); return { data: !options.syncDown, error: null }; }
+      throw new Error(`Unexpected RPC ${name}`);
+    },
+  };
+  class FixedDate extends Date { constructor(value?: string | number) { super(value ?? now.getTime()); } static now() { return now.getTime(); } }
+  const env: Record<string, string> = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'fixture',
+    SUPABASE_SERVICE_ROLE_KEY: 'fixture', DISCORD_ACHIEVEMENTS_WEBHOOK_URL: 'https://discord.com/api/webhooks/123456789012345678/secret-fixture-marker' };
+  const context = createContext({ Date: FixedDate, Deno: { env: { get: (key: string) => env[key] }, serve: (fn: typeof handler) => { handler = fn; } },
+    createClient: () => client, console: { error: (...args: unknown[]) => logs.push(args) },
+    crypto: webcrypto, Request, Response, Headers, FormData, Blob, URL, AbortSignal, TextEncoder, TextDecoder, Uint8Array,
+    fetch: async (url: URL, init: RequestInit) => {
+      if (options.networkError) throw new Error('secret-fixture-marker');
+      const form = init.body as FormData;
+      const payload = JSON.parse(String(form.get('payload_json')));
+      sent.push({ url: url.toString(), payload, proofs: await (form.get('files[0]') as Blob).text() });
+      return Response.json({ id: '234567890123456789', channel_id: '1556659843400470598' }, { status: options.http ?? 200 });
+    },
+  });
+  for (const file of ['../supabase/functions/_shared/achievements.ts', '../supabase/functions/_shared/achievementMessage.ts',
+    '../supabase/functions/_shared/submissionCooldown.ts', '../supabase/functions/submit-achievement-report/index.ts']) runInContext(compile(file), context);
+  return { sent, statuses, logs, submit: (body: unknown = valid) => handler(new Request('https://example.test/report', {
+    method: 'POST', headers: { authorization: 'Bearer fixture', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })) };
+}
+
+test('delivery attaches complete proof list, confirms thread, then commits progress', async () => {
+  const app = fixture();
+  const response = await app.submit();
+  assert.equal(response.status, 200);
+  assert.deepEqual(app.statuses, ['sent']);
+  assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), '1556659843400470598');
+  assert.match(app.sent[0].proofs, /https:\/\/example.test\/proof.png/);
+  assert.equal(app.sent[0].payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
+});
+
+test('duplicates, invalid identities, expired sessions and cooldown do not reach Discord', async () => {
+  for (const [options, status] of [[{ reservation: 'duplicate' }, 409], [{ reservation: 'sending' }, 409],
+    [{ reservation: 'sent' }, 200], [{ identity: false }, 403], [{ active: false }, 401], [{ cooldown: 150 }, 429]] as const) {
+    const app = fixture(options);
+    assert.equal((await app.submit()).status, status);
+    assert.equal(app.sent.length, 0);
+    assert.equal(app.statuses.length, 0);
+  }
+});
+
+test('known failures release proofs; uncertain deliveries block resending; sync failure never resends', async () => {
+  const rejected = fixture({ http: 429 });
+  assert.equal((await rejected.submit()).status, 502);
+  assert.deepEqual(rejected.statuses, ['failed']);
+  const uncertain = fixture({ networkError: true });
+  const response = await uncertain.submit();
+  assert.equal(response.status, 502);
+  assert.deepEqual(uncertain.statuses, ['uncertain']);
+  assert.doesNotMatch(await response.text() + JSON.stringify(uncertain.logs), /secret-fixture-marker/);
+  const sync = fixture({ syncDown: true });
+  const synced = await sync.submit();
+  assert.equal(synced.status, 202);
+  assert.equal((await synced.json()).syncPending, true);
+  assert.equal(sync.sent.length, 1);
+});
+
+test('the submission route is omitted from menu and search; the public dashboard links to no submission form', () => {
+  for (const file of ['../src/data/navigation.ts', '../src/data/search.ts', '../src/pages/AchievementsDashboard.tsx']) {
+    assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /\/achievement-report/);
+  }
+});

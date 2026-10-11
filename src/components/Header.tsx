@@ -29,6 +29,8 @@ const titles: Record<string, string> = {
   '/complaints': 'Жалобы',
   '/crafts': 'Крафты ГИБДД',
   '/servers': 'Онлайн Тверского',
+  '/achievements': 'Ачивки фракции',
+  '/achievement-report': 'Отчёт о выполнении ачивки',
 };
 
 export default function Header({ onToggleSidebar, currentTitle, onNavigate, sidebarOpen }: HeaderProps) {

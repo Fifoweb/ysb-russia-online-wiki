@@ -24,6 +24,9 @@ import SeniorPromotionReportForm from './pages/SeniorPromotionReportForm';
 import AcademyPromotionReportForm from './pages/AcademyPromotionReportForm';
 import Crafts from './pages/Crafts';
 import Servers from './pages/Servers';
+import AchievementsDashboard from './pages/AchievementsDashboard';
+import AchievementReportForm from './pages/AchievementReportForm';
+import { supabase } from './lib/supabase';
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -58,6 +61,21 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePop);
   }, []);
 
+  useEffect(() => {
+    if (!supabase || path !== '/') return;
+    const restore = () => {
+      try {
+        const started = Number(sessionStorage.getItem('achievement-report-return'));
+        if (!started || Date.now() - started > 15 * 60_000) return;
+        sessionStorage.removeItem('achievement-report-return');
+        navigate('/achievement-report');
+      } catch { /* Storage may be unavailable. */ }
+    };
+    void supabase.auth.getSession().then(({ data }) => { if (data.session) restore(); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (session) restore(); });
+    return () => listener.subscription.unsubscribe();
+  }, [path, navigate]);
+
   const renderPage = () => {
     switch (path) {
       case '/': return <Home onNavigate={navigate} />;
@@ -82,6 +100,8 @@ export default function App() {
       case '/academy-report': return <AcademyPromotionReportForm />;
       case '/crafts': return <Crafts />;
       case '/servers': return <Servers />;
+      case '/achievements': return <AchievementsDashboard />;
+      case '/achievement-report': return <AchievementReportForm onNavigate={navigate} />;
       default: return <Home onNavigate={navigate} />;
     }
   };
