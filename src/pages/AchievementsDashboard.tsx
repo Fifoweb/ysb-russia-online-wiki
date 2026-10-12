@@ -63,6 +63,17 @@ export default function AchievementsDashboard() {
   }, [week, weekOffset, refresh]);
 
   const visibleData = data?.weekStart === week ? data : null;
+  const rankedDepartments = useMemo(() => achievementDepartments.map((dept, order) => {
+    let reports = 0;
+    const contribution = achievementGoals.reduce((sum, goal) => {
+      const record = visibleData?.items.find(item => item.id === goal.id);
+      const progress = record?.departments[dept.id];
+      reports += progress?.reports ?? 0;
+      return sum + Math.max(0, progress?.value ?? 0) / (record?.target ?? goal.target) * 100;
+    }, 0) / achievementGoals.length;
+    return { ...dept, contribution, reports, order };
+  }).sort((left, right) => right.contribution - left.contribution ||
+    Number(right.reports > 0) - Number(left.reports > 0) || left.order - right.order), [visibleData]);
   const cards = useMemo(() => achievementGoals.map(goal => {
     const record = visibleData?.items.find(item => item.id === goal.id);
     const progress = department ? record?.departments[department] : record;
@@ -90,7 +101,7 @@ export default function AchievementsDashboard() {
         {availableWeeks.map(start => <option key={start} value={start}>{start === currentWeek ? 'Текущая · ' : ''}{weekLabel(start)}</option>)}
       </select></label>
       <label><span>Отдел</span><select value={department} onChange={event => setDepartment(event.target.value as AchievementDepartment | '')}>
-        <option value="">Вся фракция</option>{achievementDepartments.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+        <option value="">Вся фракция</option>{rankedDepartments.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
       </select></label>
       <button type="button" className="secondary-button" onClick={() => setRefresh(value => value + 1)} disabled={loading} aria-label="Обновить прогресс ачивок">
         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Обновить
@@ -135,10 +146,10 @@ export default function AchievementsDashboard() {
 
       <section className="panel achievement-departments">
         <div className="achievement-section-heading"><h2><Users size={18} /> Вклад отделов</h2><span>Вся фракция · {weekLabel(week)}</span></div>
-        <p>Онлайн — среднее по замерам, склад — число разных дней. Остальные показатели суммируются.</p>
+        <p>Отделы расположены по убыванию вклада — среднего процента выполнения девяти целей. Работа сверх цели тоже учитывается. Онлайн — среднее по замерам, склад — число разных дней.</p>
         <div className="achievement-table-scroll" tabIndex={0} role="region" aria-label="Таблица вклада отделов, прокручивается по горизонтали">
-          <table><thead><tr><th scope="col">Отдел</th>{achievementGoals.map(goal => <th key={goal.id} scope="col" title={goal.description}><span aria-hidden="true">{goal.emoji}</span> {goal.title}</th>)}</tr></thead>
-            <tbody>{achievementDepartments.map(dept => <tr key={dept.id}><th scope="row" title={dept.label}>{dept.label.split(' | ')[0]}</th>{achievementGoals.map(goal => {
+          <table><thead><tr><th scope="col">Отдел</th><th scope="col">Вклад</th>{achievementGoals.map(goal => <th key={goal.id} scope="col" title={goal.description}><span aria-hidden="true">{goal.emoji}</span> {goal.title}</th>)}</tr></thead>
+            <tbody>{rankedDepartments.map((dept, index) => <tr key={dept.id}><th scope="row" title={dept.label}><span className="text-sky-300 mr-2" aria-label={`Место ${index + 1}`}>{index + 1}.</span>{dept.label.split(' | ')[0]}</th><td className={dept.reports ? 'achievement-cell-active' : ''}>{dept.reports ? `${formatAchievementValue(dept.contribution)}%` : '—'}</td>{achievementGoals.map(goal => {
               const progress = visibleData.items.find(item => item.id === goal.id)?.departments[dept.id];
               return <td key={goal.id} className={progress?.reports ? 'achievement-cell-active' : ''}>{progress?.reports ? formatAchievementValue(progress.value) : '—'}</td>;
             })}</tr>)}</tbody></table>
