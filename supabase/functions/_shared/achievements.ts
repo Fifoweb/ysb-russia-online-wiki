@@ -4,6 +4,7 @@ export const MAX_EVIDENCE_CHARACTERS = 10_000;
 
 export const achievementDepartments = [
   { id: 'academy', label: 'Академия' },
+  { id: 'gu', label: 'ГУ ГИБДД' },
   { id: 'usb', label: 'УСБ | Управление собственной безопасности' },
   { id: 'uku', label: 'УКУ | Учебно-кадровое управление' },
   { id: 'uor', label: 'УОР | Управление оперативного розыска' },

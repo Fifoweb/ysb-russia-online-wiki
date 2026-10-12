@@ -16,6 +16,7 @@ const initialForm = {
   sourceFaction: '',
   joinDate: '',
   personalFileScreenshot: '',
+  leaderApprovalScreenshot: '',
   currentRank: '',
 };
 
@@ -32,12 +33,14 @@ export default function TransferForm() {
 
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.currentRank);
   const screenshotValid = /^https?:\/\/\S+$/i.test(form.personalFileScreenshot.trim());
+  const approvalScreenshotValid = /^https?:\/\/\S+$/i.test(form.leaderApprovalScreenshot.trim());
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(form.joinDate);
   const incompleteReason = [
     !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
     !form.sourceFaction.trim() && 'Укажите исходную фракцию.',
     !form.joinDate.trim() ? 'Укажите дату вступления.' : !dateValid && 'Дата должна быть в формате ГГГГ-ММ-ДД.',
     !form.personalFileScreenshot.trim() ? 'Добавьте ссылку на личное дело.' : !screenshotValid && 'Проверьте ссылку на скрин личного дела.',
+    !form.leaderApprovalScreenshot.trim() ? 'Добавьте скрин одобрения перевода от лидера.' : !approvalScreenshotValid && 'Проверьте ссылку на скрин одобрения перевода.',
     !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
   ].find(Boolean) || undefined;
   const allFilled = !incompleteReason;
@@ -129,6 +132,12 @@ export default function TransferForm() {
               <label className="block">
                 <span>Скриншот личного дела из планшета <span className="text-rose-300">*</span></span>
                 <input type="url" value={form.personalFileScreenshot} onChange={set('personalFileScreenshot')}
+                  placeholder="https://..." maxLength={300} required
+                  className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+              </label>
+              <label className="block mt-5">
+                <span>Скрин одобрения перевода от лидера <span className="text-rose-300">*</span></span>
+                <input type="url" value={form.leaderApprovalScreenshot} onChange={set('leaderApprovalScreenshot')}
                   placeholder="https://..." maxLength={300} required
                   className="mt-2 w-full px-4 py-3 text-sm outline-none" />
               </label>

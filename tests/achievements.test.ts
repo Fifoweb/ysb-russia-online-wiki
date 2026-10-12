@@ -25,6 +25,10 @@ test('Moscow week switches at Monday 00:00; new work is accepted from 00:01', ()
 
 test('quantities, dates, departments and proof requirements reject forged/invalid data', () => {
   assert.ok(validateAchievementSubmission(valid, now).value);
+  const headquarters = validateAchievementSubmission({ ...valid, department: 'gu' }, now).value!;
+  assert.ok(headquarters);
+  assert.equal(buildAchievementMessage(headquarters, '123456789012345678', 'discord.user', now)
+    .embeds[0].fields.find(field => field.name === '🏢 Отдел')?.value, 'ГУ ГИБДД');
   for (const patch of [{ quantity: -1 }, { quantity: 1.5 }, { quantity: '12' }, { quantity: 100000 },
     { workDate: '2026-10-04' }, { workDate: '2026-10-12' }, { workDate: '2026-02-31' },
     { department: '__proto__' }, { achievementId: 'unknown' }, { staticId: 'x' },

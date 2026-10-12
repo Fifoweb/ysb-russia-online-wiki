@@ -64,17 +64,20 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const sourceFaction = readText('sourceFaction');
   const joinDate = readText('joinDate');
   const personalFileScreenshot = readText('personalFileScreenshot');
+  const leaderApprovalScreenshot = readText('leaderApprovalScreenshot');
   const currentRank = readText('currentRank');
 
   if (!fullNameStatic || !sourceFaction || !joinDate || !personalFileScreenshot || !currentRank) {
     return json(400, { error: 'Заполните все обязательные поля' });
   }
+  if (!leaderApprovalScreenshot) return json(400, { error: 'Добавьте скрин одобрения перевода от лидера' });
   if (fullNameStatic.length > 100 || sourceFaction.length > 100 || personalFileScreenshot.length > 300 ||
-    currentRank.length > 2) {
+    leaderApprovalScreenshot.length > 300 || currentRank.length > 2) {
     return json(400, { error: 'Слишком длинные поля' });
   }
   if (!isValidDate(joinDate)) return json(400, { error: 'Укажите корректную дату вступления' });
   if (!isHttpUrl(personalFileScreenshot)) return json(400, { error: 'Укажите корректную ссылку на скриншот' });
+  if (!isHttpUrl(leaderApprovalScreenshot)) return json(400, { error: 'Укажите корректную ссылку на скрин одобрения перевода' });
   if (!/^(?:[1-9]|1[0-5])$/.test(currentRank)) return json(400, { error: 'Ранг должен быть от 1 до 15' });
 
   const rawWebhookUrl = Deno.env.get('DISCORD_TRANSFER_WEBHOOK_URL');
@@ -112,6 +115,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       { name: '🏢 Фракция, из которой переводится', value: sourceFaction },
       { name: '📅 Дата вступления во фракцию', value: joinDate.split('-').reverse().join('.') },
       { name: '📷 Скриншот личного дела из планшета', value: personalFileScreenshot },
+      { name: '✅ Одобрение перевода от лидера', value: leaderApprovalScreenshot },
       { name: '🎖️ Ранг', value: currentRank, inline: true },
       { name: '🆔 Discord ID', value: discordId, inline: true },
     ],

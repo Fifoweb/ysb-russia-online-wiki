@@ -18,12 +18,14 @@ const names = ['submit-application', 'submit-promotion', 'submit-resign', 'submi
   'submit-senior-promotion-report', 'submit-academy-promotion-report'];
 
 function fixture(options: { active?: boolean; authorized?: boolean; cooldown?: number; dbDown?: boolean;
-  globalRetry?: number; handler?: 'ok' | 'throw'; functionName?: string } = {}) {
+  globalRetry?: number; handler?: 'ok' | 'throw'; functionName?: string; transferDelivery?: boolean } = {}) {
   let handle!: (req: Request) => Promise<Response>;
   let attempts = 0, claims = 0, releases = 0, deliveries = 0;
   const logs: unknown[][] = [];
+  const payloads: { embeds: { fields: { name: string; value: string }[] }[]; allowed_mentions: { roles: string[] } }[] = [];
   const env: Record<string, string> = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'public-test',
-    SUPABASE_SERVICE_ROLE_KEY: 'service-test' };
+    SUPABASE_SERVICE_ROLE_KEY: 'service-test',
+    DISCORD_TRANSFER_WEBHOOK_URL: 'https://discord.com/api/webhooks/123456789012345678/fixture' };
   const client = {
     auth: { getUser: async () => ({ error: null, data: { user: options.authorized === false ? null : {
       id: '00000000-0000-4000-8000-000000000001', user_metadata: {},
@@ -40,7 +42,12 @@ function fixture(options: { active?: boolean; authorized?: boolean; cooldown?: n
   };
   const context = createContext({ Deno: { env: { get: (key: string) => env[key] }, serve: (fn: typeof handle) => { handle = fn; } },
     createClient: () => client, console: { error: (...args: unknown[]) => logs.push(args) },
-    fetch: () => { deliveries++; throw new Error('No network is allowed in these tests'); },
+    fetch: (_url: URL, init: RequestInit) => {
+      deliveries++;
+      if (!options.transferDelivery) throw new Error('No network is allowed in these tests');
+      payloads.push(JSON.parse(String(init.body)));
+      return Promise.resolve(Response.json({ id: '234567890123456789' }));
+    },
     Request, Response, Headers, URL, TextDecoder, Uint8Array, crypto: webcrypto,
   });
   runInContext(guardSource, context);
@@ -54,7 +61,7 @@ function fixture(options: { active?: boolean; authorized?: boolean; cooldown?: n
     context.capture = (fn: typeof handle) => { handle = fn; };
     runInContext("capture(withSubmissionCooldown(deliver, { 'Access-Control-Allow-Origin': '*' }));", context);
   }
-  return { logs, stats: () => ({ attempts, claims, releases, deliveries }),
+  return { logs, payloads, stats: () => ({ attempts, claims, releases, deliveries }),
     submit: (body: unknown = {}, raw?: string, headers: Record<string, string> = {}) => handle(new Request('https://example.test/form', {
       method: 'POST', headers: { Authorization: 'Bearer fixture', 'Content-Type': 'application/json', ...headers },
       body: raw ?? JSON.stringify(body),
@@ -132,4 +139,23 @@ test('delivery exceptions release only the submission reservation and cannot lea
   assert.equal(response.status, 502);
   assert.deepEqual(app.stats(), { attempts: 1, claims: 1, releases: 1, deliveries: 1 });
   assert.doesNotMatch(JSON.stringify(app.logs) + await response.text(), /secret-credential-marker/);
+});
+
+const transfer = { fullNameStatic: 'Иван Иванов | 12345', sourceFaction: 'Армия', joinDate: '2026-10-01',
+  personalFileScreenshot: 'https://fotora.ru/personal.png', currentRank: '5' };
+test('transfer rejects absent, invalid and oversized leader approval before any Discord delivery', async () => {
+  for (const approval of [undefined, '', 'bad-url', 'javascript:alert(1)', 123, [], 'https://example.test/' + 'x'.repeat(300)]) {
+    const app = fixture({ functionName: 'submit-transfer', transferDelivery: true });
+    assert.equal((await app.submit({ ...transfer, leaderApprovalScreenshot: approval })).status, 400);
+    assert.equal(app.stats().deliveries, 0);
+  }
+});
+test('transfer includes the required leader approval and preserves notification roles and automatic Discord ID', async () => {
+  const app = fixture({ functionName: 'submit-transfer', transferDelivery: true });
+  const approval = 'https://fotora.ru/leader-approval.png';
+  assert.equal((await app.submit({ ...transfer, leaderApprovalScreenshot: approval })).status, 200);
+  assert.equal(app.stats().deliveries, 1);
+  assert.equal(app.payloads[0].embeds[0].fields.find(field => field.name.includes('Одобрение перевода'))?.value, approval);
+  assert.equal(app.payloads[0].embeds[0].fields.at(-1)?.value, '123456789012345678');
+  assert.deepEqual(Array.from(app.payloads[0].allowed_mentions.roles), ['1538937566282252319','1538937566273732637']);
 });
