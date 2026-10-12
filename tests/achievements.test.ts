@@ -51,9 +51,9 @@ test('bulk proofs preserve all 50 links and reject canonical Discord duplicates'
 });
 
 test('all ten routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
-  assert.deepEqual(achievementGoals.map(goal => goal.threadId), ['1556659874602033153','1556659983603474482',
-    '1556659948249808987','1559215765503086863','1556659813889478716','1556659843400470598',
-    '1559216051353296916','1556660019661901874','1556660053572853913','1556660085638307911']);
+  assert.deepEqual(achievementGoals.map(goal => goal.threadId), ['1559215678722936934','1559215901226831922',
+    '1559215837527932989','1559215765503086863','1559215938816180307','1559215994327535700',
+    '1559216051353296916','1559216095871631372','1559216172186996827','1559216211240427641']);
   const checked = validateAchievementSubmission(valid, now).value!;
   const payload = buildAchievementMessage(checked, '123456789012345678', 'discord.user', now);
   assert.equal(payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
@@ -106,7 +106,7 @@ function compile(file: string) {
 }
 
 function fixture(options: { reservation?: string; http?: number; rejectPart?: number; networkError?: boolean; syncDown?: boolean;
-  identity?: boolean; active?: boolean; cooldown?: number } = {}) {
+  identity?: boolean; active?: boolean; cooldown?: number; discordError?: unknown } = {}) {
   let handler!: (req: Request) => Promise<Response>;
   const statuses: string[] = [];
   const logs: unknown[][] = [];
@@ -139,7 +139,7 @@ function fixture(options: { reservation?: string; http?: number; rejectPart?: nu
       if (options.networkError) throw new Error('secret-fixture-marker');
       const payload = JSON.parse(String(init.body));
       sent.push({ url: url.toString(), payload });
-      return Response.json({ id: '234567890123456789', channel_id: url.searchParams.get('thread_id') },
+      return Response.json(options.discordError ?? { id: '234567890123456789', channel_id: url.searchParams.get('thread_id') },
         { status: options.rejectPart === sent.length ? 429 : options.http ?? 200 });
     },
   });
@@ -155,7 +155,7 @@ test('delivery embeds complete proof list, confirms thread, then commits progres
   const response = await app.submit();
   assert.equal(response.status, 200);
   assert.deepEqual(app.statuses, ['sent']);
-  assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), '1556659843400470598');
+  assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), '1559215994327535700');
   assert.ok(app.sent[0].payload.embeds[0].fields.some(field => field.name.includes('Доказательства') && field.value.includes('https://example.test/proof.png')));
   assert.equal(app.sent[0].payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
 });
@@ -170,6 +170,34 @@ test('new motorcycle and AirDrop reports reach their own threads; removed escort
   const removed = fixture();
   assert.equal((await removed.submit({ ...valid, achievementId: 'escorts' })).status, 400);
   assert.equal(removed.sent.length, 0);
+});
+
+test('each current achievement sends to its replacement weekly thread', async () => {
+  for (const goal of achievementGoals) {
+    const app = fixture();
+    assert.equal((await app.submit({ ...valid, achievementId: goal.id, quantity: 1 })).status, 200);
+    assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), goal.threadId);
+    assert.deepEqual(app.statuses, ['sent']);
+  }
+});
+
+test('Discord rejections explain unavailable threads and log only safe numeric diagnostics', async () => {
+  for (const code of [10003, 50083, 160005]) {
+    const app = fixture({ http: 400, discordError: { code, message: 'secret-fixture-marker',
+      errors: { evidence: 'https://example.test/private-proof' } } });
+    const response = await app.submit();
+    assert.equal(response.status, 502);
+    const text = await response.text();
+    assert.match(text, /ветка Discord недоступна или закрыта/);
+    assert.deepEqual(app.statuses, ['failed']);
+    assert.equal(app.sent.length, 1);
+    assert.match(JSON.stringify(app.logs), new RegExp(String(code)));
+    assert.doesNotMatch(text + JSON.stringify(app.logs), /secret-fixture-marker|private-proof|discord\.user/);
+  }
+  const malformed = fixture({ http: 400, discordError: { code: 'secret-fixture-marker', message: 'secret-fixture-marker' } });
+  const response = await malformed.submit();
+  assert.match(await response.text(), /Discord отклонил отчёт/);
+  assert.doesNotMatch(JSON.stringify(malformed.logs), /secret-fixture-marker/);
 });
 test('current week has ten goals and three exercises; archived weeks retain their old nine goals', () => {
   const current = getAchievementGoalsForWeek('2026-10-12');
@@ -193,7 +221,7 @@ test('50 links longer than one Discord embed are all delivered vertically in one
     .filter(field => field.name.includes('Доказательства'))
     .flatMap(field => field.value.split('\n')));
   assert.deepEqual(lines, evidence.map(link => `<${link}>`));
-  assert.ok(app.sent.every(part => new URL(part.url).searchParams.get('thread_id') === '1556659843400470598'));
+  assert.ok(app.sent.every(part => new URL(part.url).searchParams.get('thread_id') === '1559215994327535700'));
 });
 
 test('failure after the first delivered evidence part is uncertain and never counted or automatically retried', async () => {

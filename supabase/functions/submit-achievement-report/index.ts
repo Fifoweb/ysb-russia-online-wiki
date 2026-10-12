@@ -88,10 +88,24 @@ Deno.serve(withSubmissionCooldown(async req => {
     if (!response.ok) {
       // If any earlier part was delivered, automatic retry would create duplicate reports.
       await settle(firstMessageId ? 'uncertain' : 'failed');
-      console.error('Discord achievement delivery rejected', response.status);
+      let discordCode: number | null = null;
+      try {
+        const detail = await response.json();
+        if (Number.isSafeInteger(detail?.code) && detail.code > 0) discordCode = detail.code;
+      } catch { /* Never log raw Discord responses, report content or webhook URLs. */ }
+      console.error('Discord achievement delivery rejected', {
+        httpStatus: response.status, discordCode, achievementId: goal.id, threadId: goal.threadId,
+      });
+      const reason = [10003, 50083, 160005].includes(discordCode ?? 0)
+        ? 'Нужная ветка Discord недоступна или закрыта. Сообщите куратору.'
+        : response.status === 403 || response.status === 404
+          ? 'Не удалось получить доступ к ветке Discord. Сообщите куратору.'
+          : response.status === 400
+            ? 'Discord отклонил отчёт. Сообщите куратору, чтобы проверить настройки отправки.'
+            : 'Discord временно не принял отчёт. Попробуйте позже.';
       return json(502, { error: firstMessageId
         ? 'Отчёт отправлен частично. Проверьте доказательства в Discord у куратора; повторная отправка заблокирована.'
-        : 'Discord временно не принял отчёт. Попробуйте позже.' });
+        : reason });
     }
     let message: { id?: string; channel_id?: string };
     try { message = await response.json(); } catch { message = {}; }
