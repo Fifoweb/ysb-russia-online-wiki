@@ -1,23 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { withoutProviderTokens } from './authSessionStorage';
 
-export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(isSupabaseConfigured);
+// Every form and the header read the same snapshot, including during token renewal.
+let snapshot: { session: Session | null; loading: boolean } = { session: null, loading: isSupabaseConfigured };
+const listeners = new Set<() => void>();
+let started = false;
+let revision = 0;
 
-  useEffect(() => {
-    if (!supabase) { setLoading(false); return; }
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ? withoutProviderTokens(data.session) : null);
-      setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession ? withoutProviderTokens(nextSession) : null);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+function publishSession(session: Session | null) {
+  snapshot = { session: session ? withoutProviderTokens(session) : null, loading: false };
+  listeners.forEach(notify => notify());
+}
+
+function startAuth() {
+  if (started || !supabase) return;
+  started = true;
+  const initialRevision = revision;
+  supabase.auth.onAuthStateChange((event, nextSession) => {
+    // A delayed initial read must not undo a newer login, renewal or logout.
+    if (event === 'INITIAL_SESSION' && !snapshot.loading) return;
+    revision++;
+    publishSession(nextSession);
+  });
+  void supabase.auth.getSession().then(({ data }) => {
+    if (revision !== initialRevision) return;
+    publishSession(data.session);
+  }).catch(() => {
+    if (revision === initialRevision) publishSession(snapshot.session);
+  });
+}
+
+function subscribeAuth(notify: () => void) {
+  listeners.add(notify);
+  startAuth();
+  return () => { listeners.delete(notify); };
+}
+const getAuthSnapshot = () => snapshot;
+
+export function useAuth() {
+  const { session, loading } = useSyncExternalStore(subscribeAuth, getAuthSnapshot, getAuthSnapshot);
 
   const signInWithDiscord = async () => {
     if (!supabase) return;

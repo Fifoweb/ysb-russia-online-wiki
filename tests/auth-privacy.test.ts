@@ -186,34 +186,103 @@ test('the installed SDK renews an expired site session without another Discord l
   } finally { await client.auth.stopAutoRefresh(); }
 });
 
-test('the auth hook keeps an idle login and retains manual logout and revocation handling', async () => {
+function authHookFixture() {
   const source = ts.transpileModule(readFileSync(new URL('../src/lib/auth.ts', import.meta.url), 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
     transformers: { before: [() => file => ts.factory.updateSourceFile(file,
       file.statements.filter(statement => !ts.isImportDeclaration(statement)))] },
   }).outputText.replace(/export /g, '').replace(/import.meta.env.BASE_URL/g, "'/ysb-russia-online-wiki/'");
-  let signOutCalls = 0, timers = 0, state = siteSession as unknown;
-  let notify!: (event: string, value: unknown) => void;
+  const consumers = new Map<string, { values: unknown[]; mounted: boolean }>();
+  const notifications = new Set<(event: string, value: unknown) => void>();
+  const reads: { resolve: (value: unknown) => void; done: boolean }[] = [];
+  let current = '', index = 0, signOutCalls = 0, timers = 0;
   const context = {
     isSupabaseConfigured: true, withoutProviderTokens,
-    useState: (initial: unknown) => [initial === null ? siteSession : initial, (next: unknown) => { if (initial === null) state = next; }],
-    useEffect: (effect: () => unknown) => effect(),
+    useState: (initial: unknown) => {
+      const consumer = consumers.get(current)!;
+      const position = index++;
+      if (!consumer.mounted) consumer.values[position] = typeof initial === 'function' ? initial() : initial;
+      return [consumer.values[position], (value: unknown) => { consumer.values[position] = value; }];
+    },
+    useEffect: (effect: () => unknown) => { if (!consumers.get(current)!.mounted) effect(); },
+    useSyncExternalStore: (subscribe: (notify: () => void) => unknown, getSnapshot: () => unknown) => {
+      if (!consumers.get(current)!.mounted) subscribe(() => {});
+      return getSnapshot();
+    },
     window: { location: { origin: 'https://example.test' }, setInterval: () => { timers++; return 1; } },
     supabase: { auth: {
-      getSession: async () => ({ data: { session: oldSession } }),
-      onAuthStateChange: (callback: typeof notify) => { notify = callback; return { data: { subscription: { unsubscribe() {} } } }; },
+      getSession: () => new Promise(resolve => {
+        const read = { resolve: (value: unknown) => { read.done = true; resolve({ data: { session: value } }); }, done: false };
+        reads.push(read);
+      }),
+      onAuthStateChange: (notify: (event: string, value: unknown) => void) => {
+        notifications.add(notify);
+        return { data: { subscription: { unsubscribe: () => notifications.delete(notify) } } };
+      },
       signOut: async (options: { scope: string }) => { assert.equal(options.scope, 'local'); signOutCalls++; },
     } },
   };
-  const auth = runInNewContext(source + '\nuseAuth();', context);
+  const hook = runInNewContext(source + '\nuseAuth;', context);
+  return {
+    render(name: string) {
+      current = name; index = 0;
+      if (!consumers.has(name)) consumers.set(name, { values: [], mounted: false });
+      const value = hook();
+      consumers.get(name)!.mounted = true;
+      return value;
+    },
+    emit: (event: string, value: unknown) => notifications.forEach(notify => notify(event, value)),
+    resolveReads: (value: unknown) => reads.filter(read => !read.done).forEach(read => read.resolve(value)),
+    stats: () => ({ reads: reads.length, subscriptions: notifications.size, signOutCalls, timers }),
+  };
+}
+
+test('a late empty session cannot sign a form out while the header remains signed in', async () => {
+  const app = authHookFixture();
+  app.render('header');
+  app.resolveReads(oldSession);
   await Promise.resolve();
-  assert.equal(timers, 0);
-  assert.equal(signOutCalls, 0);
-  assert.deepEqual(state, siteSession);
-  await auth.signOut();
-  assert.equal(signOutCalls, 1);
-  notify('SIGNED_OUT', null);
-  assert.equal(state, null);
+  assert.equal(app.render('header').user?.id, user.id);
+  app.render('achievement-form');
+  app.emit('TOKEN_REFRESHED', oldSession);
+  app.resolveReads(null);
+  await Promise.resolve();
+  assert.equal(app.render('header').user?.id, user.id);
+  assert.equal(app.render('achievement-form').user?.id, user.id);
+});
+
+test('all forms share one auth subscription and ignore late INITIAL_SESSION after login', async () => {
+  const app = authHookFixture();
+  const names = ['header','report','promotion','appeal','reprimand-work','restore','transfer','department',
+    'resign','complaints','employee-complaint','senior-report','academy-report','achievement-report'];
+  names.forEach(name => app.render(name));
+  assert.equal(app.stats().reads, 1);
+  assert.equal(app.stats().subscriptions, 1);
+  app.emit('SIGNED_IN', oldSession);
+  app.emit('INITIAL_SESSION', null);
+  app.resolveReads(null);
+  await Promise.resolve();
+  for (const name of names) {
+    assert.equal(app.render(name).user?.id, user.id, name);
+    assert.equal(app.render(name).loading, false, name);
+    assert.equal(app.render(name).session.provider_token, undefined, name);
+  }
+  assert.equal(app.stats().timers, 0);
+  assert.equal(app.stats().signOutCalls, 0);
+  await app.render('header').signOut();
+  assert.equal(app.stats().signOutCalls, 1);
+  app.emit('SIGNED_OUT', null);
+  names.forEach(name => assert.equal(app.render(name).user, null, name));
+});
+
+test('a late cached session cannot undo a newer logout', async () => {
+  const app = authHookFixture();
+  app.render('header'); app.render('form');
+  app.emit('SIGNED_OUT', null);
+  app.resolveReads(oldSession);
+  await Promise.resolve();
+  assert.equal(app.render('header').user, null);
+  assert.equal(app.render('form').user, null);
 });
 
 // Requests never leave this test process and cannot send an actual application.
