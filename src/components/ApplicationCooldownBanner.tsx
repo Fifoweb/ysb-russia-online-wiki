@@ -1,6 +1,6 @@
 import { Clock3 } from 'lucide-react';
 
-export default function ApplicationCooldownBanner({ seconds }: { seconds: number }) {
+export default function ApplicationCooldownBanner({ seconds, durationSeconds = 150 }: { seconds: number; durationSeconds?: number }) {
   if (seconds <= 0) return null;
   const time = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
@@ -11,7 +11,7 @@ export default function ApplicationCooldownBanner({ seconds }: { seconds: number
         <span className="application-cooldown-label">Пауза между заявками</span>
         <p>Следующую заявку можно отправить через <strong>{time}</strong></p>
         <div className="application-cooldown-track" aria-hidden="true">
-          <span style={{ width: `${Math.min(100, (seconds / 150) * 100)}%` }} />
+          <span style={{ width: `${Math.min(100, (seconds / durationSeconds) * 100)}%` }} />
         </div>
       </div>
       <span className="application-cooldown-clock" aria-hidden="true">{time}</span>

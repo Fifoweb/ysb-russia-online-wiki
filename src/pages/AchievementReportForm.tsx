@@ -22,7 +22,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
   const [syncPending, setSyncPending] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const requestId = useRef<string | null>(null);
-  const remainingSeconds = useApplicationCooldown(user?.id);
+  const remainingSeconds = useApplicationCooldown(user?.id, 'achievements');
   const goal = achievementGoals.find(item => item.id === form.achievementId);
   const evidence = useMemo(() => parseAchievementEvidence(form.evidenceText), [form.evidenceText]);
   const discordId = user?.identities?.find(item => item.provider === 'discord')?.identity_data?.sub;
@@ -70,7 +70,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
       <span className="application-heading-icon" aria-hidden="true"><Trophy size={26} /></span>
       <div><p className="eyebrow">ГИБДД · АЧИВКИ ФРАКЦИИ</p><h2 className="!mt-0 !mb-2">Отчёт о выполнении ачивки</h2><p className="!m-0 text-sm text-slate-300">Укажите свой вклад и приложите доказательства. Отчёт попадёт в нужную ветку Discord.</p></div>
     </div>
-    {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
+    {user && <ApplicationCooldownBanner seconds={remainingSeconds} durationSeconds={10} />}
     {loading ? <FormLoader /> : !user ? <section className="glass rounded-2xl border border-sky-300/20 text-center">
       <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
       <p className="text-slate-200 text-sm mb-5">{enabled ? 'Для подачи отчёта войдите через Discord.' : 'Сервис авторизации временно недоступен.'}</p>

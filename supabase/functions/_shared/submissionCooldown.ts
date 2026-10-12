@@ -1,7 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 type Handler = (req: Request) => Response | Promise<Response>;
-const COOLDOWN_SECONDS = 150;
 const MAX_BODY_BYTES = 16_384;
 
 async function readBody(req: Request): Promise<{ text?: string; status?: number }> {
@@ -29,7 +28,9 @@ async function readBody(req: Request): Promise<{ text?: string; status?: number 
   finally { reader.releaseLock(); }
 }
 
-export function withSubmissionCooldown(handler: Handler, cors: Record<string, string>): Handler {
+export function withSubmissionCooldown(handler: Handler, cors: Record<string, string>, scope: 'applications' | 'achievements' = 'applications'): Handler {
+  const prefix = scope === 'achievements' ? 'achievement' : 'application';
+  const cooldownSeconds = scope === 'achievements' ? 10 : 150;
   return async (req) => {
     if (req.method !== 'POST') return handler(req);
     const json = (status: number, body: Record<string, unknown>, extra: Record<string, string> = {}) =>
@@ -62,7 +63,7 @@ export function withSubmissionCooldown(handler: Handler, cors: Record<string, st
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     try {
       // Failed validation and blocked submissions count too. Never release this limit.
-      const { data: retry, error: attemptError } = await admin.rpc('claim_application_attempt', { p_user_id: user.id });
+      const { data: retry, error: attemptError } = await admin.rpc(`claim_${prefix}_attempt`, { p_user_id: user.id });
       if (attemptError || typeof retry !== 'number' || !Number.isInteger(retry) || retry < 0 || retry > 60) {
         console.error('Application attempt limit unavailable');
         return json(503, { error: 'Не удалось проверить ограничение попыток. Попробуйте позже.' });
@@ -90,9 +91,9 @@ export function withSubmissionCooldown(handler: Handler, cors: Record<string, st
     let data: unknown;
     let error: unknown;
     try {
-      ({ data, error } = await admin.rpc('claim_application_submission', { p_user_id: user.id, p_request_id: requestId }));
+      ({ data, error } = await admin.rpc(`claim_${prefix}_submission`, { p_user_id: user.id, p_request_id: requestId }));
     } catch { error = true; }
-    if (error || typeof data !== 'number' || !Number.isInteger(data) || data < 0 || data > COOLDOWN_SECONDS) {
+    if (error || typeof data !== 'number' || !Number.isInteger(data) || data < 0 || data > cooldownSeconds) {
       console.error('Application cooldown claim failed');
       return new Response(JSON.stringify({ error: 'Не удалось проверить время до следующей заявки. Попробуйте позже.' }), {
         status: 503, headers: { ...cors, 'Content-Type': 'application/json' },
@@ -110,7 +111,7 @@ export function withSubmissionCooldown(handler: Handler, cors: Record<string, st
 
     const release = async () => {
       try {
-        const { error: releaseError } = await admin.rpc('release_application_submission', {
+        const { error: releaseError } = await admin.rpc(`release_${prefix}_submission`, {
           p_user_id: user.id, p_request_id: requestId,
         });
         if (releaseError) console.error('Application cooldown release failed');

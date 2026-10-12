@@ -117,10 +117,10 @@ function fixture(options: { reservation?: string; http?: number; rejectPart?: nu
         { provider: 'discord', identity_data: { sub: '123456789012345678', username: 'discord.user' } }],
     } } }) },
     rpc: async (name: string, params: Record<string, unknown> = {}) => {
-      if (name === 'claim_application_attempt') return { data: 0, error: null };
+      if (name === 'claim_achievement_attempt') return { data: 0, error: null };
       if (name === 'is_site_session_active') return { data: options.active !== false, error: null };
-      if (name === 'claim_application_submission') return { data: options.cooldown ?? 0, error: null };
-      if (name === 'release_application_submission') return { data: null, error: null };
+      if (name === 'claim_achievement_submission') return { data: options.cooldown ?? 0, error: null };
+      if (name === 'release_achievement_submission') return { data: null, error: null };
       if (name === 'reserve_achievement_report') {
         assert.equal(params.p_discord_id, '123456789012345678');
         return { data: { result: options.reservation ?? 'reserved', id: 'report-fixture' }, error: null };
@@ -235,7 +235,7 @@ test('failure after the first delivered evidence part is uncertain and never cou
 
 test('duplicates, invalid identities, expired sessions and cooldown do not reach Discord', async () => {
   for (const [options, status] of [[{ reservation: 'duplicate' }, 409], [{ reservation: 'sending' }, 409],
-    [{ reservation: 'sent' }, 200], [{ identity: false }, 403], [{ active: false }, 401], [{ cooldown: 150 }, 429]] as const) {
+    [{ reservation: 'sent' }, 200], [{ identity: false }, 403], [{ active: false }, 401], [{ cooldown: 10 }, 429]] as const) {
     const app = fixture(options);
     assert.equal((await app.submit()).status, status);
     assert.equal(app.sent.length, 0);
@@ -270,4 +270,63 @@ test('achievement form recommends Fotora and explains evidence is shown vertical
   assert.match(page, /https:\/\/fotora\.ru\//);
   assert.match(page, /«Доказательства»/);
   assert.doesNotMatch(page, /allwebs|evidence\.txt/i);
+});
+
+test('achievement submissions enforce a ten-second server interval', async () => {
+  const app = fixture({ cooldown: 10 });
+  const blocked = await app.submit();
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.headers.get('Retry-After'), '10');
+  assert.equal((await blocked.json()).retryAfterSeconds, 10);
+  assert.equal(app.sent.length, 0);
+  const misconfigured = fixture({ cooldown: 11 });
+  assert.equal((await misconfigured.submit()).status, 503);
+  assert.equal(misconfigured.sent.length, 0);
+});
+
+test('browser timers separate achievement reports from the unchanged 150-second forms and survive reload', async () => {
+  const storage = new Map<string, string>();
+  let clock = now.getTime();
+  let result: { error: null | { context: Response }; data?: unknown } = { error: null };
+  const userId = 'cooldown-fixture-user';
+  storage.set('application-cooldown:' + userId, String(clock + 150000));
+  const client = () => {
+    let remaining = 0;
+    class TimerDate extends Date { static now() { return clock; } }
+    const context = createContext({
+      Date: TimerDate, Event, Response,
+      localStorage: { getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => storage.set(key, value) },
+      window: { dispatchEvent: () => {}, setInterval: () => 1, clearInterval: () => {},
+        addEventListener: () => {}, removeEventListener: () => {} },
+      useState: () => [0, (value: number) => { remaining = value; }],
+      useEffect: (effect: () => unknown) => effect(),
+      supabase: { functions: { invoke: async () => result } },
+    });
+    runInContext(compile('../src/lib/applicationCooldown.ts'), context);
+    return {
+      remaining: (scope = 'applications') => { context.useApplicationCooldown(userId, scope); return remaining; },
+      invoke: (name: string) => context.invokeApplication(name, { body: {} }, userId),
+    };
+  };
+  const browser = client();
+  assert.equal(browser.remaining(), 150);
+  assert.equal(browser.remaining('achievements'), 0);
+  await browser.invoke('submit-achievement-report');
+  assert.equal(browser.remaining('achievements'), 10);
+  assert.equal(browser.remaining(), 150);
+  clock += 3000;
+  assert.equal(client().remaining('achievements'), 7);
+  clock += 7000;
+  assert.equal(client().remaining('achievements'), 0);
+  await browser.invoke('submit-transfer');
+  assert.equal(browser.remaining(), 150);
+  assert.equal(browser.remaining('achievements'), 0);
+  result = { error: { context: Response.json({ retryAfterSeconds: 37 }, { status: 429, headers: { 'Retry-After': '37' } }) } };
+  await browser.invoke('submit-achievement-report');
+  assert.equal(browser.remaining('achievements'), 37); // Preserve the separate abuse limit too.
+  assert.equal(browser.remaining(), 150);
+  const page = readFileSync(new URL('../src/pages/AchievementReportForm.tsx', import.meta.url), 'utf8');
+  assert.match(page, /useApplicationCooldown\(user\?\.id, 'achievements'\)/);
+  assert.match(page, /durationSeconds=\{10\}/);
 });

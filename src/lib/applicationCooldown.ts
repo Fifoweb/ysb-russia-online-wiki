@@ -5,6 +5,8 @@ const DURATION_MS = 150_000;
 const STORAGE_PREFIX = 'application-cooldown:';
 const CHANGE_EVENT = 'application-cooldown-change';
 const deadlines = new Map<string, number>();
+type CooldownScope = 'applications' | 'achievements';
+const timerKey = (userId: string, scope: CooldownScope) => scope === 'achievements' ? `achievements:${userId}` : userId;
 
 function readDeadline(userId: string): number {
   if (!userId) return 0;
@@ -26,11 +28,11 @@ function setDeadline(userId: string, seconds: number): void {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
-export function useApplicationCooldown(userId?: string): number {
+export function useApplicationCooldown(userId?: string, scope: CooldownScope = 'applications'): number {
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
-    const refresh = () => setRemaining(userId ? Math.max(0, Math.ceil((readDeadline(userId) - Date.now()) / 1000)) : 0);
+    const refresh = () => setRemaining(userId ? Math.max(0, Math.ceil((readDeadline(timerKey(userId, scope)) - Date.now()) / 1000)) : 0);
     refresh();
     const interval = window.setInterval(refresh, 250);
     window.addEventListener('storage', refresh);
@@ -40,16 +42,19 @@ export function useApplicationCooldown(userId?: string): number {
       window.removeEventListener('storage', refresh);
       window.removeEventListener(CHANGE_EVENT, refresh);
     };
-  }, [userId]);
+  }, [userId, scope]);
 
   return remaining;
 }
 
 export async function invokeApplication(name: string, options: { body: Record<string, unknown> }, userId: string) {
   if (!supabase) throw new Error('Supabase client is unavailable');
+  const scope: CooldownScope = name === 'submit-achievement-report' ? 'achievements' : 'applications';
+  const key = timerKey(userId, scope);
+  const durationSeconds = scope === 'achievements' ? 10 : DURATION_MS / 1000;
   const result = await supabase.functions.invoke(name, options);
   if (!result.error) {
-    setDeadline(userId, DURATION_MS / 1000);
+    setDeadline(key, durationSeconds);
   } else {
     const response = (result.error as { context?: Response }).context;
     if (response?.status === 401) {
@@ -60,7 +65,7 @@ export async function invokeApplication(name: string, options: { body: Record<st
     }
     if (response?.status === 429) {
       const retry = Number(response.headers?.get('Retry-After'));
-      setDeadline(userId, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : 150);
+      setDeadline(key, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : durationSeconds);
     }
   }
   return result;

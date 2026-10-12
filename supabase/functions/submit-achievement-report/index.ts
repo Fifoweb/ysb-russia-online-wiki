@@ -117,4 +117,4 @@ Deno.serve(withSubmissionCooldown(async req => {
   }
   const counted = await settle('sent', firstMessageId);
   return json(counted ? 200 : 202, { ok: true, syncPending: !counted });
-}, cors));
+}, cors, 'achievements'));
