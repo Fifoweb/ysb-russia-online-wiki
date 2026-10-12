@@ -17,18 +17,35 @@ export const achievementDepartments = [
 ] as const;
 
 export const achievementGoals = [
-  { id: 'academy-graduates', title: 'Выпуск из академии', description: 'Выпустить из академии 40 человек', target: 40, unit: 'чел.', quantityLabel: 'Сколько человек выпустили?', metric: 'sum', emoji: '🎓', threadId: '1556660053572853913' },
   { id: 'discipline', title: 'Контроль дисциплины', description: 'Выявить и пресечь 30 дисциплинарных нарушений', target: 30, unit: 'нарушений', quantityLabel: 'Сколько нарушений выявили и пресекли?', metric: 'sum', emoji: '🛡️', threadId: '1556659874602033153' },
-  { id: 'joint-exercises', title: 'Совместные учения', description: 'Провести 2 совместных учения с Армией', target: 2, unit: 'учений', quantityLabel: 'Сколько учений провели?', metric: 'sum', emoji: '🤝', threadId: '1556659983603474482' },
+  { id: 'joint-exercises', title: 'Совместные учения', description: 'Провести 3 совместных учения с Армией', target: 3, unit: 'учений', quantityLabel: 'Сколько учений провели?', metric: 'sum', emoji: '🤝', threadId: '1556659983603474482' },
   { id: 'detainees', title: 'Передача задержанных', description: 'Задержать 30 человек и передать МВД / ФСБ', target: 30, unit: 'чел.', quantityLabel: 'Сколько задержанных передали МВД / ФСБ?', metric: 'sum', emoji: '🚔', threadId: '1556659948249808987' },
-  { id: 'escorts', title: 'Сопровождение поставок', description: 'Сопроводить 5 поставок от Армии', target: 5, unit: 'поставок', quantityLabel: 'Сколько поставок сопроводили?', metric: 'sum', emoji: '🚚', threadId: '1556659909557362868' },
-  { id: 'average-online', title: 'Средний онлайн', description: 'Добиться среднего онлайна 100 человек', target: 100, unit: 'чел.', quantityLabel: 'Сколько сотрудников было онлайн в момент замера?', metric: 'average', emoji: '📊', threadId: '1556660085638307911' },
+  { id: 'motorcyclists', title: 'Мотоциклисты-нарушители', description: 'Поймать и оштрафовать 20 мотоциклистов-нарушителей', target: 20, unit: 'чел.', quantityLabel: 'Сколько мотоциклистов-нарушителей поймали и оштрафовали?', metric: 'sum', emoji: '🏍️', threadId: '1559215765503086863' },
   { id: 'recruitment', title: 'Приём во фракцию', description: 'Принять 50 человек во фракцию', target: 50, unit: 'чел.', quantityLabel: 'Сколько человек приняли?', metric: 'sum', emoji: '👥', threadId: '1556659813889478716' },
-  { id: 'warehouse', title: 'Проверка склада', description: 'Проверить и почистить склад 3 раза в разные дни', target: 3, unit: 'дня', quantityLabel: 'Одна проверка за выбранный день', metric: 'distinct-days', emoji: '📦', threadId: '1556660019661901874' },
   { id: 'fines', title: 'Выписанные штрафы', description: 'Выписать 200 штрафов', target: 200, unit: 'штрафов', quantityLabel: 'Сколько штрафов выписали?', metric: 'sum', emoji: '🧾', threadId: '1556659843400470598' },
+  { id: 'airdrop', title: 'Участие в AirDrop', description: 'Принять участие в 10 AirDrop', target: 10, unit: 'AirDrop', quantityLabel: 'В скольких AirDrop приняли участие?', metric: 'sum', emoji: '🪂', threadId: '1559216051353296916' },
+  { id: 'warehouse', title: 'Проверка склада', description: 'Проверить и почистить склад фракции 3 раза в разные дни', target: 3, unit: 'дня', quantityLabel: 'Одна проверка за выбранный день', metric: 'distinct-days', emoji: '📦', threadId: '1556660019661901874' },
+  { id: 'academy-graduates', title: 'Выпуск из академии', description: 'Выпустить из академии 40 человек', target: 40, unit: 'чел.', quantityLabel: 'Сколько человек выпустили?', metric: 'sum', emoji: '🎓', threadId: '1556660053572853913' },
+  { id: 'average-online', title: 'Средний онлайн', description: 'Добиться среднего онлайна 100 человек', target: 100, unit: 'чел.', quantityLabel: 'Сколько сотрудников было онлайн в момент замера?', metric: 'average', emoji: '📊', threadId: '1556660085638307911' },
 ] as const;
 
-export type AchievementId = typeof achievementGoals[number]['id'];
+const legacyAchievementGoals = [
+  achievementGoals.find(goal => goal.id === 'academy-graduates')!,
+  achievementGoals.find(goal => goal.id === 'discipline')!,
+  { ...achievementGoals.find(goal => goal.id === 'joint-exercises')!, target: 2, description: 'Провести 2 совместных учения с Армией' },
+  achievementGoals.find(goal => goal.id === 'detainees')!,
+  { id: 'escorts', title: 'Сопровождение поставок', description: 'Сопроводить 5 поставок от Армии', target: 5, unit: 'поставок', quantityLabel: 'Сколько поставок сопроводили?', metric: 'sum', emoji: '🚚', threadId: '1556659909557362868' },
+  achievementGoals.find(goal => goal.id === 'average-online')!,
+  achievementGoals.find(goal => goal.id === 'recruitment')!,
+  achievementGoals.find(goal => goal.id === 'warehouse')!,
+  achievementGoals.find(goal => goal.id === 'fines')!,
+] as const;
+
+export function getAchievementGoalsForWeek(week: string) {
+  return week < '2026-10-12' ? legacyAchievementGoals : achievementGoals;
+}
+
+export type AchievementId = typeof achievementGoals[number]['id'] | 'escorts';
 export type AchievementDepartment = typeof achievementDepartments[number]['id'];
 
 export function moscowDate(now = new Date()): string {

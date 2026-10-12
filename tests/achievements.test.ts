@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import ts from 'typescript';
-import { achievementGoals, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
+import { achievementGoals, getAchievementGoalsForWeek, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
   validateAchievementSubmission } from '../supabase/functions/_shared/achievements.ts';
 import { buildAchievementMessage, buildAchievementMessages } from '../supabase/functions/_shared/achievementMessage.ts';
 
-const now = new Date('2026-10-11T13:00:00+03:00');
+const now = new Date('2026-10-12T13:00:00+03:00');
 const valid = { requestId: '00000000-0000-4000-8000-000000000001', fullName: 'Иван Иванов', staticId: '75463',
-  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-10-10', workTime: '12:00',
+  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-10-12', workTime: '12:00',
   evidence: ['https://example.test/proof.png'], rulesAccepted: true };
 
 test('Moscow week switches at Monday 00:00; new work is accepted from 00:01', () => {
@@ -30,7 +30,7 @@ test('quantities, dates, departments and proof requirements reject forged/invali
   assert.equal(buildAchievementMessage(headquarters, '123456789012345678', 'discord.user', now)
     .embeds[0].fields.find(field => field.name === '🏢 Отдел')?.value, 'ГУ ГИБДД');
   for (const patch of [{ quantity: -1 }, { quantity: 1.5 }, { quantity: '12' }, { quantity: 100000 },
-    { workDate: '2026-10-04' }, { workDate: '2026-10-12' }, { workDate: '2026-02-31' },
+    { workDate: '2026-10-11' }, { workDate: '2026-10-13' }, { workDate: '2026-02-31' },
     { department: '__proto__' }, { achievementId: 'unknown' }, { staticId: 'x' },
     { rulesAccepted: false }, { evidence: [] }, { evidence: ['javascript:alert(1)'] },
     { evidence: ['https://discord.com/api/webhooks/123/token'] }]) {
@@ -50,10 +50,10 @@ test('bulk proofs preserve all 50 links and reject canonical Discord duplicates'
   assert.ok(parseAchievementEvidence('https://example.test/a\nhttps://example.test/a#duplicate').error);
 });
 
-test('all nine routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
-  assert.deepEqual(achievementGoals.map(goal => goal.threadId), ['1556660053572853913','1556659874602033153',
-    '1556659983603474482','1556659948249808987','1556659909557362868','1556660085638307911',
-    '1556659813889478716','1556660019661901874','1556659843400470598']);
+test('all ten routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
+  assert.deepEqual(achievementGoals.map(goal => goal.threadId), ['1556659874602033153','1556659983603474482',
+    '1556659948249808987','1559215765503086863','1556659813889478716','1556659843400470598',
+    '1559216051353296916','1556660019661901874','1556660053572853913','1556660085638307911']);
   const checked = validateAchievementSubmission(valid, now).value!;
   const payload = buildAchievementMessage(checked, '123456789012345678', 'discord.user', now);
   assert.equal(payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
@@ -139,7 +139,7 @@ function fixture(options: { reservation?: string; http?: number; rejectPart?: nu
       if (options.networkError) throw new Error('secret-fixture-marker');
       const payload = JSON.parse(String(init.body));
       sent.push({ url: url.toString(), payload });
-      return Response.json({ id: '234567890123456789', channel_id: '1556659843400470598' },
+      return Response.json({ id: '234567890123456789', channel_id: url.searchParams.get('thread_id') },
         { status: options.rejectPart === sent.length ? 429 : options.http ?? 200 });
     },
   });
@@ -158,6 +158,27 @@ test('delivery embeds complete proof list, confirms thread, then commits progres
   assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), '1556659843400470598');
   assert.ok(app.sent[0].payload.embeds[0].fields.some(field => field.name.includes('Доказательства') && field.value.includes('https://example.test/proof.png')));
   assert.equal(app.sent[0].payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
+});
+
+test('new motorcycle and AirDrop reports reach their own threads; removed escort reports cannot be submitted', async () => {
+  for (const [achievementId, threadId] of [['motorcyclists','1559215765503086863'],['airdrop','1559216051353296916']]) {
+    const app = fixture();
+    assert.equal((await app.submit({ ...valid, achievementId, quantity: 1 })).status, 200);
+    assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), threadId);
+    assert.deepEqual(app.statuses, ['sent']);
+  }
+  const removed = fixture();
+  assert.equal((await removed.submit({ ...valid, achievementId: 'escorts' })).status, 400);
+  assert.equal(removed.sent.length, 0);
+});
+test('current week has ten goals and three exercises; archived weeks retain their old nine goals', () => {
+  const current = getAchievementGoalsForWeek('2026-10-12');
+  const archive = getAchievementGoalsForWeek('2026-10-05');
+  assert.equal(current.length, 10);
+  assert.equal(current.find(goal => goal.id === 'joint-exercises')?.target, 3);
+  assert.equal(archive.length, 9);
+  assert.equal(archive.find(goal => goal.id === 'joint-exercises')?.target, 2);
+  assert.ok(archive.some(goal => goal.id === 'escorts'));
 });
 
 test('50 links longer than one Discord embed are all delivered vertically in one thread before counting', async () => {

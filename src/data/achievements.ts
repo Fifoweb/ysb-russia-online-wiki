@@ -1,4 +1,4 @@
-export { achievementDepartments, achievementGoals, achievementWeekStart, addAchievementDays, moscowDate,
+export { achievementDepartments, achievementGoals, getAchievementGoalsForWeek, achievementWeekStart, addAchievementDays, moscowDate,
   parseAchievementEvidence, validateAchievementSubmission, type AchievementId, type AchievementDepartment }
   from '../../supabase/functions/_shared/achievements';
 

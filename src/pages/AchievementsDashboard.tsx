@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Activity, CalendarDays, CheckCircle2, Clock3, RefreshCw, Target, Trophy, Users } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
-import { achievementDepartments, achievementGoals, achievementWeekStart, addAchievementDays,
+import { achievementDepartments, getAchievementGoalsForWeek, achievementWeekStart, addAchievementDays,
   achievementPublicationRules, type AchievementDepartment } from '../data/achievements';
 import { achievementCompletion, fetchAchievementDashboard, formatAchievementValue, type AchievementDashboardData } from '../lib/achievements';
 
@@ -23,6 +23,7 @@ export default function AchievementsDashboard() {
     .filter((start, index, weeks) => weeks.indexOf(start) === index)
     .sort((left, right) => right.localeCompare(left));
   const week = selectedWeek ?? currentWeek;
+  const achievementGoals = getAchievementGoalsForWeek(week);
   const weekOffset = (new Date(week).getTime() - new Date(currentWeek).getTime()) / (7 * 86400_000);
 
   useEffect(() => {
@@ -73,14 +74,14 @@ export default function AchievementsDashboard() {
     }, 0) / achievementGoals.length;
     return { ...dept, contribution, reports, order };
   }).sort((left, right) => right.contribution - left.contribution ||
-    Number(right.reports > 0) - Number(left.reports > 0) || left.order - right.order), [visibleData]);
+    Number(right.reports > 0) - Number(left.reports > 0) || left.order - right.order), [visibleData, achievementGoals]);
   const cards = useMemo(() => achievementGoals.map(goal => {
     const record = visibleData?.items.find(item => item.id === goal.id);
     const progress = department ? record?.departments[department] : record;
     const value = progress?.value ?? 0;
     const target = record?.target ?? goal.target;
     return { ...goal, target, value, reports: progress?.reports ?? 0, percent: achievementCompletion(value, target) };
-  }), [visibleData, department]);
+  }), [visibleData, department, achievementGoals]);
   const complete = cards.filter(item => item.value >= item.target).length;
   const overall = Math.round(cards.reduce((sum, item) => sum + item.percent, 0) / cards.length);
   const reports = cards.reduce((sum, item) => sum + item.reports, 0);
@@ -92,7 +93,7 @@ export default function AchievementsDashboard() {
 
   return <PageTransition className="catalog-page achievements-page">
     <div className="page-heading page-heading-row">
-      <div><p className="eyebrow">ГИБДД · НЕДЕЛЬНЫЕ ЦЕЛИ</p><h1>Ачивки фракции</h1><p>Девять целей. Общий результат и вклад каждого отдела.</p></div>
+      <div><p className="eyebrow">ГИБДД · НЕДЕЛЬНЫЕ ЦЕЛИ</p><h1>Ачивки фракции</h1><p>{achievementGoals.length} целей. Общий результат и вклад каждого отдела.</p></div>
       <span className="achievement-week-pill"><CalendarDays size={16} /> {weekLabel(week)} · МСК</span>
     </div>
 
@@ -113,7 +114,7 @@ export default function AchievementsDashboard() {
       <section className="panel achievement-overview" aria-label="Итоги недели">
         <div className="achievement-overview-copy">
           <p className="eyebrow">{department ? achievementDepartments.find(item => item.id === department)?.label : 'ОБЩИЙ ПРОГРЕСС ФРАКЦИИ'}</p>
-          <h2><Trophy size={24} /> {complete}<span> / 9 целей выполнено по отчётам</span></h2>
+          <h2><Trophy size={24} /> {complete}<span> / {achievementGoals.length} целей выполнено по отчётам</span></h2>
           <p>Каждый отправленный отчёт приближает фракцию к недельной цели.</p>
           <div className="achievement-overview-stats">
             <span><strong>{reports}</strong><small>отчётов{department ? ' отдела' : ' за неделю'}</small></span>
@@ -146,7 +147,7 @@ export default function AchievementsDashboard() {
 
       <section className="panel achievement-departments">
         <div className="achievement-section-heading"><h2><Users size={18} /> Вклад отделов</h2><span>Вся фракция · {weekLabel(week)}</span></div>
-        <p>Отделы расположены по убыванию вклада — среднего процента выполнения девяти целей. Работа сверх цели тоже учитывается. Онлайн — среднее по замерам, склад — число разных дней.</p>
+        <p>Отделы расположены по убыванию вклада — среднего процента выполнения всех целей недели. Работа сверх цели тоже учитывается. Онлайн — среднее по замерам, склад — число разных дней.</p>
         <div className="achievement-table-scroll" tabIndex={0} role="region" aria-label="Таблица вклада отделов, прокручивается по горизонтали">
           <table><thead><tr><th scope="col">Отдел</th><th scope="col">Вклад</th>{achievementGoals.map(goal => <th key={goal.id} scope="col" title={goal.description}><span aria-hidden="true">{goal.emoji}</span> {goal.title}</th>)}</tr></thead>
             <tbody>{rankedDepartments.map((dept, index) => <tr key={dept.id}><th scope="row" title={dept.label}><span className="text-sky-300 mr-2" aria-label={`Место ${index + 1}`}>{index + 1}.</span>{dept.label.split(' | ')[0]}</th><td className={dept.reports ? 'achievement-cell-active' : ''}>{dept.reports ? `${formatAchievementValue(dept.contribution)}%` : '—'}</td>{achievementGoals.map(goal => {
