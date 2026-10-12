@@ -36,8 +36,8 @@ test('old Discord credentials are erased while the current login, identity and u
   const tab = memoryStorage({ discord_oauth_access_token: 'old', discord_oauth_user_id: discordId, draft: 'keep' });
   const storage = createAuthStorage(sessionKey, local, tab);
   assert.deepEqual(JSON.parse(storage.getItem(sessionKey)!), siteSession);
-  assert.equal(local.getItem(sessionKey), null);
-  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
+  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(tab.getItem(sessionKey), null);
   assert.equal(local.getItem('discord_oauth_access_token'), null);
   assert.equal(tab.getItem('discord_oauth_access_token'), null);
   assert.equal(tab.getItem('discord_oauth_user_id'), null);
@@ -50,13 +50,13 @@ test('new and externally written sessions cannot persist provider tokens; PKCE d
   const tab = memoryStorage();
   const storage = createAuthStorage(sessionKey, local, tab);
   storage.setItem(sessionKey, JSON.stringify(oldSession));
-  assert.equal(local.getItem(sessionKey), null);
-  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
+  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(tab.getItem(sessionKey), null);
   storage.removeItem(sessionKey);
   local.setItem(sessionKey, JSON.stringify(oldSession));
   assert.deepEqual(JSON.parse(storage.getItem(sessionKey)!), siteSession);
-  assert.equal(local.getItem(sessionKey), null);
-  assert.deepEqual(JSON.parse(tab.getItem(sessionKey)!), siteSession);
+  assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), siteSession);
+  assert.equal(tab.getItem(sessionKey), null);
   storage.setItem(`${sessionKey}-code-verifier`, 'test-pkce-verifier');
   assert.equal(storage.getItem(`${sessionKey}-code-verifier`), 'test-pkce-verifier');
   assert.equal(local.getItem(`${sessionKey}-code-verifier`), null);
@@ -132,6 +132,90 @@ test('the installed Supabase SDK restores an existing login with the same Discor
 });
 
 // Run the real Edge Function handler against simulated Supabase and Discord APIs.
+
+test('a tab-only login migrates to persistent storage and survives closing and reopening the site', () => {
+  const local = memoryStorage();
+  const oldTab = memoryStorage({ [sessionKey]: JSON.stringify(oldSession) });
+  const migrated = createAuthStorage(sessionKey, local, oldTab);
+  assert.deepEqual(JSON.parse(migrated.getItem(sessionKey)!), siteSession);
+  assert.equal(oldTab.getItem(sessionKey), null);
+  const reopened = createAuthStorage(sessionKey, local, memoryStorage());
+  assert.deepEqual(JSON.parse(reopened.getItem(sessionKey)!), siteSession);
+  assert.doesNotMatch(local.getItem(sessionKey)!, /test-discord-access-token|provider_token|provider_refresh_token/);
+});
+
+test('rotated site tokens are shared across tabs; logout cannot revive a legacy tab cache', () => {
+  const local = memoryStorage({ [sessionKey]: JSON.stringify(siteSession) });
+  const first = createAuthStorage(sessionKey, local, memoryStorage());
+  const secondTab = memoryStorage();
+  const second = createAuthStorage(sessionKey, local, secondTab);
+  const rotated = { ...siteSession, access_token: 'rotated-site-fixture', refresh_token: 'rotated-refresh-fixture' };
+  first.setItem(sessionKey, JSON.stringify(rotated));
+  assert.deepEqual(JSON.parse(second.getItem(sessionKey)!), rotated);
+  secondTab.setItem(sessionKey, JSON.stringify(oldSession));
+  first.removeItem(sessionKey);
+  second.syncPersistentSession(); // A browser storage event invalidates stale tab and memory copies.
+  assert.equal(second.getItem(sessionKey), null);
+  assert.equal(local.getItem(sessionKey), null);
+  assert.equal(secondTab.getItem(sessionKey), null);
+});
+
+test('the installed SDK renews an expired site session without another Discord login', async () => {
+  const local = memoryStorage({ [sessionKey]: JSON.stringify({ ...oldSession, expires_at: Math.floor(Date.now()/1000)-60 }) });
+  let refreshRequests = 0;
+  const renewed = { ...siteSession, access_token: 'renewed-site-access-fixture', refresh_token: 'renewed-site-refresh-fixture' };
+  const client = createClient('https://renewal.example.test', 'sb_publishable_test_public_key', {
+    auth: { storageKey: sessionKey, storage: createAuthStorage(sessionKey, local, memoryStorage()),
+      autoRefreshToken: true, detectSessionInUrl: false },
+    global: { fetch: async (input, init) => {
+      const url = new URL(String(input));
+      assert.equal(url.hostname, 'renewal.example.test');
+      assert.equal(url.searchParams.get('grant_type'), 'refresh_token');
+      assert.equal(JSON.parse(String(init?.body)).refresh_token, siteSession.refresh_token);
+      refreshRequests++;
+      return Response.json({ ...renewed, provider_token: 'test-discord-access-token' });
+    } },
+  });
+  try {
+    const { data, error } = await client.auth.getSession();
+    assert.equal(error, null);
+    assert.equal(data.session?.access_token, renewed.access_token);
+    assert.equal(data.session?.user.identities?.[0].identity_data?.sub, discordId);
+    assert.equal(refreshRequests, 1);
+    assert.deepEqual(JSON.parse(local.getItem(sessionKey)!), renewed);
+  } finally { await client.auth.stopAutoRefresh(); }
+});
+
+test('the auth hook keeps an idle login and retains manual logout and revocation handling', async () => {
+  const source = ts.transpileModule(readFileSync(new URL('../src/lib/auth.ts', import.meta.url), 'utf8'), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    transformers: { before: [() => file => ts.factory.updateSourceFile(file,
+      file.statements.filter(statement => !ts.isImportDeclaration(statement)))] },
+  }).outputText.replace(/export /g, '').replace(/import.meta.env.BASE_URL/g, "'/ysb-russia-online-wiki/'");
+  let signOutCalls = 0, timers = 0, state = siteSession as unknown;
+  let notify!: (event: string, value: unknown) => void;
+  const context = {
+    isSupabaseConfigured: true, withoutProviderTokens,
+    useState: (initial: unknown) => [initial === null ? siteSession : initial, (next: unknown) => { if (initial === null) state = next; }],
+    useEffect: (effect: () => unknown) => effect(),
+    window: { location: { origin: 'https://example.test' }, setInterval: () => { timers++; return 1; } },
+    supabase: { auth: {
+      getSession: async () => ({ data: { session: oldSession } }),
+      onAuthStateChange: (callback: typeof notify) => { notify = callback; return { data: { subscription: { unsubscribe() {} } } }; },
+      signOut: async (options: { scope: string }) => { assert.equal(options.scope, 'local'); signOutCalls++; },
+    } },
+  };
+  const auth = runInNewContext(source + '\nuseAuth();', context);
+  await Promise.resolve();
+  assert.equal(timers, 0);
+  assert.equal(signOutCalls, 0);
+  assert.deepEqual(state, siteSession);
+  await auth.signOut();
+  assert.equal(signOutCalls, 1);
+  notify('SIGNED_OUT', null);
+  assert.equal(state, null);
+});
+
 // Requests never leave this test process and cannot send an actual application.
 const functionSource = readFileSync(new URL('../supabase/functions/submit-resign/index.ts', import.meta.url), 'utf8');
 const handlerSource = ts.transpileModule(functionSource, {

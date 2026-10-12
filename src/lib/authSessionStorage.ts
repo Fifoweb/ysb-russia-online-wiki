@@ -35,6 +35,7 @@ export function createAuthStorage(
   sessionKey: string, persistentStorage: StorageLike | null, tabStorage: StorageLike | null,
 ) {
   const memory = new Map<string, string>();
+  const volatile = new Set<string>();
   const clearLegacyTokens = () => {
     for (const storage of [persistentStorage, tabStorage]) {
       for (const key of legacyKeys) {
@@ -42,42 +43,57 @@ export function createAuthStorage(
       }
     }
   };
+  const writeSafe = (key: string, safe: string) => {
+    memory.set(key, safe);
+    if (key === sessionKey) {
+      try {
+        if (persistentStorage) {
+          persistentStorage.setItem(key, safe);
+          volatile.delete(key);
+          try { tabStorage?.removeItem(key); } catch { /* Legacy tab cache may be blocked. */ }
+          return;
+        }
+      } catch { /* Fall back to this tab when persistent storage is unavailable. */ }
+    }
+    volatile.add(key);
+    try { tabStorage?.setItem(key, safe); } catch { /* Keep the sanitized value in memory. */ }
+    try { persistentStorage?.removeItem(key); } catch { /* Remove stale credentials where possible. */ }
+  };
   const storage = {
     getItem(key: string): string | null {
-      let raw: string | null;
-      // Session-scoped storage limits how long bearer/refresh tokens remain on disk.
-      // Migrate an existing login from localStorage once, so the current page
-      // doesn't unexpectedly sign everyone out after this security update.
-      try { raw = tabStorage ? tabStorage.getItem(key) : memory.get(key) ?? null; }
-      catch { raw = memory.get(key) ?? null; }
+      let raw: string | null = volatile.has(key) ? memory.get(key) ?? null : null;
+      const primary = key === sessionKey ? persistentStorage : tabStorage;
+      const fallback = key === sessionKey ? tabStorage : persistentStorage;
+      let readable = false;
+      if (raw === null) try { if (primary) { raw = primary.getItem(key); readable = true; } }
+      catch { /* Try the old tab cache or memory. */ }
       if (raw === null) {
-        try { raw = persistentStorage?.getItem(key) ?? null; }
-        catch { /* Old storage may be blocked. */ }
+        try { if (fallback) { raw = fallback.getItem(key); readable = true; } }
+        catch { /* The fallback may also be blocked. */ }
       }
+      if (raw === null && !readable) raw = memory.get(key) ?? null;
       const safe = key === sessionKey ? sanitizeSession(raw) : raw;
-      if (safe === null) memory.delete(key); else memory.set(key, safe);
-      try {
-        if (safe === null) tabStorage?.removeItem(key);
-        else tabStorage?.setItem(key, safe);
-      } catch { /* The sanitized copy remains in memory. */ }
-      try { persistentStorage?.removeItem(key); }
-      catch { /* Never write new authentication tokens into persistent storage. */ }
+      if (safe === null) storage.removeItem(key); else writeSafe(key, safe);
       return safe;
     },
     setItem(key: string, value: string) {
       const safe = key === sessionKey ? sanitizeSession(value) : value;
       if (safe === null) { storage.removeItem(key); return; }
-      memory.set(key, safe);
-      try { tabStorage?.setItem(key, safe); } catch { /* Keep the session in memory. */ }
-      try { persistentStorage?.removeItem(key); }
-      catch { /* Do not copy credentials to persistent storage. */ }
+      writeSafe(key, safe);
     },
     removeItem(key: string) {
       memory.delete(key);
+      volatile.delete(key);
       try { tabStorage?.removeItem(key); } catch { /* Keep sign-out working in memory. */ }
       try { persistentStorage?.removeItem(key); } catch { /* Keep sign-out working in memory. */ }
     },
     clearLegacyTokens,
+    syncPersistentSession() {
+      memory.delete(sessionKey);
+      volatile.delete(sessionKey);
+      try { tabStorage?.removeItem(sessionKey); } catch { /* Do not revive an old tab session. */ }
+      storage.getItem(sessionKey);
+    },
   };
   clearLegacyTokens();
   storage.getItem(sessionKey);
@@ -89,7 +105,7 @@ export function createBrowserAuthStorage(sessionKey: string) {
   let tabStorage: StorageLike | null = null;
   if (typeof window !== 'undefined') {
     // Remove Discord provider credentials before Supabase processes the OAuth callback.
-    // Site access/refresh tokens still work, but stay in this browser tab only.
+    // Only the site's session is persisted. Discord provider tokens are discarded.
     const callback = new URL(window.location.href);
     if (removeProviderTokensFromUrl(callback)) window.history.replaceState(window.history.state, '', callback.href);
     try { persistentStorage = window.localStorage; } catch { /* Use memory when storage is blocked. */ }
@@ -98,7 +114,10 @@ export function createBrowserAuthStorage(sessionKey: string) {
   const storage = createAuthStorage(sessionKey, persistentStorage, tabStorage);
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', event => {
-      if (event.key === sessionKey || legacyKeys.includes(event.key ?? '')) {
+      if (event.key === sessionKey || event.key === null) {
+        storage.syncPersistentSession();
+      }
+      if (event.key === sessionKey || event.key === null || legacyKeys.includes(event.key ?? '')) {
         storage.clearLegacyTokens();
         storage.getItem(sessionKey);
       }

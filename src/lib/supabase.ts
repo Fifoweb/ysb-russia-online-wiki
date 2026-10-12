@@ -14,7 +14,7 @@ function createAuthClient() {
   // Match Supabase's existing key so current users keep their site sessions.
   const storageKey = `sb-${new URL(url!).hostname.split('.')[0]}-auth-token`;
   return createClient(url!, key!, {
-    auth: { storageKey, storage: createBrowserAuthStorage(storageKey) },
+    auth: { storageKey, storage: createBrowserAuthStorage(storageKey), persistSession: true, autoRefreshToken: true },
   });
 }
 
