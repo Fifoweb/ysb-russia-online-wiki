@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import ts from 'typescript';
-import { achievementGoals, getAchievementGoalsForWeek, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
+import { achievementDepartments, achievementGoals, getAchievementGoalsForWeek, achievementWeekStart, canonicalEvidenceLink, parseAchievementEvidence,
   validateAchievementSubmission } from '../supabase/functions/_shared/achievements.ts';
 import { buildAchievementMessage, buildAchievementMessages } from '../supabase/functions/_shared/achievementMessage.ts';
 
@@ -48,6 +48,17 @@ test('bulk proofs preserve all 50 links and reject canonical Discord duplicates'
   assert.equal(canonicalEvidenceLink('https://cdn.discordapp.com/attachments/1/2/p.png?ex=1&hm=a'),
     canonicalEvidenceLink('https://cdn.discordapp.com/attachments/1/2/p.png?ex=2&hm=b'));
   assert.ok(parseAchievementEvidence('https://example.test/a\nhttps://example.test/a#duplicate').error);
+});
+
+test('achievement departments exclude Academy, UDO and UKM without removing the graduation goal', async () => {
+  assert.deepEqual(achievementDepartments.map(dept => dept.id), ['gu','usb','uku','uor','sdb','mb','ugk','dps']);
+  assert.ok(achievementGoals.some(goal => goal.id === 'academy-graduates'));
+  for (const department of ['academy','udo','ukm']) {
+    assert.ok(validateAchievementSubmission({ ...valid, department }, now).error);
+    const app = fixture();
+    assert.equal((await app.submit({ ...valid, department })).status, 400);
+    assert.equal(app.sent.length, 0);
+  }
 });
 
 test('all ten routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
@@ -302,6 +313,7 @@ test('browser timers separate achievement reports from the unchanged 150-second 
       useState: () => [0, (value: number) => { remaining = value; }],
       useEffect: (effect: () => unknown) => effect(),
       supabase: { functions: { invoke: async () => result } },
+      getApplicationSession: async () => ({ session: { access_token: 'fixture-site-token' } }),
     });
     runInContext(compile('../src/lib/applicationCooldown.ts'), context);
     return {

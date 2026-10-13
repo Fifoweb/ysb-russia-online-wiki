@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { getApplicationSession } from './auth';
 
 const DURATION_MS = 150_000;
 const STORAGE_PREFIX = 'application-cooldown:';
@@ -52,7 +53,11 @@ export async function invokeApplication(name: string, options: { body: Record<st
   const scope: CooldownScope = name === 'submit-achievement-report' ? 'achievements' : 'applications';
   const key = timerKey(userId, scope);
   const durationSeconds = scope === 'achievements' ? 10 : DURATION_MS / 1000;
-  const result = await supabase.functions.invoke(name, options);
+  const auth = await getApplicationSession(userId);
+  if (!auth.session) return { data: null, error: { context: Response.json({ error: auth.error }, { status: auth.status }) } };
+  const result = await supabase.functions.invoke(name, {
+    ...options, headers: { Authorization: `Bearer ${auth.session.access_token}` },
+  });
   if (!result.error) {
     setDeadline(key, durationSeconds);
   } else {

@@ -3,7 +3,6 @@ export const MAX_EVIDENCE_LINKS = 50;
 export const MAX_EVIDENCE_CHARACTERS = 10_000;
 
 export const achievementDepartments = [
-  { id: 'academy', label: 'Академия' },
   { id: 'gu', label: 'ГУ ГИБДД' },
   { id: 'usb', label: 'УСБ | Управление собственной безопасности' },
   { id: 'uku', label: 'УКУ | Учебно-кадровое управление' },
@@ -12,8 +11,6 @@ export const achievementDepartments = [
   { id: 'mb', label: 'МБ | Мотоциклетный Батальон' },
   { id: 'ugk', label: 'УГК | Управление грузового контроля' },
   { id: 'dps', label: 'ДПС | Дорожно-патрульная служба' },
-  { id: 'udo', label: 'УДО | Управление Дорожных Ситуаций' },
-  { id: 'ukm', label: 'УКМ | Управление по контролю магистралей' },
 ] as const;
 
 export const achievementGoals = [
