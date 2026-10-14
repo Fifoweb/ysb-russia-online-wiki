@@ -6,6 +6,9 @@ export interface AchievementProgress {
   target: number;
   value: number;
   reports: number;
+  closed?: boolean;
+  remaining?: number | null;
+  pendingReports?: number;
   departments: Record<AchievementDepartment, { value: number; reports: number }>;
 }
 export interface AchievementDashboardData {
@@ -29,6 +32,13 @@ export async function fetchAchievementDashboard(weekStart: string, signal: Abort
 }
 export function achievementCompletion(value: number, target: number): number {
   return Math.max(0, Math.min(100, value / target * 100));
+}
+export function achievementAvailability(progress: AchievementProgress | undefined, metric: string) {
+  const closed = Boolean(progress && (progress.closed || progress.value >= progress.target));
+  const remaining = metric === 'average' ? null : progress
+    ? Math.max(0, Math.floor(progress.remaining ?? progress.target - progress.value)) : null;
+  const pending = !closed && Boolean((progress?.pendingReports ?? 0) > 0) && (metric === 'average' || remaining === 0);
+  return { closed, pending, remaining };
 }
 export function formatAchievementValue(value: number): string {
   return value.toLocaleString('ru-RU', { maximumFractionDigits: 1 });

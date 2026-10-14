@@ -54,6 +54,18 @@ Deno.serve(withSubmissionCooldown(async req => {
     return json(503, { error: 'Не удалось сохранить отчёт. Попробуйте позже.' });
   }
   if (reservation.result === 'sent') return json(200, { ok: true, alreadySent: true });
+  if (reservation.result === 'closed') return json(409, {
+    error: 'Ачивка уже выполнена всей фракцией. Новые отчёты откроются в понедельник в 00:00 МСК.',
+    code: 'ACHIEVEMENT_CLOSED', reopensAt: reservation.reopensAt,
+  });
+  if (reservation.result === 'pending') return json(409, {
+    error: 'Последние отчёты по этой ачивке ещё обрабатываются. Дождитесь обновления прогресса.',
+    code: 'ACHIEVEMENT_PENDING',
+  });
+  if (reservation.result === 'limit') return json(400, {
+    error: `До цели осталось ${reservation.remaining} ${goal.unit}. Укажите количество в пределах остатка.`,
+    code: 'ACHIEVEMENT_LIMIT', remaining: reservation.remaining,
+  });
   if (reservation.result === 'duplicate') return json(409, { error: 'Эти доказательства, проверка склада за этот день или замер в это время уже отправлены на этой неделе.' });
   if (['sending', 'uncertain'].includes(reservation.result)) return json(409, {
     error: 'Этот отчёт уже отправляется или требует проверки доставки. Проверьте ветку Discord у куратора перед повторной подачей.',

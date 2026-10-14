@@ -116,7 +116,7 @@ function compile(file: string) {
   }).outputText.replace(/export /g, '');
 }
 
-function fixture(options: { reservation?: string; http?: number; rejectPart?: number; networkError?: boolean; syncDown?: boolean;
+function fixture(options: { reservation?: string; remaining?: number; http?: number; rejectPart?: number; networkError?: boolean; syncDown?: boolean;
   identity?: boolean; cooldown?: number; discordError?: unknown } = {}) {
   let handler!: (req: Request) => Promise<Response>;
   const statuses: string[] = [];
@@ -133,7 +133,8 @@ function fixture(options: { reservation?: string; http?: number; rejectPart?: nu
       if (name === 'release_achievement_submission') return { data: null, error: null };
       if (name === 'reserve_achievement_report') {
         assert.equal(params.p_discord_id, '123456789012345678');
-        return { data: { result: options.reservation ?? 'reserved', id: 'report-fixture' }, error: null };
+        return { data: { result: options.reservation ?? 'reserved', id: 'report-fixture', remaining: options.remaining,
+          reopensAt: '2026-10-18T21:00:00Z' }, error: null };
       }
       if (name === 'settle_achievement_report') { statuses.push(String(params.p_status)); return { data: !options.syncDown, error: null }; }
       throw new Error(`Unexpected RPC ${name}`);
@@ -267,6 +268,36 @@ test('known failures release proofs; uncertain deliveries block resending; sync 
   assert.equal(synced.status, 202);
   assert.equal((await synced.json()).syncPending, true);
   assert.equal(sync.sent.length, 1);
+});
+
+test('completed goals, pending final reports and oversized contributions never reach Discord', async () => {
+  for (const [reservation,status,code] of [['closed',409,'ACHIEVEMENT_CLOSED'],
+    ['pending',409,'ACHIEVEMENT_PENDING'],['limit',400,'ACHIEVEMENT_LIMIT']] as const) {
+    const app=fixture({reservation,remaining:3});
+    const response=await app.submit();
+    assert.equal(response.status,status);
+    const body=await response.json();
+    assert.equal(body.code,code);
+    if(reservation==='closed') assert.equal(body.reopensAt,'2026-10-18T21:00:00Z');
+    if(reservation==='limit') assert.match(body.error,/3 штрафов/);
+    assert.equal(app.sent.length,0);
+    assert.equal(app.statuses.length,0);
+  }
+});
+
+test('form availability respects global completion, reserved capacity and serialized online measurements', () => {
+  const context=createContext({});
+  runInContext(compile('../src/lib/achievements.ts'),context);
+  const availability=context.achievementAvailability;
+  const progress={id:'detainees',target:30,value:29,reports:1,departments:{},remaining:0,pendingReports:1};
+  assert.equal(availability(progress,'sum').pending,true);
+  assert.equal(availability({...progress,remaining:1,pendingReports:0},'sum').remaining,1);
+  assert.equal(availability({...progress,value:30,remaining:0,pendingReports:0},'sum').closed,true);
+  assert.equal(availability({...progress,value:2,closed:true},'sum').closed,true);
+  assert.equal(availability({...progress,target:100,value:80,remaining:null},'average').pending,true);
+  assert.equal(availability({...progress,target:100,value:80,remaining:null,pendingReports:0},'average').pending,false);
+  assert.equal(availability({...progress,target:3,value:2,remaining:1,pendingReports:0},'distinct-days').remaining,1);
+  assert.equal(availability(undefined,'sum').closed,false);
 });
 
 test('the submission route is omitted from menu and search; the public dashboard links to no submission form', () => {
