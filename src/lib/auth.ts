@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, readCachedSiteSession } from './supabase';
 import { withoutProviderTokens } from './authSessionStorage';
 
 // Every form and the header read the same snapshot, including during token renewal.
-let snapshot: { session: Session | null; loading: boolean } = { session: null, loading: isSupabaseConfigured };
+let snapshot: { session: Session | null; loading: boolean } = { session: readCachedSiteSession(), loading: isSupabaseConfigured };
 const listeners = new Set<() => void>();
 let started = false;
 let revision = 0;
@@ -24,11 +24,11 @@ function startAuth() {
     // A delayed initial read must not undo a newer login, renewal or logout.
     if (event === 'INITIAL_SESSION' && !snapshot.loading) return;
     revision++;
-    publishSession(nextSession);
+    publishSession(nextSession ?? (event === 'INITIAL_SESSION' ? readCachedSiteSession() : null));
   });
-  void supabase.auth.getSession().then(({ data }) => {
+  void supabase.auth.getSession().then(({ data, error }) => {
     if (revision !== initialRevision) return;
-    publishSession(data.session);
+    publishSession(error ? snapshot.session ?? readCachedSiteSession() : data.session ?? readCachedSiteSession());
   }).catch(() => {
     if (revision === initialRevision) publishSession(snapshot.session);
   });
@@ -53,11 +53,10 @@ export async function getApplicationSession(userId: string): Promise<Application
   const initialIdentity = identityRevision;
   const changedAccount = () => identityRevision !== initialIdentity;
   const accountError = (): ApplicationSession => ({ error: 'Аккаунт изменился. Проверьте вход и отправьте форму ещё раз.', status: 409 });
-  const expired = async (): Promise<ApplicationSession> => {
+  const loginRequired = (): ApplicationSession => {
     if (!changedAccount()) {
       revision++;
       publishSession(null);
-      try { await client.auth.signOut({ scope: 'local' }); } catch { /* Local UI is already signed out. */ }
     }
     return { error: 'Вход больше не действует. Войдите через Discord ещё раз.', status: 401 };
   };
@@ -67,7 +66,7 @@ export async function getApplicationSession(userId: string): Promise<Application
   if (cached && cached.user.id !== userId) return accountError();
   try {
     const current = await client.auth.getSession();
-    if (current.error) return invalidSession(current.error) ? await expired() : unavailable();
+    if (current.error) return invalidSession(current.error) ? loginRequired() : unavailable();
     if (changedAccount()) return accountError();
     let session = current.data.session;
     if (session && session.user.id !== userId) {
@@ -76,13 +75,13 @@ export async function getApplicationSession(userId: string): Promise<Application
     }
     if (!session || !session.expires_at || session.expires_at <= Math.floor(Date.now() / 1000) + 30) {
       const source = session ?? cached;
-      if (source?.user.id !== userId || !source.refresh_token) return await expired();
+      if (source?.user.id !== userId || !source.refresh_token) return loginRequired();
       const renewed = await client.auth.refreshSession({ refresh_token: source.refresh_token });
-      if (renewed.error) return invalidSession(renewed.error) ? await expired() : unavailable();
+      if (renewed.error) return invalidSession(renewed.error) ? loginRequired() : unavailable();
       if (changedAccount()) return accountError();
       session = renewed.data.session;
     }
-    if (!session?.access_token || !session.expires_at || session.expires_at <= Math.floor(Date.now() / 1000)) return await expired();
+    if (!session?.access_token || !session.expires_at || session.expires_at <= Math.floor(Date.now() / 1000)) return loginRequired();
     if (session.user.id !== userId) return accountError();
     return { session: withoutProviderTokens(session) };
   } catch { return unavailable(); }

@@ -53,6 +53,10 @@ export function withSubmissionCooldown(handler: Handler, cors: Record<string, st
     let user;
     try {
       const { data, error } = await userClient.auth.getUser();
+      if (error && (error.name === 'AuthRetryableFetchError' || error.status === 429 || (error.status ?? 0) >= 500)) {
+        console.error('Application authentication unavailable');
+        return json(503, { error: 'Не удалось проверить вход. Попробуйте позже.' });
+      }
       if (error || !data.user) return json(401, { error: 'Для отправки войдите через Discord' });
       user = data.user;
     } catch {
@@ -71,12 +75,6 @@ export function withSubmissionCooldown(handler: Handler, cors: Record<string, st
       if (retry > 0) return json(429, {
         error: `Слишком много попыток. Повторите через ${retry} сек.`, retryAfterSeconds: retry,
       }, { 'Retry-After': String(retry), 'Access-Control-Expose-Headers': 'Retry-After' });
-      const { data: active, error: sessionError } = await userClient.rpc('is_site_session_active');
-      if (sessionError || typeof active !== 'boolean') {
-        console.error('Application session check unavailable');
-        return json(503, { error: 'Не удалось проверить сессию. Попробуйте позже.' });
-      }
-      if (!active) return json(401, { error: 'Срок сессии истёк. Войдите через Discord ещё раз.', code: 'SESSION_EXPIRED' });
     } catch {
       console.error('Application request guard unavailable');
       return json(503, { error: 'Отправка временно недоступна. Попробуйте позже.' });

@@ -186,7 +186,7 @@ test('the installed SDK renews an expired site session without another Discord l
   } finally { await client.auth.stopAutoRefresh(); }
 });
 
-function authHookFixture() {
+function authHookFixture(cachedSession: typeof siteSession | null = null) {
   const source = ts.transpileModule(readFileSync(new URL('../src/lib/auth.ts', import.meta.url), 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
     transformers: { before: [() => file => ts.factory.updateSourceFile(file,
@@ -198,6 +198,7 @@ function authHookFixture() {
   let current = '', index = 0, signOutCalls = 0, timers = 0;
   const context = {
     isSupabaseConfigured: true, withoutProviderTokens,
+    readCachedSiteSession: () => cachedSession ? withoutProviderTokens(cachedSession) : null,
     useState: (initial: unknown) => {
       const consumer = consumers.get(current)!;
       const position = index++;
@@ -212,7 +213,8 @@ function authHookFixture() {
     window: { location: { origin: 'https://example.test' }, setInterval: () => { timers++; return 1; } },
     supabase: { auth: {
       getSession: () => new Promise(resolve => {
-        const read = { resolve: (value: unknown) => { read.done = true; resolve({ data: { session: value } }); }, done: false };
+        const read = { resolve: (value: unknown) => { read.done = true; resolve(value instanceof Error
+          ? { data: { session: null }, error: value } : { data: { session: value }, error: null }); }, done: false };
         reads.push(read);
       }),
       onAuthStateChange: (notify: (event: string, value: unknown) => void) => {
@@ -247,6 +249,7 @@ function submissionSessionFixture() {
   const posts: { name: string; options: { body: unknown; headers: { Authorization: string } } }[] = [];
   let postResult: { error: null | { context: Response }; data?: unknown } = { error: null, data: { ok: true } };
   const context = createContext({ isSupabaseConfigured: true, withoutProviderTokens, Date, Response, Event,
+    readCachedSiteSession: () => stored.data.session ? withoutProviderTokens(stored.data.session) : null,
     localStorage: memoryStorage(), window: { dispatchEvent: () => {} },
     useSyncExternalStore: (subscribe: (fn: () => void) => void, getSnapshot: () => unknown) => {
       subscribe(() => {}); return getSnapshot();
@@ -313,17 +316,17 @@ test('a missing browser session is recovered from the shared site session before
   assert.equal(app.session().access_token, 'renewed-site-fixture');
 });
 
-test('invalid refresh signs out locally without submitting; temporary failures preserve the login', async () => {
-  for (const [error, status, signOutCalls] of [
-    [{ status: 400 }, 401, 1], [{ status: 503, name: 'AuthRetryableFetchError' }, 503, 0],
+test('invalid refresh blocks submission without revoking the session; temporary failures preserve login', async () => {
+  for (const [error, status, keepsLogin] of [
+    [{ status: 400 }, 401, false], [{ status: 503, name: 'AuthRetryableFetchError' }, 503, true],
   ] as const) {
     const app = submissionSessionFixture(); await app.ready();
     app.setStored({ data: { session: null }, error: null });
     app.setRefresh(async () => ({ data: { session: null }, error }));
     assert.equal((await app.invoke()).error.context.status, status);
     assert.equal(app.stats().posts.length, 0);
-    assert.equal(app.stats().signOutCalls, signOutCalls);
-    assert.equal(Boolean(app.session()), signOutCalls === 0);
+    assert.equal(app.stats().signOutCalls, 0);
+    assert.equal(Boolean(app.session()), keepsLogin);
   }
   const app = submissionSessionFixture(); await app.ready();
   app.setStored({ data: { session: null }, error: null });
@@ -373,6 +376,16 @@ test('delivery errors never automatically repeat a submission POST', async () =>
   assert.equal(app.stats().signOutCalls, 0);
 });
 
+test('an old SESSION_EXPIRED response cannot force logout or retry delivery', async () => {
+  const app = submissionSessionFixture(); await app.ready();
+  app.setPostResult({ error: { context: Response.json({ error: 'Fixture old session guard', code: 'SESSION_EXPIRED' }, { status: 401 }) } });
+  assert.equal((await app.invoke()).error.context.status, 401);
+  assert.equal(app.stats().posts.length, 1);
+  assert.equal(app.stats().signOutCalls, 0);
+  assert.equal(app.stats().refreshCalls, 0);
+  assert.ok(app.session());
+});
+
 test('a late empty session cannot sign a form out while the header remains signed in', async () => {
   const app = authHookFixture();
   app.render('header');
@@ -385,6 +398,21 @@ test('a late empty session cannot sign a form out while the header remains signe
   await Promise.resolve();
   assert.equal(app.render('header').user?.id, user.id);
   assert.equal(app.render('achievement-form').user?.id, user.id);
+});
+
+test('startup preserves the saved login during an empty initial event or temporary refresh error', async () => {
+  const app = authHookFixture(oldSession);
+  assert.equal(app.render('header').user?.id, user.id);
+  app.emit('INITIAL_SESSION', null);
+  app.resolveReads(new Error('Fixture temporary refresh outage'));
+  await Promise.resolve();
+  assert.equal(app.render('header').user?.id, user.id);
+  assert.equal(app.render('form').user?.id, user.id);
+  assert.equal(app.render('form').session.provider_token, undefined);
+  assert.equal(app.render('form').loading, false);
+  assert.equal(app.stats().signOutCalls, 0);
+  app.emit('SIGNED_OUT', null);
+  assert.equal(app.render('header').user, null);
 });
 
 test('all forms share one auth subscription and ignore late INITIAL_SESSION after login', async () => {

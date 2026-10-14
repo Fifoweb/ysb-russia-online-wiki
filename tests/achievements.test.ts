@@ -117,7 +117,7 @@ function compile(file: string) {
 }
 
 function fixture(options: { reservation?: string; http?: number; rejectPart?: number; networkError?: boolean; syncDown?: boolean;
-  identity?: boolean; active?: boolean; cooldown?: number; discordError?: unknown } = {}) {
+  identity?: boolean; cooldown?: number; discordError?: unknown } = {}) {
   let handler!: (req: Request) => Promise<Response>;
   const statuses: string[] = [];
   const logs: unknown[][] = [];
@@ -129,7 +129,6 @@ function fixture(options: { reservation?: string; http?: number; rejectPart?: nu
     } } }) },
     rpc: async (name: string, params: Record<string, unknown> = {}) => {
       if (name === 'claim_achievement_attempt') return { data: 0, error: null };
-      if (name === 'is_site_session_active') return { data: options.active !== false, error: null };
       if (name === 'claim_achievement_submission') return { data: options.cooldown ?? 0, error: null };
       if (name === 'release_achievement_submission') return { data: null, error: null };
       if (name === 'reserve_achievement_report') {
@@ -244,9 +243,9 @@ test('failure after the first delivered evidence part is uncertain and never cou
   assert.deepEqual(app.statuses, ['uncertain']);
 });
 
-test('duplicates, invalid identities, expired sessions and cooldown do not reach Discord', async () => {
+test('duplicates, invalid identities and cooldown do not reach Discord', async () => {
   for (const [options, status] of [[{ reservation: 'duplicate' }, 409], [{ reservation: 'sending' }, 409],
-    [{ reservation: 'sent' }, 200], [{ identity: false }, 403], [{ active: false }, 401], [{ cooldown: 10 }, 429]] as const) {
+    [{ reservation: 'sent' }, 200], [{ identity: false }, 403], [{ cooldown: 10 }, 429]] as const) {
     const app = fixture(options);
     assert.equal((await app.submit()).status, status);
     assert.equal(app.sent.length, 0);

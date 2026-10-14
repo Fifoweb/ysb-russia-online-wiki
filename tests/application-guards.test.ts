@@ -17,7 +17,8 @@ const names = ['submit-application', 'submit-promotion', 'submit-resign', 'submi
   'submit-complaint', 'submit-reprimand-work', 'submit-department', 'submit-employee-complaint',
   'submit-senior-promotion-report', 'submit-academy-promotion-report'];
 
-function fixture(options: { active?: boolean; authorized?: boolean; cooldown?: number; dbDown?: boolean;
+function fixture(options: { authorized?: boolean; cooldown?: number; dbDown?: boolean;
+  authError?: { name?: string; status?: number };
   globalRetry?: number; handler?: 'ok' | 'throw'; functionName?: string; transferDelivery?: boolean } = {}) {
   let handle!: (req: Request) => Promise<Response>;
   let attempts = 0, claims = 0, releases = 0, deliveries = 0;
@@ -27,14 +28,13 @@ function fixture(options: { active?: boolean; authorized?: boolean; cooldown?: n
     SUPABASE_SERVICE_ROLE_KEY: 'service-test',
     DISCORD_TRANSFER_WEBHOOK_URL: 'https://discord.com/api/webhooks/123456789012345678/fixture' };
   const client = {
-    auth: { getUser: async () => ({ error: null, data: { user: options.authorized === false ? null : {
+    auth: { getUser: async () => ({ error: options.authError ?? null, data: { user: options.authorized === false ? null : {
       id: '00000000-0000-4000-8000-000000000001', user_metadata: {},
       identities: [{ provider: 'discord', identity_data: { sub: '123456789012345678', username: 'test' } }],
     } } }) },
     rpc: async (name: string) => {
       if (options.dbDown) return { data: null, error: new Error('secret-credential-marker') };
       if (name === 'claim_application_attempt') return { data: ++attempts > 5 ? 60 : options.globalRetry ?? 0, error: null };
-      if (name === 'is_site_session_active') return { data: options.active !== false, error: null };
       if (name === 'claim_application_submission') { claims++; return { data: options.cooldown ?? 0, error: null }; }
       if (name === 'release_application_submission') { releases++; return { data: null, error: null }; }
       throw new Error('Unexpected RPC');
@@ -103,14 +103,32 @@ test('invalid attempts cannot reset the separate request limit and the sixth is 
   assert.equal(app.stats().releases, 0);
 });
 
-test('global limit, expired sessions and unavailable database fail closed before delivery', async () => {
-  for (const [options, status] of [[{ globalRetry: 37 }, 429], [{ active: false }, 401], [{ dbDown: true }, 503]] as const) {
+test('global limit and unavailable database fail closed before delivery', async () => {
+  for (const [options, status] of [[{ globalRetry: 37 }, 429], [{ dbDown: true }, 503]] as const) {
     const app = fixture(options);
     const response = await app.submit();
     assert.equal(response.status, status);
     assert.equal(app.stats().deliveries, 0);
     assert.equal(app.stats().claims, 0);
     assert.doesNotMatch(JSON.stringify(app.logs) + await response.text(), /secret-credential-marker/);
+  }
+});
+
+test('a verified user submits without an additional session-record RPC', async () => {
+  const app = fixture();
+  assert.equal((await app.submit({ name: 'Fixture' })).status, 200);
+  assert.equal(app.stats().deliveries, 1);
+  assert.doesNotMatch(guardSource, /is_site_session_active|SESSION_EXPIRED/);
+});
+
+test('temporary Auth outages and throttling ask for retry without claiming the user signed out', async () => {
+  for (const authError of [{ name: 'AuthRetryableFetchError' }, { status: 503 }, { status: 429 }]) {
+    const app = fixture({ authError });
+    const response = await app.submit();
+    assert.equal(response.status, 503);
+    assert.equal(app.stats().attempts, 0);
+    assert.equal(app.stats().deliveries, 0);
+    assert.doesNotMatch(await response.text(), /войдите|истёк|SESSION_EXPIRED/i);
   }
 });
 
