@@ -29,6 +29,11 @@ const technicalItem = (id: string, name: string, materials: number, weightKg: nu
   image: `${import.meta.env.BASE_URL}crafts/${id}.png${imageVersion ? `?v=${imageVersion}` : ''}`,
 });
 
+const localItem = (id: string, name: string, category: CraftCategory, materials: number, weightKg: number): CraftItem => ({
+  id, name, category, materials, weightKg,
+  image: `${import.meta.env.BASE_URL}crafts/${id}.webp`,
+});
+
 export const craftItems: CraftItem[] = [
   item('124', 'Противовирусная вакцина', 'medical', 1, 0.004, 'medical'),
   item('168', 'Азитромицин', 'medical', 10, 0.005, 'medical'),
@@ -45,6 +50,8 @@ export const craftItems: CraftItem[] = [
   item('5012', 'СВ-98', 'weapon', 5000, 4.5, 'ammunition'),
   item('5016', 'АС «Вал»', 'weapon', 200, 3, 'ammunition'),
   item('5017', 'ПП-2000', 'weapon', 70, 1.8, 'ammunition'),
+  localItem('pp-19-01-vityaz', 'ПП-19-01 «Витязь»', 'weapon', 100, 2.2),
+  localItem('sr-3m-vikhr', 'СР-3М «Вихрь»', 'weapon', 200, 2.2),
   item('5018', 'СВД', 'weapon', 5000, 4.5, 'ammunition'),
   item('5019', 'АН-94 «Абакан»', 'weapon', 150, 3, 'ammunition'),
   item('5028', 'МПЛ', 'weapon', 30, 0.8, 'ammunition'),
@@ -53,10 +60,17 @@ export const craftItems: CraftItem[] = [
   item('5504', 'Патрон для дробовика', 'weapon', 1, 0.04, 'ammunition'),
   item('5506', 'Патрон для лёгкого автомата', 'weapon', 7, 0.012, 'ammunition'),
   item('5508', 'Патрон для тяжёлого автомата', 'weapon', 10, 0.01, 'ammunition'),
+  localItem('suppressor', 'Глушитель', 'weapon', 25, 0.2),
+  localItem('holographic-sight', 'Голографический прицел', 'weapon', 20, 0.3),
+  localItem('optical-sight', 'Оптический прицел', 'weapon', 50, 0.3),
+  localItem('grip', 'Рукоятка', 'weapon', 25, 0.5),
+  localItem('extended-magazine', 'Увеличенный магазин', 'weapon', 30, 0.7),
+  localItem('weapon-flashlight', 'Фонарик', 'weapon', 20, 0.2),
   item('92', 'Болгарка', 'technical', 2000, 3.5, 'tool'),
   item('112', 'Наручники', 'technical', 2, 0.35, 'ammunition'),
   item('216', 'Полицейская дубинка', 'technical', 5, 0.75, 'ammunition'),
   item('244', 'Тазер', 'technical', 5, 0.22, 'ammunition'),
+  localItem('drone-gibdd', 'Дрон ГИБДД', 'technical', 2000, 1.2),
   item('334', 'ИРП «Искра»', 'technical', 5, 0.6, 'food'),
   item('347', 'Тяжелый бронежилет служебный', 'technical', 30, 4, 'ammunition'),
   item('456', 'Легкий бронежилет служебный', 'technical', 15, 2, 'ammunition'),
