@@ -32,6 +32,8 @@ Deno.serve(withSubmissionCooldown(async req => {
   if (!validated.value) return json(400, { error: validated.error });
   const body = validated.value;
   const goal = achievementGoals.find(item => item.id === body.achievementId)!;
+  const threadId = goal.threadId;
+  if (!/^\d{17,20}$/.test(threadId)) return json(503, { error: 'Ветка Discord для этой ачивки ещё не настроена. Обратитесь к куратору.' });
   let webhook: URL;
   try {
     webhook = new URL(Deno.env.get('DISCORD_ACHIEVEMENTS_WEBHOOK_URL') ?? '');
@@ -66,7 +68,7 @@ Deno.serve(withSubmissionCooldown(async req => {
     error: `До цели осталось ${reservation.remaining} ${goal.unit}. Укажите количество в пределах остатка.`,
     code: 'ACHIEVEMENT_LIMIT', remaining: reservation.remaining,
   });
-  if (reservation.result === 'duplicate') return json(409, { error: 'Эти доказательства, проверка склада за этот день или замер в это время уже отправлены на этой неделе.' });
+  if (reservation.result === 'duplicate') return json(409, { error: 'Эти доказательства, отчёт за этот день или замер в это время уже отправлены на этой неделе.' });
   if (['sending', 'uncertain'].includes(reservation.result)) return json(409, {
     error: 'Этот отчёт уже отправляется или требует проверки доставки. Проверьте ветку Discord у куратора перед повторной подачей.',
   });
@@ -85,7 +87,7 @@ Deno.serve(withSubmissionCooldown(async req => {
     return false;
   };
   webhook.searchParams.set('wait', 'true');
-  webhook.searchParams.set('thread_id', goal.threadId);
+  webhook.searchParams.set('thread_id', threadId);
   const payloads = buildAchievementMessages(body, discordId, discordName);
   let firstMessageId: string | null = null;
   for (const payload of payloads) {
@@ -106,7 +108,7 @@ Deno.serve(withSubmissionCooldown(async req => {
         if (Number.isSafeInteger(detail?.code) && detail.code > 0) discordCode = detail.code;
       } catch { /* Never log raw Discord responses, report content or webhook URLs. */ }
       console.error('Discord achievement delivery rejected', {
-        httpStatus: response.status, discordCode, achievementId: goal.id, threadId: goal.threadId,
+        httpStatus: response.status, discordCode, achievementId: goal.id, threadId,
       });
       const reason = [10003, 50083, 160005].includes(discordCode ?? 0)
         ? 'Нужная ветка Discord недоступна или закрыта. Сообщите куратору.'
@@ -121,7 +123,7 @@ Deno.serve(withSubmissionCooldown(async req => {
     }
     let message: { id?: string; channel_id?: string };
     try { message = await response.json(); } catch { message = {}; }
-    if (!message.id || !/^\d{17,20}$/.test(message.id) || message.channel_id !== goal.threadId) {
+    if (!message.id || !/^\d{17,20}$/.test(message.id) || message.channel_id !== threadId) {
       await settle('uncertain');
       return json(502, { error: 'Не удалось подтвердить доставку в нужную ветку. Обратитесь к куратору перед повторной подачей.' });
     }

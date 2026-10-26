@@ -13,7 +13,7 @@ export const achievementDepartments = [
   { id: 'dps', label: 'ДПС | Дорожно-патрульная служба' },
 ] as const;
 
-export const achievementGoals = [
+const october12AchievementGoals = [
   { id: 'discipline', title: 'Контроль дисциплины', description: 'Выявить и пресечь 30 дисциплинарных нарушений', target: 30, unit: 'нарушений', quantityLabel: 'Сколько нарушений выявили и пресекли?', metric: 'sum', emoji: '🛡️', threadId: '1559215678722936934' },
   { id: 'joint-exercises', title: 'Совместные учения', description: 'Провести 3 совместных учения с Армией', target: 3, unit: 'учений', quantityLabel: 'Сколько учений провели?', metric: 'sum', emoji: '🤝', threadId: '1559215901226831922' },
   { id: 'detainees', title: 'Передача задержанных', description: 'Задержать 30 человек и передать МВД / ФСБ', target: 30, unit: 'чел.', quantityLabel: 'Сколько задержанных передали МВД / ФСБ?', metric: 'sum', emoji: '🚔', threadId: '1559215837527932989' },
@@ -24,6 +24,19 @@ export const achievementGoals = [
   { id: 'warehouse', title: 'Проверка склада', description: 'Проверить и почистить склад фракции 3 раза в разные дни', target: 3, unit: 'дня', quantityLabel: 'Одна проверка за выбранный день', metric: 'distinct-days', emoji: '📦', threadId: '1559216095871631372' },
   { id: 'academy-graduates', title: 'Выпуск из академии', description: 'Выпустить из академии 40 человек', target: 40, unit: 'чел.', quantityLabel: 'Сколько человек выпустили?', metric: 'sum', emoji: '🎓', threadId: '1559216172186996827' },
   { id: 'average-online', title: 'Средний онлайн', description: 'Добиться среднего онлайна 100 человек', target: 100, unit: 'чел.', quantityLabel: 'Сколько сотрудников было онлайн в момент замера?', metric: 'average', emoji: '📊', threadId: '1559216211240427641' },
+] as const;
+
+export const achievementGoals = [
+  october12AchievementGoals.find(goal => goal.id === 'recruitment')!,
+  october12AchievementGoals.find(goal => goal.id === 'fines')!,
+  october12AchievementGoals.find(goal => goal.id === 'discipline')!,
+  october12AchievementGoals.find(goal => goal.id === 'motorcyclists')!,
+  october12AchievementGoals.find(goal => goal.id === 'detainees')!,
+  { ...october12AchievementGoals.find(goal => goal.id === 'joint-exercises')!, target: 2, description: 'Провести 2 совместных учения с Армией' },
+  october12AchievementGoals.find(goal => goal.id === 'warehouse')!,
+  october12AchievementGoals.find(goal => goal.id === 'academy-graduates')!,
+  october12AchievementGoals.find(goal => goal.id === 'average-online')!,
+  { id: 'clean-week', title: 'Неделя без выговоров и конфликтов', description: 'Неделя без выговоров и конфликтов', target: 7, unit: 'дней', quantityLabel: 'Один день без выговоров и конфликтов', metric: 'distinct-days', emoji: '✅', threadId: '1559216051353296916' },
 ] as const;
 
 const legacyAchievementGoals = [
@@ -39,10 +52,11 @@ const legacyAchievementGoals = [
 ] as const;
 
 export function getAchievementGoalsForWeek(week: string) {
-  return week < '2026-10-12' ? legacyAchievementGoals : achievementGoals;
+  return week < '2026-10-12' ? legacyAchievementGoals
+    : week < '2026-10-26' ? october12AchievementGoals : achievementGoals;
 }
 
-export type AchievementId = typeof achievementGoals[number]['id'] | 'escorts';
+export type AchievementId = typeof achievementGoals[number]['id'] | 'escorts' | 'airdrop';
 export type AchievementDepartment = typeof achievementDepartments[number]['id'];
 
 export function moscowDate(now = new Date()): string {
@@ -119,7 +133,7 @@ export function validateAchievementSubmission(raw: unknown, now = new Date()):
   if (!/^\d{1,10}$/.test(staticId)) return { error: 'StaticID должен содержать от 1 до 10 цифр.' };
   const quantity = body.quantity;
   if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < (goal.metric === 'average' ? 0 : 1) ||
-    quantity > 99_999 || (goal.metric === 'distinct-days' && quantity !== 1)) return { error: 'Укажите корректное количество. Проверка склада — одна за день.' };
+    quantity > 99_999 || (goal.metric === 'distinct-days' && quantity !== 1)) return { error: 'Укажите корректное количество. Для отчёта за один день укажите 1.' };
   const workDate = text('workDate');
   const parsed = new Date(workDate + 'T00:00:00Z');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate) || !Number.isFinite(parsed.getTime()) ||
