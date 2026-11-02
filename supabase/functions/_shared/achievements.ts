@@ -26,7 +26,7 @@ const october12AchievementGoals = [
   { id: 'average-online', title: 'Средний онлайн', description: 'Добиться среднего онлайна 100 человек', target: 100, unit: 'чел.', quantityLabel: 'Сколько сотрудников было онлайн в момент замера?', metric: 'average', emoji: '📊', threadId: '1559216211240427641' },
 ] as const;
 
-export const achievementGoals = [
+const october26AchievementGoals = [
   october12AchievementGoals.find(goal => goal.id === 'recruitment')!,
   october12AchievementGoals.find(goal => goal.id === 'fines')!,
   october12AchievementGoals.find(goal => goal.id === 'discipline')!,
@@ -40,23 +40,38 @@ export const achievementGoals = [
 ] as const;
 
 const legacyAchievementGoals = [
-  achievementGoals.find(goal => goal.id === 'academy-graduates')!,
-  achievementGoals.find(goal => goal.id === 'discipline')!,
-  { ...achievementGoals.find(goal => goal.id === 'joint-exercises')!, target: 2, description: 'Провести 2 совместных учения с Армией' },
-  achievementGoals.find(goal => goal.id === 'detainees')!,
+  october26AchievementGoals.find(goal => goal.id === 'academy-graduates')!,
+  october26AchievementGoals.find(goal => goal.id === 'discipline')!,
+  { ...october26AchievementGoals.find(goal => goal.id === 'joint-exercises')!, target: 2, description: 'Провести 2 совместных учения с Армией' },
+  october26AchievementGoals.find(goal => goal.id === 'detainees')!,
   { id: 'escorts', title: 'Сопровождение поставок', description: 'Сопроводить 5 поставок от Армии', target: 5, unit: 'поставок', quantityLabel: 'Сколько поставок сопроводили?', metric: 'sum', emoji: '🚚', threadId: '1556659909557362868' },
-  achievementGoals.find(goal => goal.id === 'average-online')!,
-  achievementGoals.find(goal => goal.id === 'recruitment')!,
-  achievementGoals.find(goal => goal.id === 'warehouse')!,
-  achievementGoals.find(goal => goal.id === 'fines')!,
+  october26AchievementGoals.find(goal => goal.id === 'average-online')!,
+  october26AchievementGoals.find(goal => goal.id === 'recruitment')!,
+  october26AchievementGoals.find(goal => goal.id === 'warehouse')!,
+  october26AchievementGoals.find(goal => goal.id === 'fines')!,
+] as const;
+
+// Routes verified against the achievements forum on 3 November 2026.
+export const achievementGoals = [
+  { ...october12AchievementGoals.find(goal => goal.id === 'recruitment')!, target: 30, description: 'Принять 30 человек во фракцию' },
+  { ...october12AchievementGoals.find(goal => goal.id === 'fines')!, target: 130, description: 'Выписать 130 штрафов' },
+  { id: 'photo-fines', title: 'Штрафы по госномеру', description: 'Выписать 30 штрафов на автомобиль по госномеру через снимки', target: 30, unit: 'штрафов', quantityLabel: 'Сколько штрафов по госномеру через снимки выписали?', metric: 'sum', emoji: '📸', threadId: '1566757572755595364' },
+  { id: 'electronic-transfers', title: 'Электронные заявления', description: 'Одобрить 20 электронных заявлений на перевод в ГИБДД', target: 20, unit: 'заявлений', quantityLabel: 'Сколько электронных заявлений на перевод одобрили?', metric: 'sum', emoji: '📨', threadId: '1566757707833278526' },
+  { ...october12AchievementGoals.find(goal => goal.id === 'detainees')!, target: 50, description: 'Задержать 50 человек и передать МВД / ФСБ', threadId: '1566757785545220176' },
+  { ...october12AchievementGoals.find(goal => goal.id === 'airdrop')!, threadId: '1566757887299293285' },
+  october12AchievementGoals.find(goal => goal.id === 'warehouse')!,
+  { id: 'captures', title: 'Захват цехов и дилеров', description: 'Поучаствовать в 7 мероприятиях захвата цехов / дилеров', target: 7, unit: 'мероприятий', quantityLabel: 'В скольких захватах цехов / дилеров участвовали?', metric: 'sum', emoji: '🏭', threadId: '1566758449084108940' },
+  { ...october12AchievementGoals.find(goal => goal.id === 'average-online')!, target: 90, description: 'Добиться среднего онлайна 90 человек' },
+  { id: 'training', title: 'Тренировки фракции', description: 'Провести 3 тренировки для фракции', target: 3, unit: 'тренировок', quantityLabel: 'Сколько тренировок для фракции провели?', metric: 'sum', emoji: '🎯', threadId: '1566758572669411369' },
 ] as const;
 
 export function getAchievementGoalsForWeek(week: string) {
   return week < '2026-10-12' ? legacyAchievementGoals
-    : week < '2026-10-26' ? october12AchievementGoals : achievementGoals;
+    : week < '2026-10-26' ? october12AchievementGoals
+    : week < '2026-11-02' ? october26AchievementGoals : achievementGoals;
 }
 
-export type AchievementId = typeof achievementGoals[number]['id'] | 'escorts' | 'airdrop';
+export type AchievementId = typeof achievementGoals[number]['id'] | typeof october26AchievementGoals[number]['id'] | 'escorts';
 export type AchievementDepartment = typeof achievementDepartments[number]['id'];
 
 export function moscowDate(now = new Date()): string {

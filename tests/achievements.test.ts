@@ -8,9 +8,9 @@ import { achievementDepartments, achievementGoals, getAchievementGoalsForWeek, a
   validateAchievementSubmission } from '../supabase/functions/_shared/achievements.ts';
 import { buildAchievementMessage, buildAchievementMessages } from '../supabase/functions/_shared/achievementMessage.ts';
 
-const now = new Date('2026-10-26T13:00:00+03:00');
+const now = new Date('2026-11-02T13:00:00+03:00');
 const valid = { requestId: '00000000-0000-4000-8000-000000000001', fullName: 'Иван Иванов', staticId: '75463',
-  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-10-26', workTime: '12:00',
+  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-11-02', workTime: '12:00',
   evidence: ['https://example.test/proof.png'], rulesAccepted: true };
 
 test('Moscow week switches at Monday 00:00; new work is accepted from 00:01', () => {
@@ -30,7 +30,7 @@ test('quantities, dates, departments and proof requirements reject forged/invali
   assert.equal(buildAchievementMessage(headquarters, '123456789012345678', 'discord.user', now)
     .embeds[0].fields.find(field => field.name === '🏢 Отдел')?.value, 'ГУ ГИБДД');
   for (const patch of [{ quantity: -1 }, { quantity: 1.5 }, { quantity: '12' }, { quantity: 100000 },
-    { workDate: '2026-10-25' }, { workDate: '2026-10-27' }, { workDate: '2026-02-31' },
+    { workDate: '2026-11-01' }, { workDate: '2026-11-03' }, { workDate: '2026-02-31' },
     { department: '__proto__' }, { achievementId: 'unknown' }, { staticId: 'x' },
     { rulesAccepted: false }, { evidence: [] }, { evidence: ['javascript:alert(1)'] },
     { evidence: ['https://discord.com/api/webhooks/123/token'] }]) {
@@ -50,9 +50,9 @@ test('bulk proofs preserve all 50 links and reject canonical Discord duplicates'
   assert.ok(parseAchievementEvidence('https://example.test/a\nhttps://example.test/a#duplicate').error);
 });
 
-test('achievement departments exclude Academy, UDO and UKM without removing the graduation goal', async () => {
+test('achievement departments exclude Academy, UDO and UKM; graduation remains archived', async () => {
   assert.deepEqual(achievementDepartments.map(dept => dept.id), ['gu','usb','uku','uor','sdb','mb','ugk','dps']);
-  assert.ok(achievementGoals.some(goal => goal.id === 'academy-graduates'));
+  assert.ok(getAchievementGoalsForWeek('2026-10-26').some(goal => goal.id === 'academy-graduates'));
   for (const department of ['academy','udo','ukm']) {
     assert.ok(validateAchievementSubmission({ ...valid, department }, now).error);
     const app = fixture();
@@ -62,10 +62,14 @@ test('achievement departments exclude Academy, UDO and UKM without removing the 
 });
 
 test('all ten routes match the requested threads; embeds keep Discord ID last and ping only the author', () => {
-  assert.deepEqual(achievementGoals.map(goal => goal.id), ['recruitment','fines','discipline','motorcyclists',
-    'detainees','joint-exercises','warehouse','academy-graduates','average-online','clean-week']);
-  const oldRoutes = new Map(getAchievementGoalsForWeek('2026-10-12').map(goal => [goal.id,goal.threadId]));
-  for (const goal of achievementGoals.filter(goal => goal.id !== 'clean-week')) assert.equal(goal.threadId, oldRoutes.get(goal.id));
+  assert.deepEqual(achievementGoals.map(goal => [goal.id,goal.target,goal.threadId]), [
+    ['recruitment',30,'1559215938816180307'], ['fines',130,'1559215994327535700'],
+    ['photo-fines',30,'1566757572755595364'], ['electronic-transfers',20,'1566757707833278526'],
+    ['detainees',50,'1566757785545220176'], ['airdrop',10,'1566757887299293285'],
+    ['warehouse',3,'1559216095871631372'], ['captures',7,'1566758449084108940'],
+    ['average-online',90,'1559216211240427641'], ['training',3,'1566758572669411369'],
+  ]);
+  assert.equal(new Set(achievementGoals.map(goal => goal.threadId)).size,10);
   const checked = validateAchievementSubmission(valid, now).value!;
   const payload = buildAchievementMessage(checked, '123456789012345678', 'discord.user', now);
   assert.equal(payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
@@ -172,16 +176,13 @@ test('delivery embeds complete proof list, confirms thread, then commits progres
   assert.equal(app.sent[0].payload.embeds[0].fields.at(-1)?.value, '123456789012345678');
 });
 
-test('motorcycle reports keep their thread; retired AirDrop and escort reports cannot be submitted', async () => {
-  for (const [achievementId, threadId] of [['motorcyclists','1559215765503086863']]) {
+test('retired weekly goals reject submissions without making Discord requests', async () => {
+  for (const achievementId of ['discipline','motorcyclists','joint-exercises','academy-graduates','clean-week','escorts']) {
     const app = fixture();
-    assert.equal((await app.submit({ ...valid, achievementId, quantity: 1 })).status, 200);
-    assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'), threadId);
-    assert.deepEqual(app.statuses, ['sent']);
+    assert.ok(validateAchievementSubmission({ ...valid, achievementId, quantity: 1 }, now).error);
+    assert.equal((await app.submit({ ...valid, achievementId, quantity: 1 })).status, 400);
+    assert.equal(app.sent.length, 0);
   }
-  const removed = fixture();
-  assert.equal((await removed.submit({ ...valid, achievementId: 'escorts' })).status, 400);
-  assert.equal(removed.sent.length, 0);
 });
 
 test('each current achievement sends to its replacement weekly thread', async () => {
@@ -211,7 +212,7 @@ test('Discord rejections explain unavailable threads and log only safe numeric d
   assert.match(await response.text(), /Discord отклонил отчёт/);
   assert.doesNotMatch(JSON.stringify(malformed.logs), /secret-fixture-marker/);
 });
-test('new plan has two exercises and a clean week; both archived plans retain their goals', () => {
+test('all three archived plans retain their goals, targets and original routes', () => {
   const current = getAchievementGoalsForWeek('2026-10-26');
   const october12 = getAchievementGoalsForWeek('2026-10-12');
   const october19 = getAchievementGoalsForWeek('2026-10-19');
@@ -229,6 +230,16 @@ test('new plan has two exercises and a clean week; both archived plans retain th
   assert.equal(archive.length, 9);
   assert.equal(archive.find(goal => goal.id === 'joint-exercises')?.target, 2);
   assert.ok(archive.some(goal => goal.id === 'escorts'));
+  for (const archived of [current,october12,october19,archive]) {
+    assert.equal(archived.find(goal => goal.id === 'recruitment')?.target,50);
+    assert.equal(archived.find(goal => goal.id === 'fines')?.target,200);
+    assert.equal(archived.find(goal => goal.id === 'detainees')?.target,30);
+    assert.equal(archived.find(goal => goal.id === 'average-online')?.target,100);
+    assert.equal(archived.find(goal => goal.id === 'detainees')?.threadId,'1559215837527932989');
+    assert.ok(!archived.some(goal => goal.id === 'photo-fines'));
+  }
+  assert.equal(getAchievementGoalsForWeek('2026-11-02'),achievementGoals);
+  assert.equal(getAchievementGoalsForWeek('2026-11-09'),achievementGoals);
 });
 
 test('50 links longer than one Discord embed are all delivered vertically in one thread before counting', async () => {
@@ -384,11 +395,9 @@ test('browser timers separate achievement reports from the unchanged 150-second 
   assert.match(page, /durationSeconds=\{10\}/);
 });
 
-test('clean-week reports require one day and use the user-provided Discord thread', async () => {
-  assert.ok(validateAchievementSubmission({ ...valid, achievementId: 'clean-week', quantity: 2 }, now).error);
-  assert.ok(validateAchievementSubmission({ ...valid, achievementId: 'clean-week', quantity: 1 }, now).value);
+test('AirDrop uses its new branch, independently of the archived clean-week branch', async () => {
   const app = fixture();
-  const response = await app.submit({ ...valid, achievementId: 'clean-week', quantity: 1 });
-  assert.equal(response.status,200);
-  assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'),'1559216051353296916');
+  assert.equal((await app.submit({ ...valid, achievementId: 'airdrop', quantity: 1 })).status,200);
+  assert.equal(new URL(app.sent[0].url).searchParams.get('thread_id'),'1566757887299293285');
+  assert.equal(getAchievementGoalsForWeek('2026-10-26').find(goal => goal.id === 'clean-week')?.threadId,'1559216051353296916');
 });
