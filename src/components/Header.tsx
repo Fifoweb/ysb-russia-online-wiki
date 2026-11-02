@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Menu, Search, UserRound, X } from 'lucide-react';
+import { useState } from 'react';
+import { DiscordLogo, MagnifyingGlass, UserCircle } from '@phosphor-icons/react';
 import { useAuth } from '../lib/auth';
 import ProfileModal from './ProfileModal';
-import { fetchTverskoyOnline } from '../lib/online';
+import PortalLink from './PortalLink';
 import { trustedDiscordAvatar } from '../lib/trustedDiscordAvatar';
 
 interface HeaderProps {
@@ -11,88 +11,46 @@ interface HeaderProps {
   onNavigate: (path: string) => void;
   sidebarOpen: boolean;
 }
-
-const titles: Record<string, string> = {
-  '/': 'Главная', '/basics': 'Основа службы', '/check': 'Служебная проверка',
-  '/control': 'Повседневный контроль', '/discipline': 'Дисциплина и решения',
-  '/practice': 'Практика и зачёт', '/appendix': 'Приложения и формы',
-  '/handbook': 'Памятка Россия Онлайн',
-  '/report': 'Заявление на повышение',
-  '/appeal': 'Обжалование выговора',
-  '/reprimand-work': 'Отработка выговора',
-  '/restore': 'Восстановление сотрудника',
-  '/transfer': 'Переводы в ГИБДД',
-  '/resign': 'Заявление на увольнение',
-  '/promotion': 'Запрос на повышение',
-  '/senior-report': 'Отчёт на повышение · старший состав',
-  '/academy-report': 'Отчёт на повышение',
-  '/complaints': 'Жалобы',
-  '/crafts': 'Крафты ГИБДД',
-  '/servers': 'Онлайн Тверского',
-  '/achievements': 'Ачивки фракции',
-  '/achievement-report': 'Отчёт о выполнении ачивки',
-};
+const links = [
+  { path: '/', label: 'Главная' }, { path: '/basics', label: 'Курс' },
+  { path: '/crafts', label: 'Крафты' }, { path: '/achievements', label: 'Ачивки' },
+];
+const coursePaths = ['/basics', '/check', '/control', '/discipline', '/practice'];
 
 export default function Header({ onToggleSidebar, currentTitle, onNavigate, sidebarOpen }: HeaderProps) {
-  const { user, signInWithDiscord, signOut, enabled } = useAuth();
+  const { user, signInWithDiscord, signOut, enabled, loading } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [online, setOnline] = useState<number | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchTverskoyOnline(controller.signal).then(value => setOnline(value.current)).catch(() => undefined);
-    return () => controller.abort();
-  }, []);
-
   const meta = (user?.user_metadata || {}) as Record<string, string | undefined>;
   const avatar = trustedDiscordAvatar(meta.avatar_url);
   const displayName = meta.full_name || meta.name || 'Профиль';
-
-  const breadcrumbs = currentTitle === '/' ? [] : [
-    { label: 'Главная', path: '/' },
-    { label: titles[currentTitle] || '' },
-  ];
-
-  return (
-    <header className="site-header">
-      <div className="site-header-inner">
-        <button onClick={onToggleSidebar} className="icon-button menu-button" title={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-label={sidebarOpen ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={sidebarOpen} aria-controls="site-navigation">{sidebarOpen ? <X size={19} /> : <Menu size={19} />}</button>
-        <button className="brand-lockup" onClick={() => onNavigate('/')} aria-label="На главную">
-          <img className="brand-emblem" src={`${import.meta.env.BASE_URL}emblem.png`} alt="" aria-hidden="true" />
-          <span className="brand-white">РОССИЯ</span><span className="brand-accent">ОНЛАЙН</span><span className="brand-divider">·</span><span className="brand-unit">ГИБДД</span>
+  return <>
+    <header className="portal-header liquid-glass">
+      <div className="portal-header-brand">
+        <PortalLink path="/" onNavigate={onNavigate} className="portal-brand" aria-label="ГИБДД Вики — на главную">
+          <img src={import.meta.env.BASE_URL + 'emblem.png'} alt="" width={40} height={40} />
+          <span>ГИБДД <span>вики</span></span>
+        </PortalLink>
+      </div>
+      <nav className="portal-top-nav" aria-label="Основные разделы">
+        {links.map(link => {
+          const active = link.path === currentTitle || link.path === '/basics' && coursePaths.includes(currentTitle);
+          return <PortalLink key={link.path} path={link.path} onNavigate={onNavigate} aria-current={active ? 'page' : undefined} className={active ? 'active' : ''}>{link.label}</PortalLink>;
+        })}
+      </nav>
+      <div className="portal-header-actions">
+        <button type="button" className="portal-icon-button portal-header-search" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))} aria-label="Поиск по Вики" title="Поиск по Вики (Ctrl K)"><MagnifyingGlass size={20} aria-hidden="true" /></button>
+        {enabled && (loading && !user ? <span className="portal-auth-skeleton" aria-label="Проверяем вход…" role="status" /> : user ?
+          <button type="button" onClick={() => setProfileOpen(true)} className="portal-profile-button" aria-label={'Личный кабинет: ' + displayName}>
+            {avatar ? <img src={avatar} alt="" width={28} height={28} /> : <UserCircle size={24} aria-hidden="true" />}
+            <span>{displayName}</span>
+          </button> :
+          <button type="button" className="portal-login" aria-label="Войти через Discord" onClick={() => signInWithDiscord()}><DiscordLogo size={18} aria-hidden="true" /><span>Войти</span></button>)}
+        <button type="button" onClick={onToggleSidebar} className={'portal-icon-button portal-menu-toggle' + (sidebarOpen ? ' is-open' : '')}
+          aria-label={sidebarOpen ? 'Закрыть меню' : 'Все разделы'} aria-expanded={sidebarOpen} aria-controls="site-navigation">
+          <span /><span />
         </button>
-        <div className="header-title">
-          <span className="header-wordmark">
-            <span className="header-wordmark-icon" aria-hidden="true"><BookOpen size={15} /></span>
-            <span className="header-wordmark-name">ГИБДД</span>{' '}<span className="header-wordmark-wiki">Вики</span>
-          </span>
-          {currentTitle !== '/' && titles[currentTitle] && <span className="header-crumb">/ {titles[currentTitle]}</span>}
-        </div>
-        <div className="header-actions">
-          <button className="online-pill" onClick={() => onNavigate('/servers')} title="Открыть онлайн Тверского"><span className={online === null ? 'status-dot status-dot-pending' : 'status-dot'} /> <span>{online === null ? 'Тверской' : `${online.toLocaleString('ru-RU')} · Тверской`}</span></button>
-          <button className="icon-button" onClick={() => window.dispatchEvent(new CustomEvent('open-wiki-search'))} title="Поиск" aria-label="Поиск"><Search size={18} /></button>
-
-        {enabled && (user ? (
-          <button onClick={() => setProfileOpen(true)}
-            className="flex items-center gap-2 ml-2 pl-1 pr-3 py-1 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/40 transition-all"
-            title="Личный кабинет">
-            {avatar ? (
-              <img src={avatar} alt="" className="w-7 h-7 rounded-full" />
-            ) : (
-            <span className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-sm"><UserRound size={15} /></span>
-            )}
-            <span className="profile-name text-xs text-gray-200 font-medium max-w-[120px] truncate">{displayName}</span>
-          </button>
-        ) : (
-          <button onClick={() => signInWithDiscord()} className="discord-button">Войти</button>
-        ))}
       </div>
-      </div>
-
-      {profileOpen && user && (
-        <ProfileModal user={user} onClose={() => setProfileOpen(false)}
-          onSignOut={() => { setProfileOpen(false); signOut(); }} />
-      )}
     </header>
-  );
+    {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} onSignOut={() => { setProfileOpen(false); void signOut(); }} />}
+  </>;
 }

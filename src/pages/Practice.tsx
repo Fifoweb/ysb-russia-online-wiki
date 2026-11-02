@@ -4,7 +4,7 @@ export default function Practice() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-8">
-        <h2 className="!mt-0 !mb-2">🎯 Практика и зачёт</h2>
+        <h2 className="!mt-0 !mb-2">Практика и зачёт</h2>
         <p className="text-sm text-gray-500">Разделы 25–28: сквозной кейс, образец вывода, самостоятельные задачи и практический зачёт</p>
       </div>
 

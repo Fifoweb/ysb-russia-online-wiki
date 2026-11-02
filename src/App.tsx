@@ -1,32 +1,36 @@
-import { useCallback, useState, useEffect } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { lazy, Suspense, useCallback, useState, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import GlassFilters from './components/GlassFilters';
+import RouteBoundary from './components/RouteBoundary';
+import PortalLink from './components/PortalLink';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Home from './pages/Home';
-import ServiceBasics from './pages/ServiceBasics';
-import ServiceCheck from './pages/ServiceCheck';
-import DailyControl from './pages/DailyControl';
-import Discipline from './pages/Discipline';
-import Practice from './pages/Practice';
-import Appendix from './pages/Appendix';
-import Handbook from './pages/Handbook';
-import ReportForm from './pages/ReportForm';
-import AppealForm from './pages/AppealForm';
-import ReprimandWorkForm from './pages/ReprimandWorkForm';
-import RestoreForm from './pages/RestoreForm';
-import ResignForm from './pages/ResignForm';
-import TransferForm from './pages/TransferForm';
-import DepartmentApplicationForm from './pages/DepartmentApplicationForm';
-import ComplaintForm from './pages/ComplaintForm';
-import EmployeeComplaintForm from './pages/EmployeeComplaintForm';
-import PromotionForm from './pages/PromotionForm';
-import SeniorPromotionReportForm from './pages/SeniorPromotionReportForm';
-import AcademyPromotionReportForm from './pages/AcademyPromotionReportForm';
-import Crafts from './pages/Crafts';
-import Servers from './pages/Servers';
-import AchievementsDashboard from './pages/AchievementsDashboard';
-import AchievementReportForm from './pages/AchievementReportForm';
 import { supabase } from './lib/supabase';
+
+const ServiceBasics = lazy(() => import('./pages/ServiceBasics'));
+const ServiceCheck = lazy(() => import('./pages/ServiceCheck'));
+const DailyControl = lazy(() => import('./pages/DailyControl'));
+const Discipline = lazy(() => import('./pages/Discipline'));
+const Practice = lazy(() => import('./pages/Practice'));
+const Appendix = lazy(() => import('./pages/Appendix'));
+const Handbook = lazy(() => import('./pages/Handbook'));
+const ReportForm = lazy(() => import('./pages/ReportForm'));
+const AppealForm = lazy(() => import('./pages/AppealForm'));
+const ReprimandWorkForm = lazy(() => import('./pages/ReprimandWorkForm'));
+const RestoreForm = lazy(() => import('./pages/RestoreForm'));
+const ResignForm = lazy(() => import('./pages/ResignForm'));
+const TransferForm = lazy(() => import('./pages/TransferForm'));
+const DepartmentApplicationForm = lazy(() => import('./pages/DepartmentApplicationForm'));
+const ComplaintForm = lazy(() => import('./pages/ComplaintForm'));
+const EmployeeComplaintForm = lazy(() => import('./pages/EmployeeComplaintForm'));
+const PromotionForm = lazy(() => import('./pages/PromotionForm'));
+const SeniorPromotionReportForm = lazy(() => import('./pages/SeniorPromotionReportForm'));
+const AcademyPromotionReportForm = lazy(() => import('./pages/AcademyPromotionReportForm'));
+const Crafts = lazy(() => import('./pages/Crafts'));
+const Servers = lazy(() => import('./pages/Servers'));
+const AchievementsDashboard = lazy(() => import('./pages/AchievementsDashboard'));
+const AchievementReportForm = lazy(() => import('./pages/AchievementReportForm'));
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -38,8 +42,7 @@ const normalizePath = (p: string) => {
 export default function App() {
   const reduceMotion = useReducedMotion();
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
-  // Sidebar is always open on desktop (layout already reserves space for it),
-  // hidden by default on mobile
+  // Navigation opens as a modal without shifting the reading area.
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigate = useCallback((newPath: string) => {
@@ -102,24 +105,24 @@ export default function App() {
       case '/servers': return <Servers />;
       case '/achievements': return <AchievementsDashboard />;
       case '/achievement-report': return <AchievementReportForm onNavigate={navigate} />;
-      default: return <Home onNavigate={navigate} />;
+      default: return <section className="portal-route-error"><span className="portal-error-code">404</span><h1>Такой страницы нет</h1><p>Возможно, ссылка устарела. Все материалы доступны с главной страницы.</p><PortalLink path="/" onNavigate={navigate} className="portal-primary">Вернуться на главную</PortalLink></section>;
     }
   };
 
   return (
-    <div className="min-h-screen site-shell text-gray-200">
+    <div className="min-h-screen portal-shell">
+      <GlassFilters />
+      <a className="portal-skip-link" href="#main-content">Перейти к содержимому</a>
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
-      <main className={`site-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={path}
-            initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-            transition={{ duration: reduceMotion ? 0 : 0.24, ease: 'easeOut' }}>
-            {renderPage()}
-          </motion.div>
-        </AnimatePresence>
+      <main id="main-content" tabIndex={-1} className={`site-main portal-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
+          <div key={path}>
+            <RouteBoundary>
+            <Suspense fallback={<div className="portal-route-skeleton" role="status" aria-label="Открываем раздел…"><span /><span /><span /></div>}>
+              {renderPage()}
+            </Suspense>
+            </RouteBoundary>
+          </div>
       </main>
     </div>
   );

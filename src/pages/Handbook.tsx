@@ -132,7 +132,7 @@ export default function Handbook() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0 !mb-2">📕 Памятка Россия Онлайн</h2>
+        <h2 className="!mt-0 !mb-2">Памятка Россия Онлайн</h2>
         <p className="text-sm text-gray-500 !mb-0">Выдержки из кодексов: статьи, части, наказания и порядок задержания. {user ? 'Нажмите ★ — статья попадёт в избранное и сохранится в вашем аккаунте.' : 'Войдите через Discord, чтобы добавлять статьи в избранное ★'}</p>
       </div>
 

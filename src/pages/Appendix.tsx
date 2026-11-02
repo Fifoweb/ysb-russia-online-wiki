@@ -136,7 +136,7 @@ export default function Appendix() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-8">
-        <h2 className="!mt-0 !mb-2">📎 Приложения и формы</h2>
+        <h2 className="!mt-0 !mb-2">Приложения и формы</h2>
         <p className="text-sm text-gray-500">Справочные материалы: альбом форм, рабочие листы, источники курса</p>
       </div>
 
@@ -144,7 +144,7 @@ export default function Appendix() {
       <section className="glass rounded-2xl p-8 border border-cyan-500/20 mb-6 bg-cyan-500/[0.02]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="!mt-0 !mb-1">🚀 Конструктор документов V2</h2>
+            <h2 className="!mt-0 !mb-1">Конструктор документов V2</h2>
             <p className="text-sm text-gray-400">Полное редактирование: шапка, реквизиты, текст и подписанты</p>
           </div>
           <button onClick={() => setEditorOpen(true)}
@@ -158,7 +158,7 @@ export default function Appendix() {
 
       {/* Альбом форм */}
       <section className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0">📋 Альбом служебных документов</h2>
+        <h2 className="!mt-0">Альбом служебных документов</h2>
         <p className="mb-2">Полный перечень из <strong>44 форм</strong>, применяемых в работе УСБ. <span className="text-purple-300">Кликните на код — откроется редактируемый бланк.</span></p>
         <p className="text-xs text-gray-500 mb-4">Все 44 бланка полностью редактируются. Нажмите на текст для изменения; сохранённые личные копии можно открыть повторно. Готовый документ скачивается в PNG с белым фоном.</p>
         <div className="overflow-x-auto">
@@ -224,7 +224,7 @@ export default function Appendix() {
 
       {/* Негласная работа */}
       <section className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0">🕵️ Негласная работа: границы</h2>
+        <h2 className="!mt-0">Негласная работа: границы</h2>
         <ul>
           <li>Негласная работа требует отдельного разрешения руководства</li>
           <li>Не может нарушать права граждан и сотрудников</li>
@@ -236,7 +236,7 @@ export default function Appendix() {
 
       {/* Источники */}
       <section className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0">📜 Источники курса</h2>
+        <h2 className="!mt-0">Источники курса</h2>
         <table>
           <thead><tr><th>Аббр.</th><th>Полное название</th><th>Содержание</th></tr></thead>
           <tbody>
@@ -248,7 +248,7 @@ export default function Appendix() {
       </section>
 
       <section className="glass rounded-2xl p-8 border border-purple-500/10 mb-6">
-        <h2 className="!mt-0">📌 Важные напоминания</h2>
+        <h2 className="!mt-0">Важные напоминания</h2>
         <div className="highlight-box"><ul>
           <li>ГИБДД и МВД на проекте — разные фракции. УСБ ГИБДД не получает власти над МВД.</li>
           <li>Курс не является описанием реальных ведомственных инструкций.</li>

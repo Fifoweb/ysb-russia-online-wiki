@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, CalendarDays, CheckCircle2, Clock3, RefreshCw, Target, Trophy, Users } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import AchievementIcon from '../components/AchievementIcon';
 import FormLoader from '../components/FormLoader';
 import { achievementDepartments, getAchievementGoalsForWeek, achievementWeekStart, addAchievementDays,
   achievementPublicationRules, type AchievementDepartment } from '../data/achievements';
@@ -138,7 +139,7 @@ export default function AchievementsDashboard() {
       </div></div>
       <div className="achievement-grid">
         {filteredCards.map(item => <article key={item.id} className={`panel achievement-card${item.closed ? ' achievement-card-done' : ''}`}>
-          <div className="achievement-card-top"><span className="achievement-card-icon" aria-hidden="true">{item.emoji}</span><span className="achievement-card-status">{item.closed ? <><CheckCircle2 size={13} /> Выполнена · приём закрыт</> : item.reports ? 'В работе' : 'Ожидает отчётов'}</span></div>
+          <div className="achievement-card-top"><span className="achievement-card-icon" aria-hidden="true"><AchievementIcon id={item.id} /></span><span className="achievement-card-status">{item.closed ? <><CheckCircle2 size={13} /> Выполнена · приём закрыт</> : item.reports ? 'В работе' : 'Ожидает отчётов'}</span></div>
           <h3>{item.title}</h3><p>{item.description}</p>
           <div className="achievement-card-value"><strong>{formatAchievementValue(item.value)}</strong><span>/ {item.target} {item.unit}</span></div>
           <div className="achievement-progress" role="progressbar" aria-label={item.title} aria-valuemin={0} aria-valuemax={item.target} aria-valuenow={Math.min(item.value, item.target)} aria-valuetext={`${formatAchievementValue(item.value)} из ${item.target}`}><span style={{ width: `${item.percent}%` }} /></div>
@@ -151,7 +152,7 @@ export default function AchievementsDashboard() {
         <div className="achievement-section-heading"><h2><Users size={18} /> Вклад отделов</h2><span>Вся фракция · {weekLabel(week)}</span></div>
         <p>Отделы расположены по убыванию вклада — среднего процента выполнения всех целей недели. После достижения общей цели новые отчёты закрываются до следующей недели. Онлайн — среднее по замерам, склад — число разных дней.{achievementGoals.some(goal => goal.id === 'clean-week') && ' Неделя без выговоров и конфликтов — семь разных дней, подтверждённых отчётами.'}</p>
         <div className="achievement-table-scroll" tabIndex={0} role="region" aria-label="Таблица вклада отделов, прокручивается по горизонтали">
-          <table><thead><tr><th scope="col">Отдел</th><th scope="col">Вклад</th>{achievementGoals.map(goal => <th key={goal.id} scope="col" title={goal.description}><span aria-hidden="true">{goal.emoji}</span> {goal.title}</th>)}</tr></thead>
+          <table><thead><tr><th scope="col">Отдел</th><th scope="col">Вклад</th>{achievementGoals.map(goal => <th key={goal.id} scope="col" title={goal.description}><span aria-hidden="true"><AchievementIcon id={goal.id} size={20} /></span> {goal.title}</th>)}</tr></thead>
             <tbody>{rankedDepartments.map((dept, index) => <tr key={dept.id}><th scope="row" title={dept.label}><span className="text-sky-300 mr-2" aria-label={`Место ${index + 1}`}>{index + 1}.</span>{dept.label.split(' | ')[0]}</th><td className={dept.reports ? 'achievement-cell-active' : ''}>{dept.reports ? `${formatAchievementValue(dept.contribution)}%` : '—'}</td>{achievementGoals.map(goal => {
               const progress = visibleData.items.find(item => item.id === goal.id)?.departments[dept.id];
               return <td key={goal.id} className={progress?.reports ? 'achievement-cell-active' : ''}>{progress?.reports ? formatAchievementValue(progress.value) : '—'}</td>;

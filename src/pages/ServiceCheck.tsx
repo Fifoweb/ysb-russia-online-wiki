@@ -4,7 +4,7 @@ export default function ServiceCheck() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-8">
-        <h2 className="!mt-0 !mb-2">🔍 Служебная проверка</h2>
+        <h2 className="!mt-0 !mb-2">Служебная проверка</h2>
         <p className="text-sm text-gray-500">Разделы 06–11: от первого сообщения до анализа видеозаписи</p>
       </div>
 

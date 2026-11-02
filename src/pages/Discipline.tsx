@@ -4,7 +4,7 @@ export default function Discipline() {
   return (
     <PageTransition className="wiki-content">
       <div className="glass rounded-2xl p-8 border border-purple-500/10 mb-8">
-        <h2 className="!mt-0 !mb-2">⚖️ Дисциплина и решения</h2>
+        <h2 className="!mt-0 !mb-2">Дисциплина и решения</h2>
         <p className="text-sm text-gray-500">Разделы 14–24: квалификация, взыскания, уголовное, КоАП, передача, заключение, архив</p>
       </div>
 

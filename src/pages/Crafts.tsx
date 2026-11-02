@@ -94,10 +94,10 @@ export default function Crafts() {
       context.fillStyle = '#151212';
       context.fillRect(0, 0, width, height);
       context.fillStyle = '#e9e1df';
-      context.font = '800 24px Inter, Arial, sans-serif';
+      context.font = '800 24px Manrope, sans-serif';
       context.fillText('Калькулятор крафта', padding, 45);
       context.fillStyle = '#968b87';
-      context.font = '500 15px Inter, Arial, sans-serif';
+      context.font = '500 15px Manrope, sans-serif';
       context.fillText(`${totalItems} шт.  ·  ${totalMaterials.toLocaleString('ru-RU')} мат.  ·  ${weightSummary}`, padding, 72);
 
       let y = 105;
@@ -115,10 +115,10 @@ export default function Crafts() {
           context.drawImage(image, padding + 10 + (imageSize - imageWidth) / 2, y + 7 + (imageSize - imageHeight) / 2, imageWidth, imageHeight);
         }
         context.fillStyle = '#eee7e5';
-        context.font = '700 15px Inter, Arial, sans-serif';
+        context.font = '700 15px Manrope, sans-serif';
         context.fillText(item.name, padding + 76, y + 36, width - padding * 2 - 76 - 120);
         context.fillStyle = '#9f9591';
-      context.font = '500 14px Inter, Arial, sans-serif';
+      context.font = '500 14px Manrope, sans-serif';
       context.textAlign = 'right';
       context.fillText(`×${quantity}`, width - padding - 10, y + 36);
       context.textAlign = 'left';
@@ -126,27 +126,27 @@ export default function Crafts() {
       }
 
       context.fillStyle = '#786e6b';
-      context.font = '800 11px Inter, Arial, sans-serif';
+      context.font = '700 11px Manrope, sans-serif';
       context.fillText('ИТОГО', padding, y + 5);
       y += 29;
       for (const key of Object.keys(craftCategoryLabels) as CraftCategory[]) {
         context.fillStyle = categoryColors[key];
-        context.font = '600 14px Inter, Arial, sans-serif';
+        context.font = '600 14px Manrope, sans-serif';
         context.fillText(`${craftCategoryLabels[key]} материалы`, padding, y);
         context.fillStyle = '#f0e9e7';
-        context.font = '800 14px Inter, Arial, sans-serif';
+        context.font = '800 14px Manrope, sans-serif';
         context.fillText(materialTotals[key].toLocaleString('ru-RU'), width - padding - 42, y);
         y += 28;
       }
       context.fillStyle = '#968b87';
-      context.font = '600 14px Inter, Arial, sans-serif';
+      context.font = '600 14px Manrope, sans-serif';
       context.fillText(weightLabel, padding, y);
       context.fillStyle = '#f0e9e7';
-      context.font = '800 14px Inter, Arial, sans-serif';
+      context.font = '800 14px Manrope, sans-serif';
       context.fillText(`${totalWeight.toFixed(2)} кг`, width - padding - 65, y);
       if (hasUnknownWeight) {
         context.fillStyle = '#968b87';
-        context.font = '500 12px Inter, Arial, sans-serif';
+        context.font = '500 12px Manrope, sans-serif';
         context.fillText('Предметы с неуказанным весом не включены в расчёт веса.', padding, y + 28);
       }
 
@@ -174,7 +174,7 @@ export default function Crafts() {
       </div>
 
       <div className="toolbar">
-        <label className="catalog-search"><Search size={18} aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Поиск предметов..." aria-label="Поиск предметов" /></label>
+        <label className="catalog-search"><Search size={18} aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} name="craft-query" type="search" autoComplete="off" placeholder="Поиск предметов…" aria-label="Поиск предметов" /></label>
         <div className="segmented" role="tablist" aria-label="Категория крафтов">
           <button className={category === 'all' ? 'active' : ''} onClick={() => setCategory('all')} role="tab" aria-selected={category === 'all'}>Все</button>
           {(Object.keys(craftCategoryLabels) as CraftCategory[]).map(key => <button key={key} className={category === key ? 'active' : ''} onClick={() => setCategory(key)} role="tab" aria-selected={category === key}><MaterialIcon category={key} size={16} /><span className="hidden sm:inline">{craftCategoryLabels[key]}</span></button>)}
