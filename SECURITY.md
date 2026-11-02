@@ -24,6 +24,15 @@ external WAF are separate controls.
 
 ## Sessions and private data
 
+Employee account data is stored in `profiles` under the existing Supabase Auth
+user ID associated with Discord login. Row level security allows each signed-in
+user to read and edit only their own row. Game nickname, StaticID and department
+are self-reported form defaults, never authorization or Discord role claims.
+They are cached only in page memory and discarded on account changes. Personal
+report drafts are reset on logout or switching accounts; manually edited fields
+are not overwritten by a late profile response. The public achievements dashboard
+continues to expose aggregate results only.
+
 `is_site_session_active()` checks the caller's verified JWT session ID against
 `auth.sessions`: the session must belong to the caller, still exist, be less than
 eight hours old and have been refreshed within 30 minutes. It also respects

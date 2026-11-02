@@ -8,6 +8,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { id: 'home', label: 'Главная', icon: '⌂', path: '/', section: 'Обзор' },
+  { id: 'profile', label: 'Личный кабинет', icon: '◉', path: '/profile', section: 'Обзор' },
   { id: 'crafts', label: 'Крафты ГИБДД', icon: '▦', path: '/crafts', section: 'Каталоги' },
   { id: 'servers', label: 'Онлайн Тверского', icon: '◉', path: '/servers', section: 'Каталоги' },
   { id: 'achievements', label: 'Ачивки фракции', icon: '🏆', path: '/achievements', section: 'Обзор' },

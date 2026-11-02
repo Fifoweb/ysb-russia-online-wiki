@@ -1,3 +1,5 @@
+import { useProfileForm } from '../lib/useProfileForm';
+import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, Send, ShieldCheck, TrendingUp } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -15,7 +17,7 @@ const inputClass = 'mt-2 w-full px-4 py-3 text-sm outline-none';
 
 export default function PromotionForm() {
   const { user, loading, signInWithDiscord } = useAuth();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const remainingSeconds = useApplicationCooldown(user?.id);
@@ -63,6 +65,8 @@ export default function PromotionForm() {
         </div>
       </div>
 
+      <ProfileAutofillNotice />
+
       {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
@@ -77,7 +81,7 @@ export default function PromotionForm() {
         <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
           <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
           <p className="text-emerald-200 text-base font-semibold mb-5">Запрос на повышение отправлен</p>
-          <button type="button" onClick={() => { setForm(initialForm); setState('idle'); }}
+          <button type="button" onClick={() => { resetForm(); setState('idle'); }}
             className="secondary-button mx-auto">
             Отправить ещё один
           </button>

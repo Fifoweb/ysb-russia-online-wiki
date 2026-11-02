@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowUpRight, ArrowsLeftRight, BookOpenText, ClipboardText, FileText, GraduationCap,
-  House, MagnifyingGlass, Scales, Shield, Toolbox, Trophy, UserCheck, UsersThree, WifiHigh, X,
+  House, MagnifyingGlass, Scales, Shield, Toolbox, Trophy, UserCheck, UserCircle, UsersThree, WifiHigh, X,
   type Icon,
 } from '@phosphor-icons/react';
 import { navItems } from '../data/navigation';
@@ -18,7 +18,7 @@ interface SidebarProps {
   onToggle: () => void;
 }
 const itemIcons: Record<string, Icon> = {
-  home: House, crafts: Toolbox, servers: WifiHigh, achievements: Trophy,
+  home: House, profile: UserCircle, crafts: Toolbox, servers: WifiHigh, achievements: Trophy,
   basics: Shield, check: MagnifyingGlass, control: ClipboardText, discipline: Scales,
   practice: GraduationCap, appendix: FileText, handbook: BookOpenText, transfer: ArrowsLeftRight,
   restore: UserCheck, department: UsersThree,

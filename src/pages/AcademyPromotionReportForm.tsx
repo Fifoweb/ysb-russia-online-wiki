@@ -1,3 +1,5 @@
+import { useProfileForm } from '../lib/useProfileForm';
+import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, Send, ShieldCheck, TrendingUp } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -27,8 +29,11 @@ function validEvidenceUrl(value: string): boolean {
 
 export default function AcademyPromotionReportForm() {
   const { user, loading, signInWithDiscord } = useAuth();
-  const [nickStatic, setNickStatic] = useState('');
-  const [department, setDepartment] = useState<Department>('academy');
+  const [identityForm, setIdentityForm, resetIdentityForm] = useProfileForm<{ nickStatic: string; department: Department }>(
+    { nickStatic: '', department: 'academy' }, { nickStatic: 'combined', department: 'promotionDepartment' });
+  const { nickStatic, department } = identityForm;
+  const setNickStatic = (value: string) => setIdentityForm(current => ({ ...current, nickStatic: value }));
+  const setDepartment = (value: Department) => setIdentityForm(current => ({ ...current, department: value }));
   const [rankTransition, setRankTransition] = useState<RankTransition>('');
   const [evidence, setEvidence] = useState(blankEvidence);
   const [fromRank, setFromRank] = useState('');
@@ -95,6 +100,7 @@ export default function AcademyPromotionReportForm() {
         </div>
       </div>
 
+      <ProfileAutofillNotice />
       {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
@@ -108,7 +114,7 @@ export default function AcademyPromotionReportForm() {
         <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
           <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
           <p className="text-emerald-200 text-base font-semibold mb-5">Отчёт на повышение отправлен</p>
-          <button type="button" onClick={() => { setNickStatic(''); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); setState('idle'); }} className="secondary-button mx-auto">
+          <button type="button" onClick={() => { resetIdentityForm(); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); setState('idle'); }} className="secondary-button mx-auto">
             Заполнить новый отчёт
           </button>
         </section>

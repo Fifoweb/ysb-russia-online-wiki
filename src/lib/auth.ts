@@ -90,8 +90,11 @@ export async function getApplicationSession(userId: string): Promise<Application
 export function useAuth() {
   const { session, loading } = useSyncExternalStore(subscribeAuth, getAuthSnapshot, getAuthSnapshot);
 
-  const signInWithDiscord = async () => {
+  const signInWithDiscord = async (returnPath?: '/profile') => {
     if (!supabase) return;
+    if (returnPath === '/profile') {
+      try { sessionStorage.setItem('profile-return', String(Date.now())); } catch { /* Login still works without browser storage. */ }
+    }
     // Redirect must include the repo subpath on GitHub Pages (origin alone → 404).
     await supabase.auth.signInWithOAuth({
       provider: 'discord',

@@ -75,6 +75,13 @@ h1, h2, h3 { text-wrap: balance; }
 .portal-login, .portal-profile-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; gap: 8px; padding: 8px 12px; border-radius: 9999px; border: 1px solid rgb(147 197 253 / .2); background: rgb(147 197 253 / .08); color: #ecf5ff; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color .24s var(--portal-ease), border-color .24s var(--portal-ease); }
 .portal-login:hover, .portal-profile-button:hover { background: rgb(147 197 253 / .16); border-color: rgb(147 197 253 / .4); }
 .portal-profile-button img { border-radius: 9999px; }
+.portal-profile-button { text-decoration: none; }
+.portal-profile-button[aria-current="page"] { border-color: rgb(125 211 252 / .55); background: rgb(147 197 253 / .16); }
+.profile-autofill-notice { display: flex; align-items: start; gap: 12px; margin-bottom: 24px; padding: 16px; border: 1px solid var(--portal-stroke); border-radius: 12px; background: var(--portal-surface); }
+.profile-autofill-notice > svg { flex: 0 0 auto; color: var(--portal-accent); }
+.profile-autofill-notice p { margin: 0; color: var(--portal-muted); font-size: 14px; line-height: 20px; }
+.profile-autofill-notice :is(a, button) { color: var(--portal-accent); text-decoration: underline; text-underline-offset: 4px; }
+.profile-autofill-notice button { padding: 0; background: transparent; border: 0; font: inherit; }
 .portal-profile-button span { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .portal-auth-skeleton { width: 80px; height: 40px; border-radius: 9999px; background: rgb(147 197 253 / .08); }
 .portal-menu-toggle { position: relative; border-color: rgb(147 197 253 / .12); background: rgb(147 197 253 / .05); }
@@ -277,24 +284,6 @@ html:has(.portal-dialog[open]) { overflow: hidden; }
 .wiki-content td { border-color: var(--portal-stroke); color: #bed1e8; }
 .wiki-content blockquote { background: #0d2a50; color: #bed1e8; border: 1px solid var(--portal-stroke); border-radius: 12px; padding: 16px; font-style: normal; }
 .wiki-content .highlight-box { background: #0d2a50; border-color: var(--portal-stroke); }
-.portal-profile-dialog { width: min(520px, calc(100% - 32px)); }
-.portal-profile-identity { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 16px; border: 1px solid var(--portal-stroke); border-radius: 16px; background: rgb(147 197 253 / .04); }
-.portal-profile-identity > img { border-radius: 9999px; }
-.portal-profile-identity > div { min-width: 0; }
-.portal-profile-identity strong { display: block; font-size: 16px; line-height: 24px; overflow-wrap: anywhere; }
-.portal-profile-identity span { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: #a6bcd8; font-size: 12px; line-height: 16px; }
-.portal-profile-form { display: flex; flex-direction: column; gap: 16px; }
-.portal-profile-form label > span { display: block; margin-bottom: 8px; font-size: 14px; line-height: 20px; color: #bed1e8; }
-.portal-profile-form :is(input, textarea) { width: 100%; min-height: 48px; padding: 12px; border: 1px solid rgb(147 197 253 / .2); border-radius: 12px; background: rgb(0 0 0 / .2); color: #ecf5ff; font-size: 16px; line-height: 24px; }
-.portal-profile-form :is(input, textarea)::placeholder { color: #9fb4d1; }
-.portal-profile-form textarea { resize: vertical; }
-.portal-profile-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
-.portal-profile-actions .portal-primary { flex: 1; }
-.portal-profile-actions button:disabled { opacity: .6; cursor: wait; }
-.portal-profile-error { color: #fecdd3; font-size: 14px; line-height: 20px; margin: 0; }
-.portal-profile-saved { color: #45c978; font-size: 14px; line-height: 20px; margin: 0; }
-.portal-profile-loading { display: flex; flex-direction: column; gap: 16px; }
-.portal-profile-loading span { height: 64px; border-radius: 12px; background: #0d2a50; }
 ::-webkit-scrollbar-track { background: #020617; }
 ::-webkit-scrollbar-thumb { background: #476d9a; }
 ::selection { color: #000; background: #7dd3fc; }

@@ -1,3 +1,5 @@
+import { useProfileForm } from '../lib/useProfileForm';
+import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, FileUp, LockKeyhole, Send } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -13,7 +15,7 @@ type State = 'idle' | 'sending' | 'ok' | 'error';
 
 export default function ReportForm() {
   const { user, loading, signInWithDiscord } = useAuth();
-  const [form, setForm] = useState({ nick: '', currentRank: '', targetRank: '', points: '', evidence: '' });
+  const [form, setForm, resetForm] = useProfileForm({ nick: '', currentRank: '', targetRank: '', points: '', evidence: '' }, { nick: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const remainingSeconds = useApplicationCooldown(user?.id);
@@ -68,6 +70,8 @@ export default function ReportForm() {
         </div>
       </div>
 
+      <ProfileAutofillNotice />
+
       {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
@@ -81,7 +85,7 @@ export default function ReportForm() {
         <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
           <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
           <p className="text-emerald-200 text-base font-semibold mb-5">Заявление отправлено начальству ГИБДД</p>
-          <button type="button" onClick={() => { setForm({ nick: '', currentRank: '', targetRank: '', points: '', evidence: '' }); setState('idle'); }}
+          <button type="button" onClick={() => { resetForm(); setState('idle'); }}
             className="secondary-button mx-auto">
             Отправить ещё одно
           </button>

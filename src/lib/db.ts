@@ -3,29 +3,8 @@ import { supabase } from './supabase';
 // Structurally matches the Bookmark interface in DocumentEditor
 export interface StoredBookmark { name: string; sectionId: number; snapshot?: unknown; }
 
-export interface Profile {
-  full_name: string;
-  rank: string;
-  position: string;
-  badge: string;
-  about: string;
-}
-
-export const emptyProfile: Profile = { full_name: '', rank: '', position: '', badge: '', about: '' };
-
-export async function loadProfile(userId: string): Promise<Profile> {
-  if (!supabase) return emptyProfile;
-  const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-  return data ? { ...emptyProfile, ...data } : emptyProfile;
-}
-
-export async function saveProfile(userId: string, p: Profile): Promise<boolean> {
-  if (!supabase) return false;
-  const { error } = await supabase
-    .from('profiles')
-    .upsert({ id: userId, ...p, updated_at: new Date().toISOString() });
-  return !error;
-}
+export { emptyProfile, type Profile } from './profileData';
+export { loadProfile, saveProfile } from './profile';
 
 // One row per (user_id, doc_code); items = bookmark list with text snapshots.
 // On first login the local browser bookmarks are migrated into the account.

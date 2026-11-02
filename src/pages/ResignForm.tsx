@@ -1,3 +1,5 @@
+import { useProfileForm } from '../lib/useProfileForm';
+import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, FileText, Send, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -20,7 +22,7 @@ const initialForm = {
 
 export default function ResignForm() {
   const { user, loading, signInWithDiscord } = useAuth();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined', department: 'departmentLabel' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const remainingSeconds = useApplicationCooldown(user?.id);
@@ -79,6 +81,8 @@ export default function ResignForm() {
         </div>
       </div>
 
+      <ProfileAutofillNotice />
+
       {user && <ApplicationCooldownBanner seconds={remainingSeconds} />}
       {loading ? <FormLoader /> : !user ? (
         <section className="glass rounded-2xl border border-sky-300/20 text-center">
@@ -92,7 +96,7 @@ export default function ResignForm() {
         <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
           <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
           <p className="text-emerald-200 text-base font-semibold mb-5">Заявление на увольнение отправлено руководству</p>
-          <button type="button" onClick={() => { setForm(initialForm); setErrorMessage(''); setState('idle'); }}
+          <button type="button" onClick={() => { resetForm(); setErrorMessage(''); setState('idle'); }}
             className="secondary-button mx-auto">
             Отправить ещё одно
           </button>

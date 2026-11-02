@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Home from './pages/Home';
 import { supabase } from './lib/supabase';
+import { useAuth } from './lib/auth';
 
 const ServiceBasics = lazy(() => import('./pages/ServiceBasics'));
 const ServiceCheck = lazy(() => import('./pages/ServiceCheck'));
@@ -31,6 +32,7 @@ const Crafts = lazy(() => import('./pages/Crafts'));
 const Servers = lazy(() => import('./pages/Servers'));
 const AchievementsDashboard = lazy(() => import('./pages/AchievementsDashboard'));
 const AchievementReportForm = lazy(() => import('./pages/AchievementReportForm'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -40,6 +42,7 @@ const normalizePath = (p: string) => {
 };
 
 export default function App() {
+  const { user } = useAuth();
   const reduceMotion = useReducedMotion();
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   // Navigation opens as a modal without shifting the reading area.
@@ -68,6 +71,13 @@ export default function App() {
     if (!supabase || path !== '/') return;
     const restore = () => {
       try {
+        const profileStarted = Number(sessionStorage.getItem('profile-return'));
+        sessionStorage.removeItem('profile-return');
+        if (profileStarted && Date.now() - profileStarted >= 0 && Date.now() - profileStarted < 15 * 60_000) {
+          sessionStorage.removeItem('achievement-report-return');
+          navigate('/profile');
+          return;
+        }
         const started = Number(sessionStorage.getItem('achievement-report-return'));
         if (!started || Date.now() - started > 15 * 60_000) return;
         sessionStorage.removeItem('achievement-report-return');
@@ -105,6 +115,7 @@ export default function App() {
       case '/servers': return <Servers />;
       case '/achievements': return <AchievementsDashboard />;
       case '/achievement-report': return <AchievementReportForm onNavigate={navigate} />;
+      case '/profile': return <ProfilePage onNavigate={navigate} />;
       default: return <section className="portal-route-error"><span className="portal-error-code">404</span><h1>Такой страницы нет</h1><p>Возможно, ссылка устарела. Все материалы доступны с главной страницы.</p><PortalLink path="/" onNavigate={navigate} className="portal-primary">Вернуться на главную</PortalLink></section>;
     }
   };
@@ -116,7 +127,7 @@ export default function App() {
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
       <main id="main-content" tabIndex={-1} className={`site-main portal-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
-          <div key={path}>
+          <div key={path + ':' + (user?.id ?? 'guest')}>
             <RouteBoundary>
             <Suspense fallback={<div className="portal-route-skeleton" role="status" aria-label="Открываем раздел…"><span /><span /><span /></div>}>
               {renderPage()}

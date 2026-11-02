@@ -1,3 +1,5 @@
+import { useProfileForm } from '../lib/useProfileForm';
+import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, CheckCircle2, ExternalLink, Link2, RefreshCw, Send, ShieldCheck, Trophy } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -17,7 +19,7 @@ const blankForm = () => ({ fullName: '', staticId: '', department: '', achieveme
 
 export default function AchievementReportForm({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { user, loading, enabled, signInWithDiscord } = useAuth();
-  const [form, setForm] = useState(blankForm);
+  const [form, setForm, resetForm] = useProfileForm(blankForm, { fullName: 'nickname', staticId: 'staticId', department: 'achievementDepartment' });
   const [state, setState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [error, setError] = useState('');
   const [syncPending, setSyncPending] = useState(false);
@@ -114,6 +116,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
       <span className="application-heading-icon" aria-hidden="true"><Trophy size={26} /></span>
       <div><p className="eyebrow">ГИБДД · АЧИВКИ ФРАКЦИИ</p><h2 className="!mt-0 !mb-2">Отчёт о выполнении ачивки</h2><p className="!m-0 text-sm text-slate-300">Укажите свой вклад и приложите доказательства. Отчёт попадёт в нужную ветку Discord.</p></div>
     </div>
+    <ProfileAutofillNotice />
     {user && <ApplicationCooldownBanner seconds={remainingSeconds} durationSeconds={10} />}
     {loading ? <FormLoader /> : !user ? <section className="glass rounded-2xl border border-sky-300/20 text-center">
       <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
@@ -124,7 +127,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
       <h3 className="text-emerald-200">Отчёт отправлен в Discord</h3>
       <p>{syncPending ? 'Доставка подтверждена, но обновление счётчика требует проверки у администратора. Не отправляйте этот отчёт повторно.' : 'Ваш вклад учтён на дашборде. Публичные счётчики обновляются в течение минуты.'}</p>
       <div className="flex flex-wrap justify-center gap-3"><button type="button" className="primary-button" onClick={() => onNavigate('/achievements')}>Открыть дашборд <ArrowRight size={16} /></button>
-        <button type="button" className="secondary-button" onClick={() => { setForm(blankForm()); requestId.current = null; setState('idle'); setError(''); }}>Новый отчёт</button></div>
+        <button type="button" className="secondary-button" onClick={() => { resetForm(); requestId.current = null; setState('idle'); setError(''); }}>Новый отчёт</button></div>
     </section> : <section className="glass rounded-2xl border border-sky-300/15">
       <form onSubmit={submit} className="space-y-6">
         <fieldset disabled={blocked} className="min-w-0"><p className="eyebrow mb-2">01 · ДАННЫЕ СОТРУДНИКА</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
