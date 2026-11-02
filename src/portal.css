@@ -255,6 +255,7 @@ html:has(.portal-dialog[open]) { overflow: hidden; }
 .portal-shell .achievement-progress > span, .portal-shell .achievement-day-track span, .application-cooldown-track span { background: #7dd3fc; }
 .portal-shell .achievement-card-done .achievement-progress > span { background: #45c978; }
 .portal-shell :is(.achievement-card-icon, .achievement-form-context, .achievement-form-rules, .application-cooldown, .form-loader) { background: #081b36; border-color: var(--portal-stroke); }
+.achievement-card-icon, .achievement-form-context > span:first-child, .achievement-departments thead th > span[aria-hidden="true"] { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; font-weight: 400; font-style: normal; }
 .achievement-card > p, .achievement-departments > p, .achievement-data-caption, .achievement-overview-stats span { color: #a6bcd8; font-size: 14px; line-height: 20px; }
 .achievement-departments thead th, .achievement-departments tbody th { background: #081b36; color: #bed1e8; }
 .achievement-departments tbody td { color: #9fb4d1; }
