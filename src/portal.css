@@ -10,7 +10,7 @@
   color-scheme: dark;
   --portal-bg: #061326;
   --portal-gutter: 16px;
-  --portal-content-width: 1360px;
+  --portal-content-width: 1120px;
   --portal-surface: #081b36;
   --portal-raised: #0d2a50;
   --portal-text: #ecf5ff;
@@ -289,7 +289,7 @@ html:has(.portal-dialog[open]) { overflow: hidden; }
 ::selection { color: #000; background: #7dd3fc; }
 
 @media (min-width: 768px) {
-  :root { --portal-gutter: 24px; }
+  :root { --portal-gutter: 24px; --portal-content-width: min(1120px, 86vw); }
 }
 @media (min-width: 1280px) {
   :root { --portal-gutter: 32px; }
