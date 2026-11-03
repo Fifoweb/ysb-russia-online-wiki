@@ -44,7 +44,7 @@ async function handleUpload(req: Request): Promise<Response> {
   if (!image) return json(400, { error: 'Не удалось прочитать изображение. Нужен PNG, JPG или WEBP до 40 мегапикселей.' });
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-  let reservation: { result: string; ticket?: string; url?: string; expiresAt?: string };
+  let reservation: { result: string; ticket?: string; url?: string; expiresAt?: string; retryAfterSeconds?: number; retryable?: boolean };
   try {
     const { data, error } = await admin.rpc('reserve_evidence_upload', { p_user_id: user.id, p_hash: hash, p_size: bytes.length, p_mime: image.mime });
     if (error || !data?.result) throw new Error();
@@ -53,7 +53,10 @@ async function handleUpload(req: Request): Promise<Response> {
   if (reservation.result === 'ready' && allwebsImageUrl(reservation.url)) return json(200, { url: reservation.url, expiresAt: reservation.expiresAt ?? null, reused: true });
   if (reservation.result === 'limit') return json(429, { error: 'Достигнут суточный лимит загрузки изображений. Можно вставить готовые ссылки.', retryable: false });
   if (reservation.result === 'pending') return json(409, { error: 'Этот скриншот уже загружается. Подождите несколько секунд и повторите попытку.' }, 5);
-  if (reservation.result === 'uncertain') return json(409, { error: 'Allwebs не подтвердил предыдущую загрузку этого файла. Повтор заблокирован; можно вставить готовую ссылку вручную.', retryable: false });
+  if (reservation.result === 'uncertain') {
+    const retry = Number.isInteger(reservation.retryAfterSeconds) && reservation.retryAfterSeconds! > 0 ? reservation.retryAfterSeconds! : 60;
+    return json(409, { error: `Allwebs не подтвердил предыдущую загрузку этого файла. Повторите через ${retry} сек. или вставьте готовую ссылку.`, retryable: reservation.retryable !== false, retryAfterSeconds: retry }, retry);
+  }
   if (reservation.result !== 'reserved' || !reservation.ticket) return json(503, { error: 'Загрузка пока недоступна. Попробуйте позже.' });
   const settle = async (status: 'ready' | 'failed' | 'uncertain', imageUrl: string | null = null, expiresAt: string | null = null) => {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -65,35 +68,62 @@ async function handleUpload(req: Request): Promise<Response> {
     console.error('Evidence upload settlement unavailable');
     return false;
   };
-  let response: Response;
+  let hostingClient: Deno.HttpClient | undefined;
+  let hostingStarted = false;
+  const startedAt = Date.now();
   try {
-    const form = new FormData();
-    form.append('source', new Blob([bytes], { type: image.mime }), `screenshot-${hash.slice(0,16)}.${image.extension}`);
-    form.append('format', 'json');
-    response = await fetch('https://allwebs.ru/api/1/upload', {
-      method: 'POST', headers: { 'X-API-Key': uploadKey }, body: form, signal: AbortSignal.timeout(45_000), redirect: 'error',
-    });
-  } catch {
-    await settle('uncertain');
-    return json(502, { error: 'Allwebs не подтвердил загрузку. Файл мог быть принят; повтор заблокирован. Можно вставить ссылку вручную.', retryable: false });
-  }
-  if (!response.ok) {
-    await response.body?.cancel();
-    const uncertain = response.status >= 500;
-    await settle(uncertain ? 'uncertain' : 'failed');
-    console.error('Evidence hosting rejected upload', { status: response.status });
-    return json(502, { error: response.status === 429 ? 'Allwebs ограничил загрузки. Попробуйте позже.' : 'Allwebs отклонил файл. Возможно, такой скриншот уже загружался; попробуйте вставить его существующую ссылку.', retryable: !uncertain });
-  }
-  try {
-    const body = JSON.parse(new TextDecoder().decode(await readLimitedBytes(response.body, 256 * 1024)));
-    const imageUrl = allwebsImageUrl(body?.image?.url);
-    if (body?.status_code !== 200 || !imageUrl) throw new Error();
-    const expiresAt = allwebsExpiration(body.image.expiration_date_gmt);
-    const synced = await settle('ready', imageUrl, expiresAt);
-    return json(200, { url: imageUrl, expiresAt, reused: false, syncPending: !synced });
-  } catch {
-    await settle('uncertain');
-    return json(502, { error: 'Allwebs вернул неподтверждённый результат. Повтор заблокирован; можно вставить ссылку вручную.', retryable: false });
+    let response: Response;
+    try {
+      // Only the harmless connection check can be retried automatically.
+      // When it fails, no screenshot has been submitted to the hosting service.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        hostingClient = Deno.createHttpClient({ http1: true, http2: true, poolMaxIdlePerHost: 1 });
+        try {
+          const health = await fetch('https://allwebs.ru/', { method: 'HEAD', client: hostingClient, redirect: 'manual', signal: AbortSignal.timeout(5_000) });
+          if (health.status === 429 || health.status >= 500) throw new Error('Hosting unavailable');
+          break;
+        } catch (error) {
+          hostingClient.close(); hostingClient = undefined;
+          if (attempt === 2) throw error;
+        }
+      }
+      const form = new FormData();
+      form.append('source', new Blob([bytes], { type: image.mime }), `screenshot-${hash.slice(0,16)}.${image.extension}`);
+      form.append('format', 'json');
+      // Send the complete multipart body over the checked connection.
+      const encoded = new Request('https://allwebs.ru/api/1/upload', { method: 'POST', body: form });
+      const body = new Uint8Array(await encoded.arrayBuffer());
+      hostingStarted = true;
+      response = await fetch('https://allwebs.ru/api/1/upload', {
+        method: 'POST', headers: { 'X-API-Key': uploadKey, 'Content-Type': encoded.headers.get('Content-Type')!, 'Content-Length': String(body.length) },
+        body, client: hostingClient, signal: AbortSignal.timeout(45_000), redirect: 'error',
+      });
+    } catch (error) {
+      await settle(hostingStarted ? 'uncertain' : 'failed');
+      console.error('Evidence hosting transport unavailable', { kind: error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'network', phase: hostingStarted ? 'upload' : 'connection', elapsedMs: Date.now() - startedAt });
+      if (!hostingStarted) return json(503, { error: 'Нет соединения с Allwebs. Скриншот не отправлен. Нажмите «Повторить загрузку» или вставьте готовую ссылку.', retryable: true });
+      return json(502, { error: 'Allwebs не подтвердил загрузку. Файл мог быть принят. Повторите загрузку через минуту или вставьте готовую ссылку.', retryable: true, retryAfterSeconds: 60 }, 60);
+    }
+    if (!response.ok) {
+      await response.body?.cancel();
+      const uncertain = response.status >= 500;
+      await settle(uncertain ? 'uncertain' : 'failed');
+      console.error('Evidence hosting rejected upload', { status: response.status });
+      return json(502, { error: uncertain ? 'Allwebs временно недоступен. Повторите загрузку через минуту.' : response.status === 429 ? 'Allwebs ограничил загрузки. Попробуйте позже.' : 'Allwebs отклонил файл. Возможно, такой скриншот уже загружался; попробуйте вставить его существующую ссылку.', retryable: true, ...(uncertain ? { retryAfterSeconds: 60 } : {}) }, uncertain ? 60 : undefined);
+    }
+    try {
+      const body = JSON.parse(new TextDecoder().decode(await readLimitedBytes(response.body, 256 * 1024)));
+      const imageUrl = allwebsImageUrl(body?.image?.url);
+      if (body?.status_code !== 200 || !imageUrl) throw new Error();
+      const expiresAt = allwebsExpiration(body.image.expiration_date_gmt);
+      const synced = await settle('ready', imageUrl, expiresAt);
+      return json(200, { url: imageUrl, expiresAt, reused: false, syncPending: !synced });
+    } catch {
+      await settle('uncertain');
+      return json(502, { error: 'Allwebs вернул неподтверждённый результат. Повторите загрузку через минуту или вставьте готовую ссылку.', retryable: true, retryAfterSeconds: 60 }, 60);
+    }
+  } finally {
+    hostingClient?.close();
   }
 }
 

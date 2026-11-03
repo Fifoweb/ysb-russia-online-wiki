@@ -38,10 +38,12 @@ test('hosting results allow only original HTTPS images and never deletion URLs o
 });
 
 function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: number; dbDown?: boolean;
-  reservation?: string; hostingHttp?: number; networkError?: boolean; invalidResult?: boolean; syncDown?: boolean } = {}) {
+  reservation?: string; hostingHttp?: number; networkError?: boolean; networkErrorAt?: number; healthFailures?: number; invalidResult?: boolean; syncDown?: boolean } = {}) {
   let handler!: (request: Request) => Promise<Response>;
   const calls: { name: string; params: Record<string, unknown> }[] = [];
-  const sent: { url: string; body: FormData; headers: Record<string, string> }[] = [];
+  const sent: { url: string; body: FormData; headers: Record<string, string>; byteLength: number; client: unknown }[] = [];
+  const clients: { options: Record<string, unknown>; closed: boolean; close(): void }[] = [];
+  const checks: unknown[] = [];
   const logs: unknown[] = [];
   const client = {
     auth: { getUser: async () => ({ error: null, data: { user: options.anonymous ? null : { id: '00000000-0000-4000-8000-000000000001',
@@ -56,12 +58,22 @@ function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: n
     },
   };
   const env: Record<string,string> = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'private-secret-marker', ALLWEBS_API_KEY: 'hosting-secret-marker' };
-  const context = createContext({ Deno: { serve: (value: typeof handler) => { handler = value; }, env: { get: (key: string) => env[key] } },
+  const context = createContext({ Deno: { serve: (value: typeof handler) => { handler = value; }, env: { get: (key: string) => env[key] },
+    createHttpClient: (options: Record<string, unknown>) => {
+      const client = { options, closed: false, close() { this.closed = true; } }; clients.push(client); return client;
+    } },
     createClient: () => client, crypto: webcrypto, Request, Response, Headers, FormData, Blob, URL, AbortSignal, Uint8Array, DataView, TextDecoder,
     console: { error: (...args: unknown[]) => logs.push(args) },
-    fetch: async (url: string, init: RequestInit) => {
-      sent.push({ url, body: init.body as FormData, headers: init.headers as Record<string,string> });
-      if (options.networkError) throw new Error('hosting-secret-marker');
+    fetch: async (url: string, init: RequestInit & { client?: unknown }) => {
+      if (init.method === 'HEAD') {
+        assert.equal(url,'https://allwebs.ru/');
+        checks.push(init.client);
+        if (checks.length <= (options.healthFailures ?? 0)) throw new Error('hosting-secret-marker');
+        return new Response(null,{status:200});
+      }
+      const encoded = new Request(url, init);
+      sent.push({ url, body: await encoded.formData(), headers: init.headers as Record<string,string>, byteLength: (init.body as Uint8Array).byteLength, client: init.client });
+      if (options.networkError || options.networkErrorAt === sent.length) throw new Error('hosting-secret-marker');
       return Response.json(options.invalidResult ? { status_code: 200, image: { url: 'https://evil.test/image.png' } } :
         { status_code: 200, image: { url: imageUrl, expiration_date_gmt: '2099-11-03 09:30:00', delete_url: 'https://allwebs.ru/image/delete/private-delete-marker' } }, { status: options.hostingHttp ?? 200 });
     },
@@ -71,12 +83,12 @@ function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: n
   const submit = (bytes: Uint8Array = png, headers: Record<string,string> = {}) => handler(new Request('https://example.test/upload', {
     method: 'POST', headers: { authorization: 'Bearer site-fixture', 'Content-Type': 'image/png', ...headers }, body: bytes,
   }));
-  return { submit, sent, calls, logs };
+  return { submit, sent, calls, logs, clients, checks };
 }
 
 test('anonymous and forged-identity callers cannot read bodies, spend database quotas or contact Allwebs', async () => {
   for (const [options, status] of [[{ anonymous: true },401],[{ identity: false },403]] as const) {
-    const app = fixture(options); assert.equal((await app.submit()).status,status); assert.equal(app.calls.length,0); assert.equal(app.sent.length,0);
+    const app = fixture(options); assert.equal((await app.submit()).status,status); assert.equal(app.calls.length,0); assert.equal(app.sent.length,0); assert.equal(app.checks.length,0);
   }
 });
 
@@ -87,7 +99,7 @@ test('size, format, request limits and unavailable guards fail before hosting up
     [{}, {},new TextEncoder().encode('<html>fake.png</html>'),400], [{ reservation: 'pending' },{},png,409],
     [{ reservation: 'uncertain' },{},png,409], [{ reservation: 'limit' },{},png,429],
   ] as const) {
-    const app=fixture(options);const response=await app.submit(bytes,headers);assert.equal(response.status,status);assert.equal(app.sent.length,0);
+    const app=fixture(options);const response=await app.submit(bytes,headers);assert.equal(response.status,status);assert.equal(app.sent.length,0);assert.equal(app.checks.length,0);
     assert.doesNotMatch(await response.text(),/private-secret-marker/);
   }
 });
@@ -96,6 +108,8 @@ test('uploads preserve original bytes, use a generated filename and commit a reu
   const app=fixture();const response=await app.submit();assert.equal(response.status,200);
   const body=await response.json();assert.equal(body.url,imageUrl);assert.equal(body.expiresAt,'2099-11-03T09:30:00.000Z');
   assert.equal(app.sent.length,1);assert.equal(app.sent[0].url,'https://allwebs.ru/api/1/upload');
+  assert.equal(Number(app.sent[0].headers['Content-Length']),app.sent[0].byteLength);
+  assert.match(app.sent[0].headers['Content-Type'],/^multipart\/form-data; boundary=/);
   const original=app.sent[0].body.get('source') as File;
   assert.deepEqual(new Uint8Array(await original.arrayBuffer()),png);assert.match(original.name,/^screenshot-[a-f0-9]{16}\.png$/);
   assert.equal(app.calls.find(call=>call.name==='settle_evidence_upload')?.params.p_status,'ready');
@@ -103,14 +117,38 @@ test('uploads preserve original bytes, use a generated filename and commit a reu
   assert.doesNotMatch(JSON.stringify(body)+JSON.stringify(app.logs),/secret-marker|delete-marker/);
 });
 
-test('cached files never contact Allwebs twice and uncertain outcomes are never automatically retried', async () => {
-  const cached=fixture({reservation:'ready'});assert.equal((await cached.submit()).status,200);assert.equal(cached.sent.length,0);
+test('cached files never contact Allwebs twice and uncertain outcomes offer only an explicit delayed retry', async () => {
+  const cached=fixture({reservation:'ready'});assert.equal((await cached.submit()).status,200);assert.equal(cached.sent.length,0);assert.equal(cached.checks.length,0);
   for(const options of [{networkError:true},{invalidResult:true},{hostingHttp:503}]) {
     const app=fixture(options);const response=await app.submit();assert.equal(response.status,502);assert.equal(app.sent.length,1);
     assert.equal(app.calls.filter(call=>call.name==='settle_evidence_upload').at(-1)?.params.p_status,'uncertain');
-    assert.doesNotMatch(await response.text()+JSON.stringify(app.logs),/secret-marker|delete-marker/);
+    const body=await response.json();assert.equal(body.retryable,true);assert.equal(body.retryAfterSeconds,60);assert.equal(response.headers.get('Retry-After'),'60');
+    assert.doesNotMatch(JSON.stringify(body)+JSON.stringify(app.logs),/secret-marker|delete-marker/);
+    assert.equal(app.clients[0].closed,true);
   }
   const known=fixture({hostingHttp:400});await known.submit();assert.equal(known.calls.at(-1)?.params.p_status,'failed');
+});
+
+test('each successive screenshot gets a fresh transport and a failed upload cannot hold the next connection', async () => {
+  const app=fixture({networkErrorAt:2});
+  for(let index=1;index<=3;index++) {
+    const bytes=new Uint8Array([...png,index]);
+    assert.equal((await app.submit(bytes)).status,index===2?502:200);
+  }
+  assert.equal(app.sent.length,3);assert.equal(app.clients.length,3);
+  assert.equal(new Set(app.sent.map(upload=>upload.client)).size,3);
+  for(const client of app.clients) {
+    assert.equal(client.options.http1,true);assert.equal(client.options.http2,true);assert.equal(client.options.poolMaxIdlePerHost,1);assert.equal(client.closed,true);
+  }
+});
+
+test('connection probes can retry safely, never upload bytes on failure, and leave the next attempt available', async () => {
+  const recovered=fixture({healthFailures:2});assert.equal((await recovered.submit()).status,200);
+  assert.equal(recovered.checks.length,3);assert.equal(recovered.sent.length,1);assert.ok(recovered.clients.every(client=>client.closed));
+  const disconnected=fixture({healthFailures:3});const response=await disconnected.submit();
+  assert.equal(response.status,503);assert.equal((await response.json()).retryable,true);assert.equal(disconnected.sent.length,0);
+  assert.equal(disconnected.calls.at(-1)?.params.p_status,'failed');assert.ok(disconnected.clients.every(client=>client.closed));
+  assert.equal((await disconnected.submit(new Uint8Array([...png,9]))).status,200);assert.equal(disconnected.sent.length,1);
 });
 
 test('a temporary database settlement outage retains the confirmed link and retries only database writes', async () => {

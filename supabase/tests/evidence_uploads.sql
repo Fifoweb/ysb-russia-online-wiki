@@ -53,10 +53,16 @@ begin
   v_result:=public.reserve_evidence_upload(v_user,repeat('b',64),100,'image/png');v_ticket:=(v_result->>'ticket')::uuid;
   perform public.settle_evidence_upload(repeat('b',64),v_ticket,'uncertain');
   v_result:=public.reserve_evidence_upload(v_user,repeat('b',64),100,'image/png');
-  if v_result->>'result'<>'uncertain' then raise exception 'Unconfirmed hosting upload could be resent'; end if;
-  update private.evidence_uploads set updated_at=now()-interval '25 hours' where hash=repeat('b',64);
+  if v_result->>'result'<>'uncertain' or (v_result->>'retryable')::boolean is not true
+    or (v_result->>'retryAfterSeconds')::integer not between 1 and 60 then
+    raise exception 'Unconfirmed hosting upload did not enforce the short manual retry delay';
+  end if;
+  -- One unsuccessful file does not block a different screenshot from the same user.
+  v_result:=public.reserve_evidence_upload(v_user,repeat('e',64),100,'image/png');
+  if v_result->>'result'<>'reserved' then raise exception 'A different screenshot was blocked after a timeout'; end if;
+  update private.evidence_uploads set updated_at=clock_timestamp()-interval '61 seconds' where hash=repeat('b',64);
   v_result:=public.reserve_evidence_upload(v_user,repeat('b',64),100,'image/png');v_second:=(v_result->>'ticket')::uuid;
-  if v_result->>'result'<>'reserved' or v_second=v_ticket then raise exception 'Old uncertain upload could not start a fresh attempt after 24 hours'; end if;
+  if v_result->>'result'<>'reserved' or v_second=v_ticket then raise exception 'Explicit retry remained blocked after one minute'; end if;
   if public.settle_evidence_upload(repeat('b',64),v_ticket,'ready','https://allwebs.ru/images/2026/stale.png',null) then raise exception 'Old ticket overwrote a newer reservation'; end if;
   update private.evidence_upload_buckets set amount=209715200 where bucket='day:user:'||v_user::text;
   v_result:=public.reserve_evidence_upload(v_user,repeat('c',64),100,'image/png');
