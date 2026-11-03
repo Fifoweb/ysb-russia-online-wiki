@@ -127,7 +127,7 @@ export default function App() {
       <a className="portal-skip-link" href="#main-content">Перейти к содержимому</a>
       <Sidebar currentPath={path} onNavigate={navigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
-      <main id="main-content" tabIndex={-1} className={`site-main portal-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
+      <main id="main-content" tabIndex={-1} className={`site-main portal-main min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
           <div key={path + ':' + (user?.id ?? 'guest')}>
             <EvidenceUploadsProvider>
             <RouteBoundary>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight, ArrowUpRight, BookOpenText, CheckCircle, ClipboardText, FileText,
+  ArrowRight, ArrowUpRight, BookOpenText, ClipboardText, FileText,
   GraduationCap, MagnifyingGlass, Scales, ShieldCheck, ShieldStar, Toolbox, Trophy, UsersThree, WifiHigh,
 } from '@phosphor-icons/react';
 import PortalLink from '../components/PortalLink';
@@ -17,10 +17,10 @@ const courseCards = [
   { path: '/appendix', title: 'Приложения и формы', desc: 'Рабочие бланки, личные копии и готовые документы.', count: 'Формы Ф1–Ф5', icon: FileText },
 ];
 const tools = [
-  { path: '/crafts', title: 'Крафты ГИБДД', desc: 'Подберите предметы и рассчитайте материалы.', icon: Toolbox, label: 'Каталог и калькулятор' },
-  { path: '/handbook', title: 'Памятка сотрудника', desc: 'Найдите нужную статью и сохраните в избранное.', icon: BookOpenText, label: 'Всегда под рукой' },
-  { path: '/promotion', title: 'Кадровые заявки', desc: 'Откройте форму и подготовьте запрос на повышение.', icon: UsersThree, label: 'Заявления и отчёты' },
-  { path: '/achievements', title: 'Ачивки фракции', desc: 'Следите за целями недели и вкладом отделов.', icon: Trophy, label: 'Общий результат' },
+  { path: '/crafts', title: 'Крафты ГИБДД', desc: 'Подберите предметы и рассчитайте материалы.', icon: Toolbox },
+  { path: '/handbook', title: 'Памятка сотрудника', desc: 'Найдите нужную статью и сохраните в избранное.', icon: BookOpenText },
+  { path: '/promotion', title: 'Кадровые заявки', desc: 'Откройте форму и подготовьте запрос на повышение.', icon: UsersThree },
+  { path: '/achievements', title: 'Ачивки фракции', desc: 'Следите за целями недели и вкладом отделов.', icon: Trophy },
 ];
 const entrance = [0.16, 1, 0.3, 1] as const;
 
@@ -78,13 +78,11 @@ export default function Home({ onNavigate }: HomeProps) {
         <motion.p {...reveal(0.16)} className="portal-hero-lead">Знания, документы и инструменты фракции. Ваша опора на каждой смене.</motion.p>
         <motion.div {...reveal(0.24)} className="portal-hero-actions">
           <PortalLink path="/basics" onNavigate={onNavigate} className="portal-primary">Открыть курс <ArrowUpRight size={20} aria-hidden="true" /></PortalLink>
-          <span className="portal-hero-note"><CheckCircle size={16} aria-hidden="true" /> От основ до практики</span>
         </motion.div>
       </div>
-      <div className="hero-photo-caption" aria-hidden="true"><span /> На связи. На службе.</div>
       <PortalLink path="/servers" onNavigate={onNavigate} className="portal-live-card liquid-glass refractive" aria-label="Открыть мониторинг сервера Тверской">
         <span className="portal-live-heading"><span className={online === null ? 'portal-live-dot pending' : 'portal-live-dot'} /> Тверской <ArrowUpRight size={18} aria-hidden="true" /></span>
-        <span className="portal-live-value" aria-live="polite">{online === null ? <span className={onlineFailed ? '' : 'portal-number-skeleton'}>{onlineFailed ? 'Нет данных' : '—'}</span> : online.toLocaleString('ru-RU')}</span>
+        <span className={'portal-live-value' + (onlineFailed ? ' is-unavailable' : '')} aria-live="polite">{online === null ? <span className={onlineFailed ? '' : 'portal-number-skeleton'}>{onlineFailed ? 'Нет данных' : '—'}</span> : online.toLocaleString('ru-RU')}</span>
         <span className="portal-live-caption"><WifiHigh size={16} aria-hidden="true" /> {onlineFailed ? 'Источник временно недоступен' : online === null ? 'Получаем онлайн…' : 'игроков на сервере сейчас'}</span>
       </PortalLink>
     </section>
@@ -95,7 +93,7 @@ export default function Home({ onNavigate }: HomeProps) {
     </motion.section>
 
     <section className="portal-course" aria-labelledby="portal-course-title">
-      <div className="portal-section-heading"><div><h2 id="portal-course-title">Все разделы</h2><p>От первого дня до уверенной работы.</p></div><span className="portal-section-meta"><BookOpenText size={18} aria-hidden="true" /> 28 тем курса</span></div>
+      <div className="portal-section-heading"><h2 id="portal-course-title">Все разделы</h2><span className="portal-section-meta"><BookOpenText size={18} aria-hidden="true" /> 28 тем курса</span></div>
       <div className="portal-course-grid">
         {courseCards.map((card, index) => {
           const Icon = card.icon;
@@ -111,19 +109,19 @@ export default function Home({ onNavigate }: HomeProps) {
     </section>
 
     <section className="portal-tools" aria-labelledby="portal-tools-title">
-      <div className="portal-section-heading"><div><h2 id="portal-tools-title">Для ежедневной работы</h2><p>Меньше рутины на каждой смене.</p></div></div>
+      <div className="portal-section-heading"><h2 id="portal-tools-title">Для ежедневной работы</h2></div>
       <div className="portal-tool-grid">{tools.map((tool, index) => {
         const Icon = tool.icon;
         return <motion.div key={tool.path} {...reveal((index % 2) * 0.08)}>
           <PortalLink path={tool.path} onNavigate={onNavigate} className="portal-tool-card">
-            <Icon size={28} weight="duotone" aria-hidden="true" /><div><span className="portal-tool-label">{tool.label}</span><h3>{tool.title}</h3><p>{tool.desc}</p></div><ArrowUpRight size={20} aria-hidden="true" />
+            <Icon size={24} weight="duotone" aria-hidden="true" /><div><h3>{tool.title}</h3><p>{tool.desc}</p></div><ArrowUpRight size={20} aria-hidden="true" />
           </PortalLink>
         </motion.div>;
       })}</div>
     </section>
 
     <section className="portal-closing" aria-label="Всё необходимое для службы">
-      <ShieldStar size={40} weight="duotone" aria-hidden="true" /><Tagline />
+      <Tagline />
       <PortalLink path="/basics" onNavigate={onNavigate} className="portal-secondary">Открыть курс <ArrowUpRight size={20} aria-hidden="true" /></PortalLink>
     </section>
     <footer className="portal-footer">
