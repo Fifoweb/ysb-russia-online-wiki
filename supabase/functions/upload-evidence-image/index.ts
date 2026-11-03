@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { MAX_IMAGE_BYTES, inspectEvidenceImage, readLimitedBytes, evidenceHostingUrl, allwebsImageUrl, allwebsExpiration } from '../_shared/evidenceImages.ts';
+import { MAX_IMAGE_BYTES, inspectEvidenceImage, readLimitedBytes, evidenceHostingUrl, fotoraAlbumUrl, allwebsImageUrl, allwebsExpiration } from '../_shared/evidenceImages.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -50,7 +50,16 @@ async function handleUpload(req: Request): Promise<Response> {
     if (error || !data?.result) throw new Error();
     reservation = data;
   } catch { return json(503, { error: 'Не удалось подготовить загрузку. Попробуйте позже.' }); }
-  if (reservation.result === 'ready' && evidenceHostingUrl(reservation.url)) return json(200, { url: evidenceHostingUrl(reservation.url), expiresAt: reservation.expiresAt ?? null, reused: true });
+  if (reservation.result === 'ready' && evidenceHostingUrl(reservation.url)) {
+    if (fotoraAlbumUrl(reservation.url)) {
+      try {
+        const { data, error } = await admin.rpc('is_complete_evidence_album', { p_user_id: user.id, p_url: reservation.url, p_hashes: [hash] });
+        if (error || typeof data !== 'boolean') throw new Error();
+        if (!data) return json(409, { error: `Этот снимок входит в альбом с другими фото. Проверьте альбом и при необходимости вставьте его ссылку вручную: ${reservation.url}`, retryable: false });
+      } catch { return json(503, { error: 'Не удалось проверить состав альбома. Попробуйте позже.' }); }
+    }
+    return json(200, { url: evidenceHostingUrl(reservation.url), expiresAt: reservation.expiresAt ?? null, reused: true });
+  }
   if (reservation.result === 'limit') return json(429, { error: 'Достигнут суточный лимит загрузки изображений. Можно вставить готовые ссылки.', retryable: false });
   if (reservation.result === 'duplicate') return json(409, { error: 'Этот скриншот уже входит в подборку другого аккаунта. Приложите собственные доказательства.', retryable: false });
   if (reservation.result === 'pending') return json(409, { error: 'Этот скриншот уже загружается. Подождите несколько секунд и повторите попытку.' }, 5);

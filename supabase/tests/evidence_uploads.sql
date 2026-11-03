@@ -79,6 +79,18 @@ begin
   end if;
   v_result:=public.reserve_evidence_upload(v_user,repeat('f',64),100,'image/png');
   if v_result->>'result'<>'duplicate' or v_result ? 'url' then raise exception 'One shared photo disclosed another account album'; end if;
+  v_result:=public.reserve_evidence_upload(v_other,repeat('9',64),100,'image/png');v_ticket:=(v_result->>'ticket')::uuid;
+  perform public.settle_evidence_upload(repeat('9',64),v_ticket,'ready','https://fotora.ru/uploaded/?ID=TESTALBUM123',now()+interval '1 day');
+  if public.is_complete_evidence_album(v_other,'https://fotora.ru/uploaded/?ID=TESTALBUM123',array[repeat('f',64)]) then
+    raise exception 'A cached album silently added unselected photos';
+  end if;
+  if public.is_complete_evidence_album(v_other,'https://fotora.ru/uploaded/?ID=TESTALBUM123',array[null::text]) then
+    raise exception 'Null hashes bypassed album completeness';
+  end if;
+  if not public.is_complete_evidence_album(v_other,'https://fotora.ru/uploaded/?ID=TESTALBUM123',array[repeat('f',64),repeat('9',64)])
+    or public.is_complete_evidence_album(v_user,'https://fotora.ru/uploaded/?ID=TESTALBUM123',array[repeat('f',64),repeat('9',64)]) then
+    raise exception 'Album completeness or ownership was not enforced';
+  end if;
   update private.evidence_upload_buckets set amount=209715200 where bucket='day:user:'||v_user::text;
   v_result:=public.reserve_evidence_upload(v_user,repeat('c',64),100,'image/png');
   if v_result->>'result'<>'limit' then raise exception 'Daily image byte quota not enforced'; end if;

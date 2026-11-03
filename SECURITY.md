@@ -43,6 +43,8 @@ validated against the exact provider host and album route. Switching providers
 reuses the original cached proof URL instead of uploading the same photo again.
 An album URL is reused only by its owner. A matching photo from another account
 does not disclose the remaining photos in that account's album.
+An owner also has to select every photo in a cached album before it can be
+inserted automatically; selecting a subset cannot silently attach extra photos.
 
 Employee account data is stored in `profiles` under the existing Supabase Auth
 user ID associated with Discord login. Row level security allows each signed-in

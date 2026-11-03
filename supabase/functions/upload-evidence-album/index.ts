@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { MAX_ALBUM_BYTES, MAX_ALBUM_BODY_BYTES, MAX_IMAGE_BYTES, MAX_SELECTED_IMAGES, evidenceHostingUrl, inspectEvidenceImage, readLimitedBytes } from '../_shared/evidenceImages.ts';
+import { MAX_ALBUM_BYTES, MAX_ALBUM_BODY_BYTES, MAX_IMAGE_BYTES, MAX_SELECTED_IMAGES, evidenceHostingUrl, fotoraAlbumUrl, inspectEvidenceImage, readLimitedBytes } from '../_shared/evidenceImages.ts';
 import { FotoraUploadError, uploadFotoraAlbum } from '../_shared/fotora.ts';
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Expose-Headers': 'Retry-After' };
@@ -73,6 +73,16 @@ async function handleAlbum(req: Request): Promise<Response> {
       const retry = data.result === 'pending' ? 5 : Number.isInteger(data.retryAfterSeconds) && data.retryAfterSeconds > 0 ? data.retryAfterSeconds : 60;
       return json(409, { error: `Один из скриншотов уже обрабатывается. Повторите через ${retry} сек.`, retryable: data.retryable !== false, retryAfterSeconds: retry }, retry);
     } catch { await settle('failed'); return json(503, { error: 'Не удалось подготовить загрузку. Попробуйте позже.' }); }
+  }
+  for (const album of [...links].filter(url => fotoraAlbumUrl(url))) {
+    try {
+      const { data, error } = await admin.rpc('is_complete_evidence_album', { p_user_id: user.id, p_url: album, p_hashes: photos.map(photo => photo.hash) });
+      if (error || typeof data !== 'boolean') throw new Error();
+      if (!data) {
+        await settle('failed');
+        return json(409, { error: `Часть снимков входит в альбом с другими фото. Проверьте его и при необходимости вставьте ссылку вручную: ${album}`, retryable: false });
+      }
+    } catch { await settle('failed'); return json(503, { error: 'Не удалось проверить состав альбома. Попробуйте позже.' }); }
   }
   let synced = true;
   if (reserved.length) {

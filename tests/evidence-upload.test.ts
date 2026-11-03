@@ -38,7 +38,7 @@ test('hosting results allow only original HTTPS images and never deletion URLs o
 });
 
 function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: number; dbDown?: boolean;
-  reservation?: string; cachedUrl?: string; hostingHttp?: number; networkError?: boolean; networkErrorAt?: number; healthFailures?: number; invalidResult?: boolean; syncDown?: boolean } = {}) {
+  reservation?: string; cachedUrl?: string; completeAlbum?: boolean; hostingHttp?: number; networkError?: boolean; networkErrorAt?: number; healthFailures?: number; invalidResult?: boolean; syncDown?: boolean } = {}) {
   let handler!: (request: Request) => Promise<Response>;
   const calls: { name: string; params: Record<string, unknown> }[] = [];
   const sent: { url: string; body: FormData; headers: Record<string, string>; byteLength: number; client: unknown }[] = [];
@@ -52,6 +52,7 @@ function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: n
       calls.push({ name, params });
       if (options.dbDown) return { data: null, error: new Error('private-secret-marker') };
       if (name === 'claim_evidence_upload_attempt') return { data: options.attempt ?? 0, error: null };
+      if (name === 'is_complete_evidence_album') return { data: options.completeAlbum !== false, error: null };
       if (name === 'reserve_evidence_upload') return { data: { result: options.reservation ?? 'reserved', ticket: 'ticket', url: options.cachedUrl ?? imageUrl, expiresAt: '2099-01-01T00:00:00Z' }, error: null };
       if (name === 'settle_evidence_upload') return { data: !options.syncDown, error: null };
       throw new Error('Unexpected RPC');
@@ -122,6 +123,7 @@ test('cached files never contact Allwebs twice and uncertain outcomes offer only
   const previousAlbum='https://fotora.ru/uploaded/?ID=TESTALBUM123';
   const fotora=fixture({reservation:'ready',cachedUrl:previousAlbum});const reused=await fotora.submit();
   assert.equal(reused.status,200);assert.equal((await reused.json()).url,previousAlbum);assert.equal(fotora.sent.length,0);
+  const subset=fixture({reservation:'ready',cachedUrl:previousAlbum,completeAlbum:false});assert.equal((await subset.submit()).status,409);assert.equal(subset.sent.length,0);
   for(const options of [{networkError:true},{invalidResult:true},{hostingHttp:503}]) {
     const app=fixture(options);const response=await app.submit();assert.equal(response.status,502);assert.equal(app.sent.length,1);
     assert.equal(app.calls.filter(call=>call.name==='settle_evidence_upload').at(-1)?.params.p_status,'uncertain');

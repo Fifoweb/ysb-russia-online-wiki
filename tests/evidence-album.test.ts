@@ -76,7 +76,7 @@ test('Fotora failures and future captcha challenges stop safely, never retry fil
   }
 });
 
-function albumFixture(options: { anonymous?: boolean; identity?: boolean; attempt?: number; dbDown?: boolean; reservations?: string[]; cachedUrl?: string; syncDown?: boolean; hostingError?: 'failed'|'uncertain' } = {}) {
+function albumFixture(options: { anonymous?: boolean; identity?: boolean; attempt?: number; dbDown?: boolean; reservations?: string[]; cachedUrl?: string; completeAlbum?: boolean; syncDown?: boolean; hostingError?: 'failed'|'uncertain' } = {}) {
   let handler!: (request: Request)=>Promise<Response>,reserveIndex=0;
   const calls: {name:string;params:Record<string,unknown>}[]=[],hosted:unknown[][]=[],logs:unknown[]=[];
   class HostingError extends Error { constructor(public uncertain:boolean){super('private-cookie-marker');} }
@@ -85,6 +85,7 @@ function albumFixture(options: { anonymous?: boolean; identity?: boolean; attemp
     rpc:async(name:string,params:Record<string,unknown>)=>{
       calls.push({name,params});if(options.dbDown)return{data:null,error:new Error('private-secret-marker')};
       if(name==='claim_evidence_upload_attempt')return{data:options.attempt??0,error:null};
+      if(name==='is_complete_evidence_album')return{data:options.completeAlbum!==false,error:null};
       if(name==='reserve_evidence_upload')return{data:{result:options.reservations?.[reserveIndex++]??'reserved',ticket:'ticket',url:options.cachedUrl??albumUrl,expiresAt:'2099-12-04T00:00:00.000Z'},error:null};
       return{data:!options.syncDown,error:null};
     }};
@@ -121,6 +122,8 @@ test('bulk uploads use the shared hash cache across hosts, settle all new photos
   assert.ok(app.calls.every(call=>!call.name.includes('application')&&!call.name.includes('achievement')));
   assert.doesNotMatch(JSON.stringify(data)+JSON.stringify(app.logs),/private-name|private-secret|cookie/);
   const cached=albumFixture({reservations:['ready','ready']});assert.equal((await cached.submit()).status,200);assert.equal(cached.hosted.length,0);
+  const subset=albumFixture({reservations:['ready','reserved'],completeAlbum:false});const rejected=await subset.submit();
+  assert.equal(rejected.status,409);assert.equal((await rejected.json()).retryable,false);assert.equal(subset.hosted.length,0);assert.equal(subset.calls.at(-1)?.params.p_status,'failed');
 });
 
 test('a blocked member releases unused reservations; ambiguous hosting outcomes are not retried; confirmed links survive sync failures', async () => {

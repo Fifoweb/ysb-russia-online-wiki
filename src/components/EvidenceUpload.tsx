@@ -121,13 +121,13 @@ export default function EvidenceUpload({ children, value, onChange, multiple = f
     </div>
     {notice && <p className="evidence-upload-notice" role="status">{notice}</p>}
     {items.length > 0 && <ul className="evidence-upload-list" aria-label="Выбранные скриншоты">{items.map(item => {
-      const album = item.provider === 'fotora', title = album ? `Альбом Fotora · ${item.files.length} фото` : item.files[0].name;
-      const albumLink = item.urls?.map(fotoraAlbumUrl).find(Boolean);
+      const albumLinks = item.urls?.map(fotoraAlbumUrl).filter((url): url is string => Boolean(url)) ?? [];
+      const album = item.provider === 'fotora', title = album ? `${item.urls && (albumLinks.length !== 1 || item.urls.length !== 1) ? 'Подборка' : 'Альбом Fotora'} · ${item.files.length} фото` : item.files[0].name;
       return <li key={item.id} data-status={item.status}>
         {item.preview ? <img src={item.preview} alt="" width={56} height={56} loading="lazy" decoding="async" /> : <FileImage size={32} aria-hidden="true" />}
         <div className="evidence-upload-detail"><strong title={title}>{title}</strong><span role="status">{item.status === 'selected' ? 'Готово к загрузке' : item.status === 'queued' ? 'В очереди…' : item.status === 'uploading' ? `Загружаем на ${providerName(item.provider!)}…` : item.status === 'done' ? <><CheckCircle size={16} aria-hidden="true" />{(item.urls?.length ?? 0) > 1 ? 'Ссылки добавлены' : 'Ссылка добавлена'}</> : item.error}</span>
           {item.expiresAt && item.status === 'done' && <small>Хостинг указал срок до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</small>}
-          {albumLink && <a className="evidence-upload-insert" href={albumLink} target="_blank" rel="noopener noreferrer">Открыть альбом</a>}
+          {albumLinks.map((url, index) => <a key={url} className="evidence-upload-insert" href={url} target="_blank" rel="noopener noreferrer">{albumLinks.length > 1 ? `Открыть альбом ${index + 1}` : 'Открыть альбом'}</a>)}
           {item.status === 'uploading' && <progress aria-label={`Загрузка: ${title}`} />}
           {item.status === 'error' && item.urls && <button className="evidence-upload-insert" type="button" disabled={disabled} onClick={() => { if (insert(item, item.urls!, true)) patch(item.id, { status: 'done', error: undefined }); }}><ClipboardText size={16} aria-hidden="true" />Подставить ссылки</button>}
         </div>
