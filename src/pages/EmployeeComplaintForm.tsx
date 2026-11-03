@@ -1,9 +1,10 @@
+import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { ArrowRight, CheckCircle2, Clock3, MessageSquareText, Send, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Clock3, MessageSquareText, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -109,12 +110,11 @@ export default function EmployeeComplaintForm() {
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
-          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
-          <p className="text-emerald-200 text-base font-semibold mb-5">Жалоба отправлена на рассмотрение</p>
+        <SubmissionSuccess title="Жалоба отправлена на рассмотрение">
+
           <button type="button" onClick={() => { resetForm(); setErrorMessage(''); setState('idle'); }}
             className="secondary-button mx-auto">Отправить ещё одну</button>
-        </section>
+        </SubmissionSuccess>
       ) : (
         <section className="glass rounded-2xl border border-sky-300/15">
           <form onSubmit={submit} className="space-y-6">
@@ -196,11 +196,7 @@ export default function EmployeeComplaintForm() {
               </p>
             )}
             <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
-            <button type="submit" disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
-              className="primary-button w-full justify-center !py-3.5">
-              {state === 'sending' ? 'Отправка…' : 'Отправить жалобу'}
-              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
-            </button>
+            <ApplicationSubmitButton type="submit" disabled={!allFilled || state === 'sending' || remainingSeconds > 0} sending={state === 'sending'}>Отправить жалобу</ApplicationSubmitButton>
           </form>
         </section>
       )}

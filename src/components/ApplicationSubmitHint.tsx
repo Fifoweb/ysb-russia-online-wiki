@@ -1,4 +1,5 @@
 import { Info } from 'lucide-react';
+import { SubmissionPending } from './SubmissionFeedback';
 
 type Props = {
   reason?: string;
@@ -7,7 +8,8 @@ type Props = {
 };
 
 export default function ApplicationSubmitHint({ reason, remainingSeconds, sending }: Props) {
-  if (!reason || remainingSeconds > 0 || sending) return null;
+  if (sending) return <SubmissionPending />;
+  if (!reason || remainingSeconds > 0) return null;
 
   return (
     <p className="flex items-start gap-2 text-sm text-sky-100/80" role="status">

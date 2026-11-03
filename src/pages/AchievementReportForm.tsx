@@ -1,9 +1,10 @@
+import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, CheckCircle2, ExternalLink, Link2, RefreshCw, Send, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ExternalLink, Link2, RefreshCw, ShieldCheck, Trophy } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
@@ -125,13 +126,12 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
       <ShieldCheck size={32} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
       <p className="text-slate-200 text-sm mb-5">{enabled ? 'Для подачи отчёта войдите через Discord.' : 'Сервис авторизации временно недоступен.'}</p>
       {enabled && <button type="button" onClick={() => void signIn()} className="primary-button mx-auto">Войти через Discord <ArrowRight size={16} /></button>}
-    </section> : state === 'ok' ? <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
-      <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
-      <h3 className="text-emerald-200">Отчёт отправлен в Discord</h3>
+    </section> : state === 'ok' ? <SubmissionSuccess title="Отчёт отправлен в Discord">
+
       <p>{syncPending ? 'Доставка подтверждена, но обновление счётчика требует проверки у администратора. Не отправляйте этот отчёт повторно.' : 'Ваш вклад учтён на дашборде. Публичные счётчики обновляются в течение минуты.'}</p>
       <div className="flex flex-wrap justify-center gap-3"><button type="button" className="primary-button" onClick={() => onNavigate('/achievements')}>Открыть дашборд <ArrowRight size={16} /></button>
         <button type="button" className="secondary-button" onClick={() => { resetForm(); requestId.current = null; setState('idle'); setError(''); }}>Новый отчёт</button></div>
-    </section> : <section className="glass rounded-2xl border border-sky-300/15">
+    </SubmissionSuccess> : <section className="glass rounded-2xl border border-sky-300/15">
       <form onSubmit={submit} className="space-y-6">
         <fieldset disabled={blocked} className="min-w-0"><p className="eyebrow mb-2">01 · ДАННЫЕ СОТРУДНИКА</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <label htmlFor="achievement-name"><span>Имя и фамилия <span className="text-rose-300">*</span></span><input id="achievement-name" required maxLength={100} value={form.fullName} onChange={event => update('fullName', event.target.value)} placeholder="Иван Иванов" className={inputClass} /></label>
@@ -167,7 +167,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
         <div className="border-t border-sky-300/15 pt-5"><label htmlFor="achievement-discord" className="block"><span>Discord ID <span className="font-normal text-slate-400">(автоматически)</span></span><input id="achievement-discord" readOnly value={typeof discordId === 'string' ? discordId : 'Будет добавлен при отправке'} className={inputClass} /></label><p className="application-note">В Discord вы будете упомянуты. Ник и ID доступны кураторам; публичный дашборд показывает только сводные числа.</p></div>
         {state === 'error' && <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>}
         <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
-        <button type="submit" disabled={Boolean(incompleteReason) || state === 'sending' || remainingSeconds > 0} className="primary-button w-full justify-center !py-3.5">{state === 'sending' ? 'Отправка…' : 'Отправить отчёт'}{state !== 'sending' && <Send size={17} aria-hidden="true" />}</button>
+        <ApplicationSubmitButton type="submit" disabled={Boolean(incompleteReason) || state === 'sending' || remainingSeconds > 0} sending={state === 'sending'}>Отправить отчёт</ApplicationSubmitButton>
       </form>
     </section>}
   </PageTransition>;

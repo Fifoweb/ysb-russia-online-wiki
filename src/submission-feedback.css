@@ -1,0 +1,33 @@
+.portal-shell .application-submit-button { position: relative; isolation: isolate; width: 100%; justify-content: center; min-height: 52px; padding: 12px 24px; overflow: hidden; transition: background-color .24s var(--portal-ease), transform .24s var(--portal-ease), border-color .24s var(--portal-ease); }
+.application-submit-label, .application-submit-icon { position: relative; z-index: 1; }
+.application-submit-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 24px; }
+.application-submit-button::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(100deg, transparent 20%, rgb(186 230 253 / .2) 50%, transparent 80%); transform: translateX(-110%); pointer-events: none; }
+.portal-shell .application-submit-button[aria-busy="true"] { background: #1d4ed8; border-color: #60a5fa; opacity: 1; cursor: wait; transform: none; }
+.application-submit-button[aria-busy="true"]::before { animation: submission-sweep 1.8s var(--portal-ease) infinite; }
+.application-submit-button[aria-busy="true"] .application-submit-icon { animation: submission-plane 1.8s var(--portal-ease) infinite; }
+.submission-pending { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--portal-stroke); border-radius: 12px; background: rgb(13 42 80 / .7); box-shadow: inset 0 1px 0 rgb(255 255 255 / .06); animation: submission-enter .35s var(--portal-ease) both; }
+.submission-pending-art { position: relative; display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 64px; border: 1px solid var(--portal-stroke); border-radius: 16px; background: var(--portal-surface); color: var(--portal-accent); }
+.submission-pending-plane { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid rgb(125 211 252 / .3); border-radius: 8px; background: #123760; color: #bae6fd; animation: submission-plane 1.8s var(--portal-ease) infinite; }
+.submission-pending-copy { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.submission-pending-copy > strong { color: var(--portal-text); font-size: 16px; font-weight: 600; line-height: 24px; }
+.submission-pending-copy > span { color: var(--portal-muted); font-size: 14px; line-height: 20px; }
+.submission-pending-track { position: relative; height: 3px; margin-top: 8px; overflow: hidden; border-radius: 9999px; background: rgb(125 211 252 / .12); }
+.submission-pending-track > span { position: absolute; inset-block: 0; left: 0; width: 32%; border-radius: inherit; background: var(--portal-accent); animation: submission-track 1.8s var(--portal-ease) infinite; }
+.wiki-content .submission-success { position: relative; isolation: isolate; padding: 48px 32px; border: 1px solid rgb(125 211 252 / .24); border-radius: 16px; text-align: center; background: var(--portal-surface); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); animation: submission-enter .5s var(--portal-ease) both; }
+.submission-success-seal { position: relative; display: grid; place-items: center; width: 96px; height: 96px; margin: 0 auto 24px; border-radius: 50%; color: var(--portal-accent); background: radial-gradient(circle, rgb(125 211 252 / .12), rgb(125 211 252 / .02) 70%); }
+.submission-success-seal > svg { position: relative; overflow: visible; }
+.submission-success-ring { transform: rotate(-90deg); transform-box: fill-box; transform-origin: center; stroke-dasharray: 1; animation: submission-draw .7s var(--portal-ease) both; }
+.submission-success-check { color: #6ee7b7; stroke-dasharray: 1; animation: submission-draw .5s var(--portal-ease) .2s both; }
+.submission-success-ripple { position: absolute; inset: 8px; border: 1px solid rgb(125 211 252 / .45); border-radius: 50%; opacity: 0; animation: submission-ripple .9s var(--portal-ease) .15s both; }
+.wiki-content .submission-success-title { max-width: 560px; margin: 0 auto; color: var(--portal-text); font-size: 24px; line-height: 32px; font-weight: 600; text-wrap: balance; }
+.submission-success-title:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 8px; border-radius: 8px; }
+.submission-success-content { display: grid; justify-items: center; gap: 24px; margin-top: 24px; animation: submission-enter .4s var(--portal-ease) .1s both; }
+.wiki-content .submission-success-content p { max-width: 560px; margin: 0; color: var(--portal-muted); font-size: 16px; line-height: 24px; }
+@keyframes submission-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes submission-sweep { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
+@keyframes submission-plane { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(3px, -3px); } }
+@keyframes submission-track { from { transform: translateX(-110%); } to { transform: translateX(420%); } }
+@keyframes submission-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes submission-ripple { from { opacity: .6; transform: scale(.9); } to { opacity: 0; transform: scale(1.3); } }
+@media (max-width: 540px) { .wiki-content .submission-success { padding: 32px 24px; } .wiki-content .submission-success-title { font-size: 20px; line-height: 28px; } .submission-pending { gap: 12px; } .submission-pending-art { flex-basis: 48px; width: 48px; height: 56px; } }
+@media (prefers-reduced-motion: reduce) { .application-submit-button, .application-submit-button::before, .application-submit-icon, .submission-pending, .submission-pending-plane, .submission-pending-track > span, .submission-success, .submission-success *, .submission-success *::before { animation: none !important; transition: none !important; } .submission-pending-track > span { transform: translateX(105%); opacity: .6; } .submission-success-ring, .submission-success-check { stroke-dashoffset: 0; } }

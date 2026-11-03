@@ -1,7 +1,8 @@
+import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useState } from 'react';
-import { ArrowRight, CheckCircle2, MessageSquareText, Send, ShieldCheck } from 'lucide-react';
+import { ArrowRight, MessageSquareText, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -75,13 +76,12 @@ export default function ComplaintForm() {
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
-          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
-          <p className="text-emerald-200 text-base font-semibold mb-5">Жалоба отправлена</p>
+        <SubmissionSuccess title="Жалоба отправлена">
+
           <button type="button" onClick={() => { setForm(initialForm); setState('idle'); }} className="secondary-button mx-auto">
             Отправить ещё одну
           </button>
-        </section>
+        </SubmissionSuccess>
       ) : (
         <section className="glass rounded-2xl border border-sky-300/15">
           <div className="space-y-6">
@@ -117,11 +117,7 @@ export default function ComplaintForm() {
             </div>
             {state === 'error' && <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</p>}
             <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
-            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
-              className="primary-button w-full justify-center !py-3.5">
-              {state === 'sending' ? 'Отправка…' : 'Отправить жалобу'}
-              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
-            </button>
+            <ApplicationSubmitButton type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0} sending={state === 'sending'}>Отправить жалобу</ApplicationSubmitButton>
           </div>
         </section>
       )}

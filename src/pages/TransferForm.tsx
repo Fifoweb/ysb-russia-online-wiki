@@ -1,9 +1,10 @@
+import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
-import { ArrowRight, ArrowRightLeft, CheckCircle2, Send, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import FormLoader from '../components/FormLoader';
 import { useAuth } from '../lib/auth';
@@ -100,14 +101,13 @@ export default function TransferForm() {
           </button>
         </section>
       ) : state === 'ok' ? (
-        <section className="glass rounded-2xl border border-emerald-400/25 text-center" role="status">
-          <CheckCircle2 size={34} className="mx-auto mb-4 text-emerald-300" aria-hidden="true" />
-          <p className="text-emerald-200 text-base font-semibold mb-5">Заявка на перевод в ГИБДД отправлена руководству</p>
+        <SubmissionSuccess title="Заявка на перевод в ГИБДД отправлена руководству">
+
           <button type="button" onClick={() => { resetForm(); setErrorMessage(''); setState('idle'); }}
             className="secondary-button mx-auto">
             Отправить ещё одну
           </button>
-        </section>
+        </SubmissionSuccess>
       ) : (
         <section className="glass rounded-2xl border border-sky-300/15">
           <div className="space-y-6">
@@ -161,11 +161,7 @@ export default function TransferForm() {
             )}
 
             <ApplicationSubmitHint reason={incompleteReason} remainingSeconds={remainingSeconds} sending={state === 'sending'} />
-            <button type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0}
-              className="primary-button w-full justify-center !py-3.5">
-              {state === 'sending' ? 'Отправка…' : 'Отправить заявку на перевод'}
-              {state !== 'sending' && <Send size={17} aria-hidden="true" />}
-            </button>
+            <ApplicationSubmitButton type="button" onClick={submit} disabled={!allFilled || state === 'sending' || remainingSeconds > 0} sending={state === 'sending'}>Отправить заявку на перевод</ApplicationSubmitButton>
             <p className="application-note text-center">Отправляется от вашего Discord-аккаунта: {(user.user_metadata as Record<string, string | undefined>)?.full_name || 'пользователь'}</p>
           </div>
         </section>
