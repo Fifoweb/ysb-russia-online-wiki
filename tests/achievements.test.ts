@@ -366,6 +366,7 @@ test('browser timers separate achievement reports from the unchanged 150-second 
       useEffect: (effect: () => unknown) => effect(),
       supabase: { functions: { invoke: async () => result } },
       getApplicationSession: async () => ({ session: { access_token: 'fixture-site-token' } }),
+      withSubmissionMotion: (_name: string, send: () => Promise<unknown>) => send(),
     });
     runInContext(compile('../src/lib/applicationCooldown.ts'), context);
     return {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { getApplicationSession } from './auth';
+import { withSubmissionMotion } from './submissionMotion';
 
 const DURATION_MS = 150_000;
 const STORAGE_PREFIX = 'application-cooldown:';
@@ -50,22 +51,25 @@ export function useApplicationCooldown(userId?: string, scope: CooldownScope = '
 
 export async function invokeApplication(name: string, options: { body: Record<string, unknown> }, userId: string) {
   if (!supabase) throw new Error('Supabase client is unavailable');
-  const scope: CooldownScope = name === 'submit-achievement-report' ? 'achievements' : 'applications';
-  const key = timerKey(userId, scope);
-  const durationSeconds = scope === 'achievements' ? 10 : DURATION_MS / 1000;
-  const auth = await getApplicationSession(userId);
-  if (!auth.session) return { data: null, error: { context: Response.json({ error: auth.error }, { status: auth.status }) } };
-  const result = await supabase.functions.invoke(name, {
-    ...options, headers: { Authorization: `Bearer ${auth.session.access_token}` },
-  });
-  if (!result.error) {
-    setDeadline(key, durationSeconds);
-  } else {
-    const response = (result.error as { context?: Response }).context;
-    if (response?.status === 429) {
-      const retry = Number(response.headers?.get('Retry-After'));
-      setDeadline(key, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : durationSeconds);
+  const client = supabase;
+  return withSubmissionMotion(name, async () => {
+    const scope: CooldownScope = name === 'submit-achievement-report' ? 'achievements' : 'applications';
+    const key = timerKey(userId, scope);
+    const durationSeconds = scope === 'achievements' ? 10 : DURATION_MS / 1000;
+    const auth = await getApplicationSession(userId);
+    if (!auth.session) return { data: null, error: { context: Response.json({ error: auth.error }, { status: auth.status }) } };
+    const result = await client.functions.invoke(name, {
+      ...options, headers: { Authorization: `Bearer ${auth.session.access_token}` },
+    });
+    if (!result.error) {
+      setDeadline(key, durationSeconds);
+    } else {
+      const response = (result.error as { context?: Response }).context;
+      if (response?.status === 429) {
+        const retry = Number(response.headers?.get('Retry-After'));
+        setDeadline(key, Number.isFinite(retry) && retry > 0 ? Math.min(150, retry) : durationSeconds);
+      }
     }
-  }
-  return result;
+    return result;
+  });
 }

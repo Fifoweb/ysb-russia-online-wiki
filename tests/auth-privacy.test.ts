@@ -249,6 +249,7 @@ function submissionSessionFixture() {
   const posts: { name: string; options: { body: unknown; headers: { Authorization: string } } }[] = [];
   let postResult: { error: null | { context: Response }; data?: unknown } = { error: null, data: { ok: true } };
   const context = createContext({ isSupabaseConfigured: true, withoutProviderTokens, Date, Response, Event,
+    withSubmissionMotion: (_name: string, send: () => Promise<unknown>) => send(),
     readCachedSiteSession: () => stored.data.session ? withoutProviderTokens(stored.data.session) : null,
     localStorage: memoryStorage(), window: { dispatchEvent: () => {} },
     useSyncExternalStore: (subscribe: (fn: () => void) => void, getSnapshot: () => unknown) => {
