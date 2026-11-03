@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
+import { departmentLeadershipRoles } from '../_shared/departments.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -8,16 +9,7 @@ const cors = {
 };
 const WEBHOOK_ID = '1553880310158983198';
 const CHANNEL_ID = '1538937578835935397';
-const ROLE_IDS: Record<string, string> = {
-  senior: '1538937566273732632',
-  usb: '1540269592927019038',
-  uku: '1540268884987478096',
-  uor: '1540268999718342656',
-  sdb: '1540268801193672755',
-  mb: '1542235140611379260',
-  ugk: '1540269700443799583',
-  dps: '1540268712282562610',
-};
+const ROLE_IDS: Record<string, string> = departmentLeadershipRoles;
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 

@@ -1,9 +1,10 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
+import { departmentLeadershipRoles } from '../_shared/departments.ts';
 
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(status:number,body:unknown)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store'}});
-const roles:Record<string,string>={ senior:'1538937566273732632',usb:'1540269592927019038',uku:'1540268884987478096',uor:'1540268999718342656',sdb:'1540268801193672755',mb:'1542235140611379260',ugk:'1540269700443799583',dps:'1540268712282562610',ovk:'1540269592927019038',udk:'1540269491404017674' };
+const roles:Record<string,string>=departmentLeadershipRoles;
 const guildId='1538937566156300350', channelId='1538937568890986529', webhookId='1552405413432004609';
 function webhookUrl(raw:string|undefined) {
   try { const u=new URL(raw||''); return u.protocol==='https:'&&u.hostname==='discord.com'&&!u.port&&!u.username&&!u.password&&!u.search&&!u.hash&&new RegExp(`^/api/webhooks/${webhookId}/[\\w.-]+$`).test(u.pathname)?u:null; } catch { return null; }

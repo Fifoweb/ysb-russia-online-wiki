@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
+import { departmentLeadershipRoles } from '../_shared/departments.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,8 @@ const cors = {
 const TARGETS = {
   academy: { label: 'Академия', webhookId: '1553922705936617472', channelId: '1538937581432078451', roleId: '1540267213578043434', secret: 'DISCORD_ACADEMY_PROMOTION_WEBHOOK_URL' },
   uku: { label: 'УКУ', webhookId: '1554442409205563452', channelId: '1538937582400966689', roleId: '1540268884987478096', secret: 'DISCORD_UKU_PROMOTION_WEBHOOK_URL' },
-  usb: { label: 'УСБ', webhookId: '1554663195552124979', channelId: '1538937580421255241', roleId: '1540269592927019038', secret: 'DISCORD_USB_PROMOTION_WEBHOOK_URL' },
+  ovk: { label: 'ОВК', webhookId: '1567283053909512202', channelId: '1540874407080103986', threadId: '1540874839471165520', roleId: departmentLeadershipRoles.ovk, secret: 'DISCORD_OVK_PROMOTION_WEBHOOK_URL' },
+  udk: { label: 'УДК', webhookId: '1567282962251128912', channelId: '1540874407080103986', threadId: '1540874889441972296', roleId: departmentLeadershipRoles.udk, secret: 'DISCORD_UDK_PROMOTION_WEBHOOK_URL' },
   dps: { label: 'ДПС', webhookId: '1554664973332906005', channelId: '1538937580937019425', roleId: '1540268712282562610', secret: 'DISCORD_DPS_PROMOTION_WEBHOOK_URL' },
   sdb: { label: 'СДБ', webhookId: '1554665342901428274', channelId: '1540401716779024535', roleId: '1540268801193672755', secret: 'DISCORD_SDB_PROMOTION_WEBHOOK_URL' },
   uor: { label: 'УОР', webhookId: '1554665977621258313', channelId: '1540370399789981706', roleId: '1540268999718342656', secret: 'DISCORD_UOR_PROMOTION_WEBHOOK_URL' },
@@ -64,7 +66,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const nickStatic = typeof body.nickStatic === 'string' ? body.nickStatic.trim() : '';
   if (!nickStatic || nickStatic.length > 100) return json(400, { error: 'Укажите никнейм и #статик (до 100 символов)' });
   const department = body.department === undefined ? 'academy' : body.department;
-  if (department !== 'academy' && department !== 'uku' && department !== 'usb' &&
+  if (department !== 'academy' && department !== 'uku' && department !== 'ovk' && department !== 'udk' &&
     department !== 'dps' && department !== 'sdb' && department !== 'uor' && department !== 'ugk' && department !== 'mb') {
     return json(400, { error: 'Выберите подразделение из списка' });
   }
@@ -150,6 +152,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   };
   const url = new URL(webhook);
   url.searchParams.set('wait', 'true');
+  if ('threadId' in targetConfig) url.searchParams.set('thread_id', targetConfig.threadId);
   let response: Response;
   try {
     response = await fetch(url, {

@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import ts from 'typescript';
+import { departmentLeadershipRoles } from '../supabase/functions/_shared/departments';
 
 const discordId='123456789012345678', userId='00000000-0000-4000-8000-000000000001';
 const testWebhook='https://discord.com/api/webhooks/1552405413432004609/offline-test-token';
@@ -17,7 +18,7 @@ function fixture(options:{anonymous?:boolean;identity?:boolean;badChannel?:boole
       insert:async(value:unknown)=>{calls.push({table,operation:'insert',value});return{error:options.reserveFail?{}:null}},
       update:(value:unknown)=>({eq:()=>({eq:async()=>{calls.push({table,operation:'update',value});return{error:options.finishFail?{}:null}}})})})};
   const env:Record<string,string>={SUPABASE_URL:'https://example.test',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'private-service-marker',DISCORD_VACATION_WEBHOOK_URL:testWebhook};
-  const context=createContext({Deno:{env:{get:(key:string)=>env[key]},serve:(fn:typeof handler)=>{handler=fn}},createClient:()=>client,withSubmissionCooldown:(fn:typeof handler)=>fn,Request,Response,URL,AbortSignal,Date,Intl,console:{error:(...v:unknown[])=>logs.push(v)},fetch:async(url:URL,init:RequestInit={})=>{
+  const context=createContext({departmentLeadershipRoles,Deno:{env:{get:(key:string)=>env[key]},serve:(fn:typeof handler)=>{handler=fn}},createClient:()=>client,withSubmissionCooldown:(fn:typeof handler)=>fn,Request,Response,URL,AbortSignal,Date,Intl,console:{error:(...v:unknown[])=>logs.push(v)},fetch:async(url:URL,init:RequestInit={})=>{
     const method=init.method||'GET';requests.push({method,url:String(url),body:init.body?JSON.parse(String(init.body)):undefined});
     if(method==='GET')return Response.json({id:'1552405413432004609',guild_id:'1538937566156300350',channel_id:options.badChannel?'123456789012345678':'1538937568890986529'});
     if(options.throwPost)throw new Error('private-webhook-marker');return Response.json({id:'123456789012345678'},{status:options.postStatus??200});

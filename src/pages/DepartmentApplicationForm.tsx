@@ -1,4 +1,5 @@
 import PortalSelect from '../components/PortalSelect';
+import { currentDepartments } from '../data/departments';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
@@ -16,14 +17,7 @@ import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 type State = 'idle' | 'sending' | 'ok' | 'error';
 
 const departments = [
-  { id: 'ugk', label: 'УГК | Управление грузового контроля' },
-  { id: 'usb', label: 'УСБ | Управление собственной безопасности' },
-  { id: 'mb', label: 'МБ | Мотоциклетный Батальон' },
-  { id: 'uor', label: 'УОР | Управление оперативного розыска' },
-  { id: 'sdb', label: 'СДБ | Специальный дорожный батальон' },
-  { id: 'uku', label: 'УКУ | Учебно-кадровое управление' },
-  { id: 'dps', label: 'ДПС | Дорожно-патрульная служба' },
-  { id: 'ukm', label: 'УКМ | Управление по контролю магистралей' },
+  ...currentDepartments,
   { id: 'academy', label: 'Академия' },
 ] as const;
 

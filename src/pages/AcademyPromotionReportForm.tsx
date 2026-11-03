@@ -1,4 +1,5 @@
 import PortalSelect from '../components/PortalSelect';
+import { currentDepartments, type DepartmentId } from '../data/departments';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
@@ -16,7 +17,7 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
-type Department = 'academy' | 'uku' | 'usb' | 'dps' | 'sdb' | 'uor' | 'ugk' | 'mb';
+type Department = 'academy' | DepartmentId;
 type RankTransition = '' | '1-2' | '2-3';
 type EvidenceKey = 'governmentId' | 'exam' | 'practice' | 'stateFractionRole';
 const blankEvidence = { governmentId: '', exam: '', practice: '', stateFractionRole: '' };
@@ -136,13 +137,7 @@ export default function AcademyPromotionReportForm() {
                   <span>Подразделение</span>
                   <PortalSelect label="Подразделение" value={department} onChange={event => { setDepartment(event.target.value as Department); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); }} className={inputClass}>
                     <option value="academy">Академия</option>
-                    <option value="uku">УКУ · Учебное и кадровое управление</option>
-                    <option value="usb">УСБ · Управление собственной безопасности</option>
-                    <option value="dps">ДПС · Дорожно-патрульная служба</option>
-                    <option value="sdb">СДБ · Специальный дорожный батальон</option>
-                    <option value="uor">УОР · Управление оперативного розыска</option>
-                    <option value="ugk">УГК · Управление грузового контроля</option>
-                    <option value="mb">МБ · Мотоциклетный Батальон</option>
+                    {currentDepartments.map(department => <option key={department.id} value={department.id}>{department.label}</option>)}
                   </PortalSelect>
                 </label>
                 {department === 'academy' ? (

@@ -1,4 +1,5 @@
 import PortalSelect from '../components/PortalSelect';
+import { departmentLeadershipOptions } from '../data/departments';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
@@ -19,14 +20,7 @@ type State = 'idle' | 'sending' | 'ok' | 'error';
 const initialForm = { nickStatic: '', rankTransition: '', evidence: '', mentionTarget: 'senior' };
 const inputClass = 'mt-2 w-full px-4 py-3 text-sm outline-none';
 const targets = [
-  { value: 'senior', label: 'Старший состав' },
-  { value: 'usb', label: 'Руководство УСБ' },
-  { value: 'uku', label: 'Руководство УКУ' },
-  { value: 'uor', label: 'Руководство УОР' },
-  { value: 'sdb', label: 'Руководство СДБ' },
-  { value: 'mb', label: 'Руководство МБ' },
-  { value: 'ugk', label: 'Руководство УГК' },
-  { value: 'dps', label: 'Руководство ДПС' },
+  ...departmentLeadershipOptions.map(({ id, label }) => ({ value: id, label })),
   { value: 'people', label: 'Конкретные люди по Discord-нику' },
 ];
 

@@ -1,16 +1,9 @@
+import { canonicalDepartment, currentDepartments } from '../data/departments';
+
 export const profileDepartments = [
   { id: 'gu', label: 'ГУ ГИБДД' },
   { id: 'academy', label: 'Академия' },
-  { id: 'usb', label: 'УСБ | Управление собственной безопасности' },
-  { id: 'uku', label: 'УКУ | Учебно-кадровое управление' },
-  { id: 'uor', label: 'УОР | Управление оперативного розыска' },
-  { id: 'sdb', label: 'СДБ | Специальный дорожный батальон' },
-  { id: 'mb', label: 'МБ | Мотоциклетный Батальон' },
-  { id: 'ugk', label: 'УГК | Управление грузового контроля' },
-  { id: 'dps', label: 'ДПС | Дорожно-патрульная служба' },
-  { id: 'ukm', label: 'УКМ | Управление по контролю магистралей' },
-  { id: 'udk', label: 'УДК' },
-  { id: 'ovk', label: 'ОВК' },
+  ...currentDepartments,
 ] as const;
 
 export type DepartmentStatus = 'pending' | 'verified' | 'none' | 'not_member' | 'multiple' | 'unavailable';
@@ -37,12 +30,13 @@ export const emptyProfile: Profile = {
 export function readProfile(value: unknown): Profile {
   const row = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   const profile = Object.fromEntries(Object.keys(emptyProfile).map(key => [key, typeof row[key] === 'string' ? row[key] : ''])) as unknown as Profile;
+  profile.department = canonicalDepartment(profile.department);
   if (!['pending','verified','none','not_member','multiple','unavailable'].includes(profile.department_status)) profile.department_status = 'pending';
   return profile;
 }
 
 export function profileDepartmentLabel(id: string): string {
-  return profileDepartments.find(department => department.id === id)?.label ?? '';
+  return profileDepartments.find(department => department.id === canonicalDepartment(id))?.label ?? '';
 }
 
 export function withDiscordDepartment(profile: Profile, value: unknown): Profile {
@@ -100,9 +94,9 @@ export function profileDefault(profile: Profile, field: ProfileDefault): string 
     case 'staticId': return staticId;
     case 'combined': return nickname && staticId ? `${nickname} | ${staticId}` : '';
     case 'departmentLabel': return profile.department_status === 'verified' ? profileDepartmentLabel(profile.department).split(' | ')[0] : '';
-    case 'achievementDepartment': return profile.department_status === 'verified' && ['gu','usb','uku','uor','sdb','mb','ugk','dps'].includes(profile.department) ? profile.department : '';
-    case 'sourceDepartment': return profile.department_status === 'verified' && ['academy','usb','uku','uor','sdb','mb','ugk','dps','ukm'].includes(profile.department) ? profile.department : '';
-    case 'promotionDepartment': return profile.department_status === 'verified' && ['academy','usb','uku','uor','sdb','mb','ugk','dps'].includes(profile.department) ? profile.department : '';
+    case 'achievementDepartment': return profile.department_status === 'verified' && (profile.department === 'gu' || currentDepartments.some(department => department.id === profile.department)) ? profile.department : '';
+    case 'sourceDepartment':
+    case 'promotionDepartment': return profile.department_status === 'verified' && (profile.department === 'academy' || currentDepartments.some(department => department.id === profile.department)) ? profile.department : '';
   }
 }
 

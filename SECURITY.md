@@ -61,8 +61,8 @@ values are ignored by the new client and never presented as verified membership.
 No Discord provider token is required or retained. A single matched role confirms
 the department; no role, a missing member, multiple departments, and outages are
 distinct states. Unavailable or ambiguous results clear department autofill while
-nickname and StaticID remain editable. Existing report permissions and department
-routing do not change; select-based autofill uses each form's existing allowlist.
+nickname and StaticID remain editable. Report permissions stay separate from
+membership; select-based autofill uses each form's current department allowlist.
 Results are cached for 60 seconds (15 on provider outages); 25-second leases prevent
 parallel refreshes for the same account. At most 120 uncached checks start globally
 per minute, and Discord 429 backoff pauses new checks for up to five minutes.
@@ -71,6 +71,15 @@ The browser caches profile data only in page memory and discards it on account c
 report drafts are reset on logout or switching accounts; manually edited fields
 are not overwritten by a late profile response. The public achievements dashboard
 continues to expose aggregate results only.
+
+Current department names and leadership notifications share one catalog:
+OVK, UDK, SDB, UOR, MB, UGK, UKU and DPS. Headquarters and Academy are retained
+only in the forms that use them. Retired USB contributions remain stored intact
+and count under the renamed OVK column; new achievement reports accept UDK and
+OVK. OVK/UDK applications and promotion reports use the owner's supplied forum
+threads and leadership roles. Their webhook URLs are server-only secrets
+`DISCORD_OVK_PROMOTION_WEBHOOK_URL` and `DISCORD_UDK_PROMOTION_WEBHOOK_URL`.
+Promotion delivery validates the webhook ID and parent channel before posting.
 
 `is_site_session_active()` checks the caller's verified JWT session ID against
 `auth.sessions`: the session must belong to the caller, still exist, be less than

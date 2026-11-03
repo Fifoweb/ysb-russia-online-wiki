@@ -4,6 +4,7 @@ import { createContext, runInContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import test from 'node:test';
 import ts from 'typescript';
+import { currentDepartments, departmentLeadershipRoles } from '../supabase/functions/_shared/departments';
 
 function compile(path: string) {
   return ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
@@ -41,7 +42,7 @@ function fixture(options: { authorized?: boolean; cooldown?: number; dbDown?: bo
     },
   };
   const context = createContext({ Deno: { env: { get: (key: string) => env[key] }, serve: (fn: typeof handle) => { handle = fn; } },
-    createClient: () => client, console: { error: (...args: unknown[]) => logs.push(args) },
+    createClient: () => client, currentDepartments, departmentLeadershipRoles, console: { error: (...args: unknown[]) => logs.push(args) },
     fetch: (_url: URL, init: RequestInit) => {
       deliveries++;
       if (!options.transferDelivery) throw new Error('No network is allowed in these tests');

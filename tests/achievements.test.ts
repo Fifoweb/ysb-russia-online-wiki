@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { currentDepartments } from '../supabase/functions/_shared/departments';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -10,7 +11,7 @@ import { buildAchievementMessage, buildAchievementMessages } from '../supabase/f
 
 const now = new Date('2026-11-02T13:00:00+03:00');
 const valid = { requestId: '00000000-0000-4000-8000-000000000001', fullName: 'Иван Иванов', staticId: '75463',
-  department: 'usb', achievementId: 'fines', quantity: 12, workDate: '2026-11-02', workTime: '12:00',
+  department: 'ovk', achievementId: 'fines', quantity: 12, workDate: '2026-11-02', workTime: '12:00',
   evidence: ['https://example.test/proof.png'], rulesAccepted: true };
 
 test('Moscow week switches at Monday 00:00; new work is accepted from 00:01', () => {
@@ -51,7 +52,7 @@ test('bulk proofs preserve all 50 links and reject canonical Discord duplicates'
 });
 
 test('achievement departments exclude Academy, UDO and UKM; graduation remains archived', async () => {
-  assert.deepEqual(achievementDepartments.map(dept => dept.id), ['gu','usb','uku','uor','sdb','mb','ugk','dps']);
+  assert.deepEqual(achievementDepartments.map(dept => dept.id), ['gu','ovk','udk','sdb','uor','mb','ugk','uku','dps']);
   assert.ok(getAchievementGoalsForWeek('2026-10-26').some(goal => goal.id === 'academy-graduates'));
   for (const department of ['academy','udo','ukm']) {
     assert.ok(validateAchievementSubmission({ ...valid, department }, now).error);
@@ -77,6 +78,15 @@ test('all ten routes match the requested threads; embeds keep Discord ID last an
   assert.deepEqual(payload.allowed_mentions, { parse: [], users: ['123456789012345678'] });
   assert.match(payload.embeds[0].footer.text, /Отправил ДС discord.user/);
   assert.ok(payload.embeds[0].fields.every(field => field.inline !== true && field.value.length <= 1024));
+});
+
+test('OVK and UDK achievement reports are accepted with the current full department name', async () => {
+  for (const department of ['ovk', 'udk']) {
+    const app = fixture();
+    assert.equal((await app.submit({ ...valid, department })).status, 200);
+    const name = achievementDepartments.find(item => item.id === department)!.label;
+    assert.ok(JSON.stringify(app.sent[0].payload.embeds).includes(name));
+  }
 });
 
 test('all 26 normal proof URLs appear one-per-line in Discord evidence, never above the embed or in evidence.txt', () => {
@@ -149,7 +159,7 @@ function fixture(options: { reservation?: string; remaining?: number; http?: num
   const env: Record<string, string> = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'fixture',
     SUPABASE_SERVICE_ROLE_KEY: 'fixture', DISCORD_ACHIEVEMENTS_WEBHOOK_URL: 'https://discord.com/api/webhooks/123456789012345678/secret-fixture-marker' };
   const context = createContext({ Date: FixedDate, Deno: { env: { get: (key: string) => env[key] }, serve: (fn: typeof handler) => { handler = fn; } },
-    createClient: () => client, console: { error: (...args: unknown[]) => logs.push(args) },
+    createClient: () => client, currentDepartments, console: { error: (...args: unknown[]) => logs.push(args) },
     crypto: webcrypto, Request, Response, Headers, FormData, Blob, URL, AbortSignal, TextEncoder, TextDecoder, Uint8Array,
     fetch: async (url: URL, init: RequestInit) => {
       if (options.networkError) throw new Error('secret-fixture-marker');

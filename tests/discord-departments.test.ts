@@ -113,7 +113,7 @@ test('verified departments override editable legacy values; absent roles and out
   const manual={...emptyProfile,game_nickname:'Test_Officer',static_id:'123',department:'usb'};
   const verified=withDiscordDepartment(manual,{department:'udk',status:'verified',checked_at:checkedAt});
   assert.equal(profileDefault(verified,'departmentLabel'),'УДК');
-  for(const field of ['achievementDepartment','sourceDepartment','promotionDepartment'] as const)assert.equal(profileDefault(verified,field),'');
+  for(const field of ['achievementDepartment','sourceDepartment','promotionDepartment'] as const)assert.equal(profileDefault(verified,field),'udk');
   for(const status of ['none','not_member','multiple','unavailable']){
     const profile=withDiscordDepartment(manual,{department:'',status,checked_at:checkedAt});
     assert.equal(profile.department,'');assert.deepEqual(validateProfile(profile),{});

@@ -1,16 +1,12 @@
+import { currentDepartments } from './departments.ts';
+
 export const ACHIEVEMENT_TIME_ZONE = 'Europe/Moscow';
 export const MAX_EVIDENCE_LINKS = 50;
 export const MAX_EVIDENCE_CHARACTERS = 10_000;
 
 export const achievementDepartments = [
   { id: 'gu', label: 'ГУ ГИБДД' },
-  { id: 'usb', label: 'УСБ | Управление собственной безопасности' },
-  { id: 'uku', label: 'УКУ | Учебно-кадровое управление' },
-  { id: 'uor', label: 'УОР | Управление оперативного розыска' },
-  { id: 'sdb', label: 'СДБ | Специальный дорожный батальон' },
-  { id: 'mb', label: 'МБ | Мотоциклетный Батальон' },
-  { id: 'ugk', label: 'УГК | Управление грузового контроля' },
-  { id: 'dps', label: 'ДПС | Дорожно-патрульная служба' },
+  ...currentDepartments,
 ] as const;
 
 const october12AchievementGoals = [

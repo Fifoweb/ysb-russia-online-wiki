@@ -1,4 +1,5 @@
 import PortalSelect from '../components/PortalSelect';
+import { departmentLeadershipOptions } from '../data/departments';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarBlank } from '@phosphor-icons/react';
 import PageTransition from '../components/PageTransition';
@@ -13,10 +14,7 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import '../vacation.css';
 import { vacationPeriodError, vacationTimestamp, vacationDuration } from '../lib/vacation';
 
-export const vacationLeadership = [
-  ['senior','Старший состав'],['dps','Руководство ДПС'],['sdb','Руководство СДБ'],['ugk','Руководство УГК'],
-  ['mb','Руководство МБ'],['uor','Руководство УОР'],['uku','Руководство УКУ'],['usb','Руководство УСБ'],['udk','Руководство УДК'],['ovk','Руководство ОВК'],
-] as const;
+export const vacationLeadership = departmentLeadershipOptions.map(({ id, label }) => [id, label] as const);
 export default function Vacation({ onNavigate }: { onNavigate: (path:string)=>void }) {
   const {user,loading,signInWithDiscord}=useAuth();
   const {profile}=useProfile();

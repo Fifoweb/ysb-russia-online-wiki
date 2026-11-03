@@ -3,12 +3,25 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import ts from 'typescript';
-import { emptyProfile, readProfile, validateProfile, profileDefault, profileWriteValues, applyProfileDefaults, type Profile } from '../src/lib/profileData';
+import { emptyProfile, readProfile, validateProfile, profileDefault, profileDepartmentLabel, profileWriteValues, applyProfileDefaults, type Profile } from '../src/lib/profileData';
 import { createProfileStore } from '../src/lib/profileStore';
 
-const officer: Profile = { ...emptyProfile, game_nickname: 'Kira_Comis', static_id: '75463', department: 'usb', department_status: 'verified', rank: 'Лейтенант' };
+const officer: Profile = { ...emptyProfile, game_nickname: 'Kira_Comis', static_id: '75463', department: 'ovk', department_status: 'verified', rank: 'Лейтенант' };
 const otherOfficer: Profile = { ...officer, game_nickname: 'Pavel_Mironov', static_id: '91342', department: 'dps' };
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('OVK and UDK autofill every department form; legacy USB profiles resolve to OVK', () => {
+  for (const department of ['ovk', 'udk']) {
+    const profile = { ...officer, department };
+    assert.deepEqual(validateProfile(profile), {});
+    for (const field of ['achievementDepartment', 'sourceDepartment', 'promotionDepartment'] as const) assert.equal(profileDefault(profile, field), department);
+    assert.equal(profileDefault({ ...profile, department_status: 'none' }, 'sourceDepartment'), '');
+  }
+  assert.equal(readProfile({ ...officer, department: 'usb' }).department, 'ovk');
+  assert.equal(profileDepartmentLabel('ovk'), 'ОВК | Отдел внутреннего контроля');
+  assert.equal(profileDepartmentLabel('udk'), 'УДК | Управление дорожного контроля');
+  for (const department of ['usb', 'udo', 'ukm']) assert.equal(profileDefault({ ...officer, department }, 'achievementDepartment'), '');
+});
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -39,13 +52,13 @@ test('profile defaults match each form format and filter departments by the form
   assert.equal(profileDefault({ ...officer, static_id: '' }, 'combined'), '');
   assert.equal(profileDefault(officer, 'nickname'), 'Kira_Comis');
   assert.equal(profileDefault(officer, 'staticId'), '75463');
-  assert.equal(profileDefault(officer, 'departmentLabel'), 'УСБ');
+  assert.equal(profileDefault(officer, 'departmentLabel'), 'ОВК');
   for (const department of ['academy', 'ukm']) assert.equal(profileDefault({ ...officer, department }, 'achievementDepartment'), '');
   assert.equal(profileDefault({ ...officer, department: 'gu' }, 'sourceDepartment'), '');
   for (const department of ['gu', 'ukm']) assert.equal(profileDefault({ ...officer, department }, 'promotionDepartment'), '');
   const form = applyProfileDefaults({ reporter: '', offender: '', source: '', target: '', evidence: '' }, [], officer,
     { reporter: 'combined', source: 'sourceDepartment' });
-  assert.deepEqual(form, { reporter: 'Kira_Comis | 75463', offender: '', source: 'usb', target: '', evidence: '' });
+  assert.deepEqual(form, { reporter: 'Kira_Comis | 75463', offender: '', source: 'ovk', target: '', evidence: '' });
 });
 
 function hookFixture() {
@@ -76,12 +89,12 @@ test('a slow profile load never overwrites typed or deliberately cleared fields;
   [form, setForm] = app.render();
   assert.equal(form.name, 'Manual_Name');
   assert.equal(form.static, '75463');
-  assert.equal(form.department, 'usb');
+  assert.equal(form.department, 'ovk');
   assert.equal(form.evidence, 'https://example.test/proof');
   setForm({ ...form, static: '' });
   assert.equal(app.render()[0].static, '');
   app.render()[2]();
-  assert.deepEqual(JSON.parse(JSON.stringify(app.render()[0])), { name: 'Kira_Comis', static: '75463', department: 'usb', evidence: '' });
+  assert.deepEqual(JSON.parse(JSON.stringify(app.render()[0])), { name: 'Kira_Comis', static: '75463', department: 'ovk', evidence: '' });
 });
 
 test('account changes and logout discard the previous form draft and all its personal fields', () => {

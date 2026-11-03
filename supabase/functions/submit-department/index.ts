@@ -1,6 +1,7 @@
 // Заявка в отдел: Discord-вход обязателен, Discord ID берётся из авторизованной сессии.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
+import { currentDepartments, departmentLeadershipRoles } from '../_shared/departments.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,8 @@ const DEFAULT_ROUTE: Route = {
   notificationRoleId: '1540269592927019038',
 };
 const ROUTES: Record<string, Route> = {
+  ovk: { webhookSecret: 'DISCORD_OVK_PROMOTION_WEBHOOK_URL', threadId: '1540874839471165520', notificationRoleId: departmentLeadershipRoles.ovk },
+  udk: { webhookSecret: 'DISCORD_UDK_PROMOTION_WEBHOOK_URL', threadId: '1540874889441972296', notificationRoleId: departmentLeadershipRoles.udk },
   mb: { webhookSecret: 'DISCORD_DEPARTMENT_MB_WEBHOOK_URL', threadId: '1542235723921498184', notificationRoleId: '1542235140611379260' },
   sdb: { webhookSecret: 'DISCORD_DEPARTMENT_SDB_WEBHOOK_URL', threadId: '1540875016298565723', notificationRoleId: '1540268801193672755' },
   uku: { webhookSecret: 'DISCORD_DEPARTMENT_UKU_WEBHOOK_URL', threadId: '1540875076554203296', notificationRoleId: '1540268884987478096' },
@@ -22,17 +25,7 @@ const ROUTES: Record<string, Route> = {
   uor: { webhookSecret: 'DISCORD_DEPARTMENT_UOR_WEBHOOK_URL', threadId: '1540874929795240080', notificationRoleId: '1540268999718342656' },
   dps: { webhookSecret: 'DISCORD_DEPARTMENT_DPS_WEBHOOK_URL', threadId: '1542223019639046144', notificationRoleId: '1540268712282562610' },
 };
-const DEPARTMENTS: Record<string, string> = {
-  ugk: 'УГК | Управление грузового контроля',
-  usb: 'УСБ | Управление собственной безопасности',
-  mb: 'МБ | Мотоциклетный Батальон',
-  uor: 'УОР | Управление оперативного розыска',
-  sdb: 'СДБ | Специальный дорожный батальон',
-  uku: 'УКУ | Учебно-кадровое управление',
-  dps: 'ДПС | Дорожно-патрульная служба',
-  ukm: 'УКМ | Управление по контролю магистралей',
-  academy: 'Академия',
-};
+const DEPARTMENTS: Record<string, string> = Object.fromEntries([...currentDepartments, { id: 'academy', label: 'Академия' }].map(department => [department.id, department.label]));
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
