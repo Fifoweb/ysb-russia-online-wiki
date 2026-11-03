@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
@@ -36,6 +38,7 @@ export default function EmployeeComplaintForm() {
   const [form, setForm, resetForm] = useProfileForm(initialForm, { reporterNicknameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
   const discordId = (user?.identities?.find((identity) => identity.provider === 'discord')?.identity_data as
     Record<string, unknown> | null)?.sub;
@@ -51,7 +54,7 @@ export default function EmployeeComplaintForm() {
   const incidentAge = Date.now() - incidentTime;
   const incidentValid = Number.isFinite(incidentTime) && incidentAge >= -5 * 60 * 1000 &&
     incidentAge <= validityWindowMs;
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.reporterNicknameStatic.trim() && 'Укажите ваш никнейм и статик.',
     !form.offenderNicknameStatic.trim() && 'Укажите никнейм или статик нарушителя.',
     !form.faction && 'Выберите фракцию нарушителя.',
@@ -59,7 +62,7 @@ export default function EmployeeComplaintForm() {
     !form.description.trim() && 'Опишите ситуацию.',
     !form.incidentAt ? 'Укажите дату и время происшествия.' : !incidentValid && 'Дата должна быть за последние 48 часов и не более 5 минут в будущем.',
     !form.evidence.trim() && 'Добавьте доказательства нарушения.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -168,12 +171,14 @@ export default function EmployeeComplaintForm() {
               {form.incidentAt && !incidentValid && (
                 <p role="alert" className="mt-2 text-sm text-rose-300">Укажите время происшествия за последние 48 часов.</p>
               )}
-              <label htmlFor="complaint-evidence" className="block mt-5">
-                <span>Доказательства нарушения <span className="text-rose-300">*</span></span>
-                <textarea id="complaint-evidence" value={form.evidence} onChange={update('evidence')}
-                  rows={3} maxLength={1000} required placeholder="Ссылки на скриншоты, видео или другие доказательства"
-                  className={inputClass + ' resize-y'} />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label htmlFor="complaint-evidence" className="block mt-5">
+                  <span>Доказательства нарушения <span className="text-rose-300">*</span></span>
+                  <textarea id="complaint-evidence" value={form.evidence} onChange={update('evidence')}
+                    rows={3} maxLength={1000} required placeholder="Ссылки на скриншоты, видео или другие доказательства"
+                    className={inputClass + ' resize-y'} />
+                </label>
+              </EvidenceUpload>
             </div>
 
             <div className="border-t border-sky-300/15 pt-5">

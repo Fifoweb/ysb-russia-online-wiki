@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -30,6 +32,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
   const week = achievementWeekStart(now);
   const visibleProgress = progress?.weekStart === week ? progress : null;
   const requestId = useRef<string | null>(null);
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id, 'achievements');
   const goal = achievementGoals.find(item => item.id === form.achievementId);
   const availability = achievementAvailability(visibleProgress?.items.find(item => item.id === goal?.id), goal?.metric ?? 'sum');
@@ -45,7 +48,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
   const payload = { fullName: form.fullName, staticId: form.staticId, department: form.department,
     achievementId: form.achievementId, quantity: Number(form.quantity), workDate: form.workDate,
     workTime: form.workTime, evidence: evidence.links, rulesAccepted: form.rulesAccepted };
-  const incompleteReason = !visibleProgress ? progressError ? 'Не удалось загрузить статусы ачивок. Нажмите «Обновить».' : 'Проверяем доступные ачивки…'
+  const incompleteReason = uploadStatus.reason || (!visibleProgress ? progressError ? 'Не удалось загрузить статусы ачивок. Нажмите «Обновить».' : 'Проверяем доступные ачивки…'
     : allClosed ? 'Все ачивки выполнены. Новые отчёты откроются в понедельник в 00:00 МСК.'
     : closed ? 'Ачивка выполнена. Новые отчёты откроются в понедельник в 00:00 МСК.'
     : availability.pending ? 'Последние отчёты ещё обрабатываются. Дождитесь обновления прогресса.'
@@ -53,7 +56,7 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
       ? `До цели осталось ${availability.remaining} ${goal.unit}. Укажите количество в пределах остатка.`
     : !form.quantity ? 'Укажите количество выполненного.' : evidence.error || validateAchievementSubmission({
     ...payload, requestId: '00000000-0000-4000-8000-000000000001',
-  }, now).error;
+  }, now).error);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 10_000);
@@ -151,7 +154,9 @@ export default function AchievementReportForm({ onNavigate }: { onNavigate: (pat
         </div>
 
         <fieldset disabled={blocked} className="min-w-0 border-t border-sky-300/15 pt-6"><p className="eyebrow mb-2">03 · ДОКАЗАТЕЛЬСТВА</p>
-          <label htmlFor="achievement-evidence" className="block"><span>Ссылки на скриншоты, видео или сообщения Discord <span className="text-rose-300">*</span></span><textarea id="achievement-evidence" required rows={6} maxLength={10000} value={form.evidenceText} onChange={event => update('evidenceText', event.target.value)} className={`${inputClass} resize-y`} placeholder={'https://fotora.ru/…\nhttps://discord.com/channels/…'} aria-describedby="achievement-evidence-help" /></label>
+          <EvidenceUpload value={form.evidenceText} onChange={next => update('evidenceText', next)} multiple={true} maxLength={10000} maxFiles={50} disabled={blocked || state === 'sending'}>
+            <label htmlFor="achievement-evidence" className="block"><span>Ссылки на скриншоты, видео или сообщения Discord <span className="text-rose-300">*</span></span><textarea id="achievement-evidence" required rows={6} maxLength={10000} value={form.evidenceText} onChange={event => update('evidenceText', event.target.value)} className={`${inputClass} resize-y`} placeholder={'https://fotora.ru/…\nhttps://discord.com/channels/…'} aria-describedby="achievement-evidence-help" /></label>
+          </EvidenceUpload>
           <div id="achievement-evidence-help" className="achievement-evidence-help"><span><Link2 size={14} /> {evidence.links.length} / 50 ссылок</span><span>Каждая ссылка с новой строки. Можно вставить весь список сразу.</span></div>
           <p className="achievement-host-note">Для загрузки скриншотов рекомендуем <a href="https://fotora.ru/" target="_blank" rel="noopener noreferrer">Fotora <ExternalLink size={12} /></a>. Подойдут и другие хостинги.</p>
           <p className="application-note">Все ссылки появятся в Discord столбиком в разделе «Доказательства». Очень длинный список будет продолжен в той же ветке.</p>

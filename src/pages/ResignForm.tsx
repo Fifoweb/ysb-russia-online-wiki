@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -25,6 +27,7 @@ export default function ResignForm() {
   const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined', department: 'departmentLabel' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
@@ -33,12 +36,12 @@ export default function ResignForm() {
 
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.currentRank);
   const screenshotValid = /^https?:\/\/\S+$/i.test(form.recordScreenshot.trim());
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.fullNameStatic.trim() && 'Укажите имя, фамилию и StaticID.',
     !form.department.trim() && 'Укажите отдел.',
     !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
     !form.recordScreenshot.trim() ? 'Добавьте ссылку на личное дело.' : !screenshotValid && 'Проверьте ссылку на скрин личного дела.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -122,12 +125,14 @@ export default function ResignForm() {
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ЛИЧНОЕ ДЕЛО</p>
-              <label className="block">
-                <span>Скриншот личного дела <span className="text-rose-300">*</span></span>
-                <input type="url" value={form.recordScreenshot} onChange={set('recordScreenshot')}
-                  placeholder="https://..." maxLength={300} required
-                  className="mt-2 w-full px-4 py-3 text-sm outline-none" />
-              </label>
+              <EvidenceUpload value={form.recordScreenshot} onChange={next => setForm(current => ({ ...current, recordScreenshot: next }))} multiple={false} maxLength={300} maxFiles={1} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Скриншот личного дела <span className="text-rose-300">*</span></span>
+                  <input type="url" value={form.recordScreenshot} onChange={set('recordScreenshot')}
+                    placeholder="https://..." maxLength={300} required
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+                </label>
+              </EvidenceUpload>
             </div>
 
             {state === 'error' && (

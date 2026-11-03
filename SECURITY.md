@@ -24,6 +24,15 @@ external WAF are separate controls.
 
 ## Sessions and private data
 
+Image uploads use a separate `upload-evidence-image` handler with verified
+Discord login, a streamed 10 MiB byte limit, raster signature/dimension checks,
+independent request and byte quotas, bounded concurrency and a fixed hosting URL.
+Only validated HTTPS Allwebs image URLs are returned; API credentials, deletion
+links and provider response bodies are never exposed. Private SHA-256 caching
+prevents duplicate hosting requests. Unknown delivery outcomes are not resent
+automatically. Uploading images does not claim or reset report cooldowns.
+Allwebs is temporary external storage; its reported expiration is displayed.
+
 Employee account data is stored in `profiles` under the existing Supabase Auth
 user ID associated with Discord login. Row level security allows each signed-in
 user to read and edit only their own row. Game nickname, StaticID and department

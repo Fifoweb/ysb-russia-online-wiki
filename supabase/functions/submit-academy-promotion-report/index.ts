@@ -35,7 +35,7 @@ function evidenceUrl(value: unknown): string | null {
     const url = new URL(value.trim());
     const host = url.hostname.toLowerCase();
     return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
-      ['imgur.com', 'fotora.ru', 'yapx.ru'].some(domain => host === domain || host.endsWith(`.${domain}`))
+      ['imgur.com', 'fotora.ru', 'yapx.ru', 'allwebs.ru'].some(domain => host === domain || host.endsWith(`.${domain}`))
       ? url.href : null;
   } catch { return null; }
 }
@@ -100,7 +100,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       : ['exam', 'practice'];
     const links = Object.fromEntries(required.map(key => [key, evidenceUrl(evidence[key])]));
     if (required.some(key => !links[key])) {
-      return json(400, { error: 'Приложите ко всем заданиям ссылки HTTPS на Imgur, Fotora или Япикс' });
+      return json(400, { error: 'Приложите ко всем заданиям ссылки HTTPS на Imgur, Fotora, Япикс или Allwebs' });
     }
     title = '🎓 Отчёт на повышение · Академия';
     fields = rankTransition === '1-2' ? [

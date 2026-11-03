@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -20,6 +22,7 @@ export default function RestoreForm() {
   }, { fullNameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
@@ -27,12 +30,12 @@ export default function RestoreForm() {
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   // Скриншот из гос.фракций — опционально (только после ban/warn), остальные обязательны
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
     !form.rankEvidence.trim() && 'Добавьте доказательства прежнего ранга.',
     !form.dismissReason.trim() && 'Укажите причину увольнения.',
     !form.previousRank.trim() && 'Укажите прежний ранг.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -54,13 +57,18 @@ export default function RestoreForm() {
     }
   };
 
-  const field = (label: string, key: keyof typeof form, placeholder: string, optional = false) => (
-    <label className="block">
-      <span>{label} {optional ? <span className="text-slate-400 font-normal">(необязательно)</span> : <span className="text-rose-300">*</span>}</span>
-      <input value={form[key]} onChange={set(key)} placeholder={placeholder}
-        className="mt-2 w-full px-4 py-3 text-sm outline-none" />
-    </label>
-  );
+  const field = (label: string, key: keyof typeof form, placeholder: string, optional = false) => {
+    const control = (
+      <label className="block">
+        <span>{label} {optional ? <span className="text-slate-400 font-normal">(необязательно)</span> : <span className="text-rose-300">*</span>}</span>
+        <input value={form[key]} onChange={set(key)} placeholder={placeholder}
+          className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+      </label>
+    );
+    return key === 'rankEvidence' || key === 'factionScreenshot'
+      ? <EvidenceUpload value={form[key]} onChange={next => setForm(current => ({ ...current, [key]: next }))} maxLength={300} disabled={state === 'sending'}>{control}</EvidenceUpload>
+      : control;
+  };
 
   return (
     <PageTransition className="wiki-content application-panel">

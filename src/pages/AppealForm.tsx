@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -24,16 +26,17 @@ export default function AppealForm() {
   const [form, setForm, resetForm] = useProfileForm(initialForm, { nick: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.reason.trim() && 'Опишите основания для обжалования.',
     !form.evidence.trim() && 'Добавьте доказательства.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -110,11 +113,13 @@ export default function AppealForm() {
 
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ДОКАЗАТЕЛЬСТВА</p>
-              <label className="block">
-                <span>Доказательства, подтверждающие ваши слова (если таковые допустимы) <span className="text-rose-300">*</span></span>
-                <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
-                  placeholder="Ссылки на скриншоты, видео или другие допустимые доказательства..." className={`${inputClass} resize-y`} />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Доказательства, подтверждающие ваши слова (если таковые допустимы) <span className="text-rose-300">*</span></span>
+                  <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
+                    placeholder="Ссылки на скриншоты, видео или другие допустимые доказательства..." className={`${inputClass} resize-y`} />
+                </label>
+              </EvidenceUpload>
             </div>
 
             {state === 'error' && (

@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -18,19 +20,20 @@ export default function ReportForm() {
   const [form, setForm, resetForm] = useProfileForm({ nick: '', currentRank: '', targetRank: '', points: '', evidence: '' }, { nick: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.nick.trim() && 'Укажите ник и статик.',
     !form.currentRank.trim() && 'Укажите текущее звание.',
     !form.targetRank.trim() && 'Укажите желаемое звание.',
     !form.points.trim() && 'Укажите количество баллов.',
     !form.evidence.trim() && 'Добавьте доказательства.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -107,12 +110,14 @@ export default function ReportForm() {
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ПОДТВЕРЖДЕНИЕ</p>
-              <label className="block">
-                <span>Доказательства <span className="text-rose-300">*</span></span>
-                <textarea value={form.evidence} onChange={set('evidence')} rows={4}
-                  placeholder="Ссылки на скриншоты/видео, описание: чем подтверждаете набор баллов..."
-                  className="mt-2 w-full px-4 py-3 text-sm outline-none resize-y" />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Доказательства <span className="text-rose-300">*</span></span>
+                  <textarea value={form.evidence} onChange={set('evidence')} rows={4}
+                    placeholder="Ссылки на скриншоты/видео, описание: чем подтверждаете набор баллов..."
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none resize-y" />
+                </label>
+              </EvidenceUpload>
             </div>
 
             {state === 'error' && (

@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -23,7 +25,7 @@ function validEvidenceUrl(value: string): boolean {
     const url = new URL(value.trim());
     const host = url.hostname.toLowerCase();
     return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
-      ['imgur.com', 'fotora.ru', 'yapx.ru'].some(domain => host === domain || host.endsWith(`.${domain}`));
+      ['imgur.com', 'fotora.ru', 'yapx.ru', 'allwebs.ru'].some(domain => host === domain || host.endsWith(`.${domain}`));
   } catch { return false; }
 }
 
@@ -41,6 +43,7 @@ export default function AcademyPromotionReportForm() {
   const [workEvidence, setWorkEvidence] = useState('');
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
   const identity = user?.identities?.find(item => item.provider === 'discord')?.identity_data as Record<string, unknown> | undefined;
   const discordId = typeof identity?.sub === 'string' ? identity.sub : 'Будет добавлен при отправке';
@@ -55,15 +58,15 @@ export default function AcademyPromotionReportForm() {
     { key: 'exam', label: 'Экзамен по КоАП, УК и УПК' },
     { key: 'practice', label: 'Практика по УПК' },
   ] : [];
-  const incompleteReason = !nickStatic.trim() ? 'Укажите никнейм и #статик.'
+  const incompleteReason = uploadStatus.reason || (!nickStatic.trim() ? 'Укажите никнейм и #статик.'
     : department !== 'academy'
       ? !fromRank || !toRank ? 'Выберите исходный и целевой ранги.'
         : Number(fromRank) >= Number(toRank) ? 'Целевой ранг должен быть выше исходного.'
         : !workEvidence.trim() ? 'Добавьте доказательства проделанной работы.' : undefined
       : !rankTransition ? 'Выберите повышение: с 1 на 2 или с 2 на 3.'
         : fields.find(field => !evidence[field.key].trim()) ? 'Приложите ссылки ко всем заданиям.'
-        : fields.find(field => !validEvidenceUrl(evidence[field.key])) ? 'Ссылки должны вести на Imgur, Fotora или Япикс по HTTPS.'
-        : undefined;
+        : fields.find(field => !validEvidenceUrl(evidence[field.key])) ? 'Ссылки должны вести на Imgur, Fotora, Япикс или Allwebs по HTTPS.'
+        : undefined);
 
   const submit = async () => {
     if (!supabase || !user || state === 'sending' || remainingSeconds > 0 || incompleteReason) return;
@@ -174,15 +177,17 @@ export default function AcademyPromotionReportForm() {
                 <p className="eyebrow mb-2">02 · ДОКАЗАТЕЛЬСТВА</p>
                 <div className="space-y-4">
                   {fields.map((field, index) => (
-                    <label key={field.key} className="block">
-                      <span>{index + 1}. {field.label} <span className="text-rose-300">*</span></span>
-                      <input type="url" value={evidence[field.key]} onChange={event => setEvidence(current => ({ ...current, [field.key]: event.target.value }))}
-                        maxLength={500} placeholder="https://imgur.com/..." className={inputClass}
-                        aria-invalid={Boolean(evidence[field.key].trim()) && !validEvidenceUrl(evidence[field.key])} />
-                    </label>
+                    <EvidenceUpload key={field.key} value={evidence[field.key]} onChange={next => setEvidence(current => ({ ...current, [field.key]: next }))} multiple={false} maxLength={500} maxFiles={1} disabled={state === 'sending'}>
+                      <label key={field.key} className="block">
+                        <span>{index + 1}. {field.label} <span className="text-rose-300">*</span></span>
+                        <input type="url" value={evidence[field.key]} onChange={event => setEvidence(current => ({ ...current, [field.key]: event.target.value }))}
+                          maxLength={500} placeholder="https://imgur.com/..." className={inputClass}
+                          aria-invalid={Boolean(evidence[field.key].trim()) && !validEvidenceUrl(evidence[field.key])} />
+                      </label>
+                    </EvidenceUpload>
                   ))}
                 </div>
-                <p className="application-note">Во время выполнения заданий включайте бодикамеру, иначе отчёт отклонят. Скриншоты принимаются только через Imgur, Fotora или Япикс.</p>
+                <p className="application-note">Во время выполнения заданий включайте бодикамеру, иначе отчёт отклонят. Скриншоты принимаются только через Imgur, Fotora, Япикс или Allwebs.</p>
                 <p className="application-note">Запись на экзамен и практику — в канале «📝・запись-на-экзамен».</p>
                 {rankTransition === '1-2' && <p className="application-note">Для роли State Fraction сначала <a href="https://discord.gg/DUYKbzwG2" target="_blank" rel="noopener noreferrer">вступите на сервер</a>, затем перейдите в канал «получение-роли» и приложите скриншот полученной роли.</p>}
               </div>
@@ -190,11 +195,13 @@ export default function AcademyPromotionReportForm() {
             {department !== 'academy' && (
               <div className="border-t border-sky-300/15 pt-6">
                 <p className="eyebrow mb-2">02 · ПРОДЕЛАННАЯ РАБОТА</p>
-                <label className="block">
-                  <span>Доказательства проделанной работы <span className="text-rose-300">*</span></span>
-                  <textarea value={workEvidence} onChange={event => setWorkEvidence(event.target.value)} maxLength={1000} rows={4}
-                    placeholder="Ссылки на выполненную работу или описание с доказательствами" className={`${inputClass} resize-y`} />
-                </label>
+                <EvidenceUpload value={workEvidence} onChange={next => setWorkEvidence(next)} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                  <label className="block">
+                    <span>Доказательства проделанной работы <span className="text-rose-300">*</span></span>
+                    <textarea value={workEvidence} onChange={event => setWorkEvidence(event.target.value)} maxLength={1000} rows={4}
+                      placeholder="Ссылки на выполненную работу или описание с доказательствами" className={`${inputClass} resize-y`} />
+                  </label>
+                </EvidenceUpload>
               </div>
             )}
 

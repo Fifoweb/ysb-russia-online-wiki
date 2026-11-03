@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -27,6 +29,7 @@ export default function TransferForm() {
   const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
@@ -37,14 +40,14 @@ export default function TransferForm() {
   const screenshotValid = /^https?:\/\/\S+$/i.test(form.personalFileScreenshot.trim());
   const approvalScreenshotValid = /^https?:\/\/\S+$/i.test(form.leaderApprovalScreenshot.trim());
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(form.joinDate);
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.fullNameStatic.trim() && 'Укажите имя и StaticID.',
     !form.sourceFaction.trim() && 'Укажите исходную фракцию.',
     !form.joinDate.trim() ? 'Укажите дату вступления.' : !dateValid && 'Дата должна быть в формате ГГГГ-ММ-ДД.',
     !form.personalFileScreenshot.trim() ? 'Добавьте ссылку на личное дело.' : !screenshotValid && 'Проверьте ссылку на скрин личного дела.',
     !form.leaderApprovalScreenshot.trim() ? 'Добавьте скрин одобрения перевода от лидера.' : !approvalScreenshotValid && 'Проверьте ссылку на скрин одобрения перевода.',
     !form.currentRank.trim() ? 'Укажите текущий ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -133,18 +136,22 @@ export default function TransferForm() {
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ПОДТВЕРЖДЕНИЕ</p>
-              <label className="block">
-                <span>Скриншот личного дела из планшета <span className="text-rose-300">*</span></span>
-                <input type="url" value={form.personalFileScreenshot} onChange={set('personalFileScreenshot')}
-                  placeholder="https://..." maxLength={300} required
-                  className="mt-2 w-full px-4 py-3 text-sm outline-none" />
-              </label>
-              <label className="block mt-5">
-                <span>Скрин одобрения перевода от лидера <span className="text-rose-300">*</span></span>
-                <input type="url" value={form.leaderApprovalScreenshot} onChange={set('leaderApprovalScreenshot')}
-                  placeholder="https://..." maxLength={300} required
-                  className="mt-2 w-full px-4 py-3 text-sm outline-none" />
-              </label>
+              <EvidenceUpload value={form.personalFileScreenshot} onChange={next => setForm(current => ({ ...current, personalFileScreenshot: next }))} multiple={false} maxLength={300} maxFiles={1} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Скриншот личного дела из планшета <span className="text-rose-300">*</span></span>
+                  <input type="url" value={form.personalFileScreenshot} onChange={set('personalFileScreenshot')}
+                    placeholder="https://..." maxLength={300} required
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+                </label>
+              </EvidenceUpload>
+              <EvidenceUpload value={form.leaderApprovalScreenshot} onChange={next => setForm(current => ({ ...current, leaderApprovalScreenshot: next }))} multiple={false} maxLength={300} maxFiles={1} disabled={state === 'sending'}>
+                <label className="block mt-5">
+                  <span>Скрин одобрения перевода от лидера <span className="text-rose-300">*</span></span>
+                  <input type="url" value={form.leaderApprovalScreenshot} onChange={set('leaderApprovalScreenshot')}
+                    placeholder="https://..." maxLength={300} required
+                    className="mt-2 w-full px-4 py-3 text-sm outline-none" />
+                </label>
+              </EvidenceUpload>
             </div>
 
             {state === 'error' && (

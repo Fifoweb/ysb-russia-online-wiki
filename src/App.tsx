@@ -8,6 +8,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import { supabase } from './lib/supabase';
 import { useAuth } from './lib/auth';
+import { EvidenceUploadsProvider } from './components/EvidenceUploadsProvider';
 
 const ServiceBasics = lazy(() => import('./pages/ServiceBasics'));
 const ServiceCheck = lazy(() => import('./pages/ServiceCheck'));
@@ -128,11 +129,13 @@ export default function App() {
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} currentTitle={path} onNavigate={navigate} sidebarOpen={sidebarOpen} />
       <main id="main-content" tabIndex={-1} className={`site-main portal-main px-4 md:px-8 pb-20 min-h-screen relative z-10${sidebarOpen ? ' site-main-with-sidebar' : ''}`}>
           <div key={path + ':' + (user?.id ?? 'guest')}>
+            <EvidenceUploadsProvider>
             <RouteBoundary>
             <Suspense fallback={<div className="portal-route-skeleton" role="status" aria-label="Открываем раздел…"><span /><span /><span /></div>}>
               {renderPage()}
             </Suspense>
             </RouteBoundary>
+            </EvidenceUploadsProvider>
           </div>
       </main>
     </div>

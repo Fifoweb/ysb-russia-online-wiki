@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -27,18 +29,19 @@ export default function ReprimandWorkForm() {
   const [form, setForm, resetForm] = useProfileForm(initialForm, { nick: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((current) => ({ ...current, [key]: event.target.value }));
 
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.nick.trim() && 'Укажите ник и статик.',
     !form.reprimandScreenshot.trim() && 'Добавьте скрин личного дела с выговором.',
     !form.action.trim() && 'Опишите способ отработки.',
     !form.evidence.trim() && 'Добавьте доказательства отработки.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -102,10 +105,12 @@ export default function ReprimandWorkForm() {
 
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">02 · ВЫГОВОР И ОТРАБОТКА</p>
-              <label className="block">
-                <span>Скрин вашего личного дела (планшета) с выданным выговором <span className="text-rose-300">*</span></span>
-                <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} maxLength={300} placeholder="https://..." className={inputClass} />
-              </label>
+              <EvidenceUpload value={form.reprimandScreenshot} onChange={next => setForm(current => ({ ...current, reprimandScreenshot: next }))} multiple={false} maxLength={300} maxFiles={1} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Скрин вашего личного дела (планшета) с выданным выговором <span className="text-rose-300">*</span></span>
+                  <input type="url" value={form.reprimandScreenshot} onChange={set('reprimandScreenshot')} maxLength={300} placeholder="https://..." className={inputClass} />
+                </label>
+              </EvidenceUpload>
 
               <label className="block mt-5">
                 <span>Каким действием отрабатываете выговор <span className="text-rose-300">*</span></span>
@@ -116,11 +121,13 @@ export default function ReprimandWorkForm() {
 
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ПОДТВЕРЖДЕНИЕ</p>
-              <label className="block">
-                <span>Доказательства отработки (видеозапись / скрин) <span className="text-rose-300">*</span></span>
-                <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
-                  placeholder="Ссылка на видеозапись или скриншот..." className={`${inputClass} resize-y`} />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Доказательства отработки (видеозапись / скрин) <span className="text-rose-300">*</span></span>
+                  <textarea value={form.evidence} onChange={set('evidence')} rows={4} maxLength={1000}
+                    placeholder="Ссылка на видеозапись или скриншот..." className={`${inputClass} resize-y`} />
+                </label>
+              </EvidenceUpload>
             </div>
 
             {state === 'error' && (

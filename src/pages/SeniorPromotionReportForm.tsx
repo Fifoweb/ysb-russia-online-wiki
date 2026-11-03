@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
 import { useState } from 'react';
@@ -32,18 +34,19 @@ export default function SeniorPromotionReportForm() {
   const [people, setPeople] = useState(['']);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
   const discordId = (user?.identities?.find(identity => identity.provider === 'discord')?.identity_data as Record<string, unknown> | null)?.sub;
 
   const rankMatch = form.rankTransition.trim().match(/^(?:[1-9]|1[0-5])-(?:[1-9]|1[0-5])$/);
   const [fromRank, toRank] = rankMatch ? form.rankTransition.trim().split('-').map(Number) : [0, 0];
   const rankValid = Boolean(rankMatch) && fromRank < toRank;
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.nickStatic.trim() && 'Укажите никнейм и #статик.',
     !form.rankTransition.trim() ? 'Укажите ранги в формате 1-2.' : !rankValid && 'Укажите повышение в формате 1-2 (ранги от 1 до 15).',
     !form.evidence.trim() && 'Добавьте доказательства проделанной работы.',
     form.mentionTarget === 'people' && people.some(value => value.trim() && value.trim().length < 2) && 'Укажите Discord-ник полностью или Discord ID.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
 
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -117,11 +120,13 @@ export default function SeniorPromotionReportForm() {
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">02 · ПРОДЕЛАННАЯ РАБОТА</p>
-              <label className="block">
-                <span>Доказательства проделанной работы <span className="text-rose-300">*</span></span>
-                <textarea value={form.evidence} onChange={set('evidence')} maxLength={1000} rows={4}
-                  placeholder="Добавьте ссылки на скриншоты, сообщения или описание работы" className={`${inputClass} resize-y`} />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label className="block">
+                  <span>Доказательства проделанной работы <span className="text-rose-300">*</span></span>
+                  <textarea value={form.evidence} onChange={set('evidence')} maxLength={1000} rows={4}
+                    placeholder="Добавьте ссылки на скриншоты, сообщения или описание работы" className={`${inputClass} resize-y`} />
+                </label>
+              </EvidenceUpload>
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · КОГО ОТМЕТИТЬ</p>

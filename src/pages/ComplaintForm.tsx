@@ -1,3 +1,5 @@
+import EvidenceUpload from '../components/EvidenceUpload';
+import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, MessageSquareText, Send, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -19,16 +21,17 @@ export default function ComplaintForm() {
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const uploadStatus = useEvidenceUploadStatus();
   const remainingSeconds = useApplicationCooldown(user?.id);
 
   const set = (key: keyof typeof form) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((current) => ({ ...current, [key]: event.target.value }));
-  const incompleteReason = [
+  const incompleteReason = uploadStatus.reason || ([
     !form.offender.trim() && 'Укажите нарушителя.',
     !form.description.trim() && 'Опишите ситуацию.',
     !form.contactDiscord.trim() && 'Укажите ваш Discord для связи.',
-  ].find(Boolean) || undefined;
+  ].find(Boolean) || undefined);
   const allFilled = !incompleteReason;
 
   const submit = async () => {
@@ -96,11 +99,13 @@ export default function ComplaintForm() {
                 <textarea value={form.description} onChange={set('description')} rows={5} maxLength={1024}
                   placeholder="Опишите, что произошло..." className={`${inputClass} resize-y`} />
               </label>
-              <label className="block mt-5">
-                <span>Доказательства <span className="text-slate-400 font-normal">(при наличии)</span></span>
-                <textarea value={form.evidence} onChange={set('evidence')} rows={3} maxLength={1000}
-                  placeholder="Ссылки или описание доказательств..." className={`${inputClass} resize-y`} />
-              </label>
+              <EvidenceUpload value={form.evidence} onChange={next => setForm(current => ({ ...current, evidence: next }))} multiple={true} maxLength={1000} maxFiles={10} disabled={state === 'sending'}>
+                <label className="block mt-5">
+                  <span>Доказательства <span className="text-slate-400 font-normal">(при наличии)</span></span>
+                  <textarea value={form.evidence} onChange={set('evidence')} rows={3} maxLength={1000}
+                    placeholder="Ссылки или описание доказательств..." className={`${inputClass} resize-y`} />
+                </label>
+              </EvidenceUpload>
             </div>
             <div className="border-t border-sky-300/15 pt-6">
               <p className="eyebrow mb-2">03 · ОБРАТНАЯ СВЯЗЬ</p>
