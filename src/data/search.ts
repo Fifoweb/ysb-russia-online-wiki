@@ -11,6 +11,8 @@ export interface SearchEntry {
 }
 
 const baseEntries: SearchEntry[] = [
+  { id: 'vacation-form', title: 'Заявка на отпуск', section: 'Заявки', path: '/vacation', snippet: 'Календарь, выбор даты и времени отпуска, уведомление руководства.' },
+  { id: 'vacation-dashboard', title: 'Отпуска сотрудников', section: 'Обзор', path: '/vacations', snippet: 'Текущие и предстоящие отпуска, отделы и даты возвращения.' },
   { id: 'catalog-crafts', title: 'Крафты ГИБДД', section: 'Каталоги', path: '/crafts', snippet: 'Каталог доступных предметов, фильтры и калькулятор материалов...' },
   { id: 'catalog-servers', title: 'Онлайн Тверского', section: 'Каталоги', path: '/servers', snippet: 'Текущий онлайн и динамика сервера Тверской...' },
   { id: 'achievements-dashboard', title: 'Ачивки фракции', section: 'Обзор', path: '/achievements', snippet: 'Недельные цели, прогресс выполнения ачивок и вклад отделов.' },

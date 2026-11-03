@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, ArrowsClockwise, Buildings, Check, CheckCircle
   IdentificationCard, LockKey, ShieldCheck, SignOut, Trophy, UserCircle, UserFocus } from '@phosphor-icons/react';
 import PageTransition from '../components/PageTransition';
 import PortalLink from '../components/PortalLink';
+import MyVacations from '../components/MyVacations';
 import { useAuth } from '../lib/auth';
 import { useProfile } from '../lib/useProfile';
 import { departmentStatusText, profileDepartmentLabel, profileWriteValues, validateProfile, type Profile, type ProfileErrors } from '../lib/profileData';
@@ -147,6 +148,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       <div className="account-welcome-features"><span><IdentificationCard size={20} aria-hidden="true" />Игровой профиль</span><span><CheckCircle size={20} aria-hidden="true" />Автозаполнение отчётов</span><span><LockKey size={20} aria-hidden="true" />Доступ через ваш Discord</span></div>
     </section> : (status === 'loading' || status === 'idle') && profile.department_status === 'pending' ? <ProfileSkeleton /> : status === 'error' && profile.department_status === 'pending' ? <section className="account-panel account-load-error" role="alert"><IdentificationCard size={40} aria-hidden="true" /><h2>Профиль пока не загрузился</h2><p>{error}</p><button type="button" className="portal-primary" onClick={() => void refresh()}>Загрузить ещё раз</button></section> : <>
       <div className="account-layout"><EmployeeCard user={user} profile={profile} signOut={signOut} /><div className="account-main"><ProfileEditor key={user.id} profile={profile} save={save} refresh={refresh} refreshing={status === 'loading'} />{status === 'error' && <p className="account-error" role="alert">{error}</p>}<p className="account-sync-note"><LockKey size={16} aria-hidden="true" />Данные доступны при входе с этим Discord на любом устройстве.</p></div></div>
+      <MyVacations userId={user.id} onNavigate={onNavigate} />
       <section className="account-shortcuts" aria-labelledby="account-shortcuts-title"><h2 id="account-shortcuts-title">Перейти к работе</h2><div>{shortcuts.map(({ path, title, description, icon: Icon }) => <PortalLink key={path} path={path} onNavigate={onNavigate}><Icon size={28} weight="duotone" aria-hidden="true" /><span><strong>{title}</strong><span>{description}</span></span><ArrowUpRight size={20} aria-hidden="true" /></PortalLink>)}</div></section>
     </>}
   </PageTransition>;

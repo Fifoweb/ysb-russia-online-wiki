@@ -34,6 +34,8 @@ const Servers = lazy(() => import('./pages/Servers'));
 const AchievementsDashboard = lazy(() => import('./pages/AchievementsDashboard'));
 const AchievementReportForm = lazy(() => import('./pages/AchievementReportForm'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const Vacation = lazy(() => import('./pages/Vacation'));
+const VacationDashboard = lazy(() => import('./pages/VacationDashboard'));
 
 // GitHub Pages hosts under /<repo>/ — strip that base from routing
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -72,6 +74,18 @@ export default function App() {
     if (!supabase || path !== '/') return;
     const restore = () => {
       try {
+        const vacationsStarted = Number(sessionStorage.getItem('vacations-return'));
+        sessionStorage.removeItem('vacations-return');
+        if (vacationsStarted && Date.now() - vacationsStarted >= 0 && Date.now() - vacationsStarted < 15 * 60_000) {
+          navigate('/vacations');
+          return;
+        }
+        const vacationStarted = Number(sessionStorage.getItem('vacation-return'));
+        sessionStorage.removeItem('vacation-return');
+        if (vacationStarted && Date.now() - vacationStarted >= 0 && Date.now() - vacationStarted < 15 * 60_000) {
+          navigate('/vacation');
+          return;
+        }
         const profileStarted = Number(sessionStorage.getItem('profile-return'));
         sessionStorage.removeItem('profile-return');
         if (profileStarted && Date.now() - profileStarted >= 0 && Date.now() - profileStarted < 15 * 60_000) {
@@ -117,6 +131,8 @@ export default function App() {
       case '/achievements': return <AchievementsDashboard />;
       case '/achievement-report': return <AchievementReportForm onNavigate={navigate} />;
       case '/profile': return <ProfilePage onNavigate={navigate} />;
+      case '/vacation': return <Vacation onNavigate={navigate} />;
+      case '/vacations': return <VacationDashboard onNavigate={navigate} />;
       default: return <section className="portal-route-error"><span className="portal-error-code">404</span><h1>Такой страницы нет</h1><p>Возможно, ссылка устарела. Все материалы доступны с главной страницы.</p><PortalLink path="/" onNavigate={navigate} className="portal-primary">Вернуться на главную</PortalLink></section>;
     }
   };

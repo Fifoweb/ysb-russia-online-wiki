@@ -18,7 +18,7 @@ interface SidebarProps {
   onToggle: () => void;
 }
 const itemIcons: Record<string, Icon> = {
-  home: House, profile: UserCircle, crafts: Toolbox, servers: WifiHigh, achievements: Trophy,
+  home: House, profile: UserCircle, vacations: ClipboardText, vacation: ClipboardText, crafts: Toolbox, servers: WifiHigh, achievements: Trophy,
   basics: Shield, check: MagnifyingGlass, control: ClipboardText, discipline: Scales,
   practice: GraduationCap, appendix: FileText, handbook: BookOpenText, transfer: ArrowsLeftRight,
   restore: UserCheck, department: UsersThree,

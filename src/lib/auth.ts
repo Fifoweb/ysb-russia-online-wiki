@@ -90,10 +90,19 @@ export async function getApplicationSession(userId: string): Promise<Application
 export function useAuth() {
   const { session, loading } = useSyncExternalStore(subscribeAuth, getAuthSnapshot, getAuthSnapshot);
 
-  const signInWithDiscord = async (returnPath?: '/profile') => {
+  const signInWithDiscord = async (returnPath?: '/profile' | '/vacation' | '/vacations') => {
     if (!supabase) return;
+    try {
+      for (const key of ['profile-return', 'vacation-return', 'vacations-return']) sessionStorage.removeItem(key);
+    } catch { /* Redirect still works without browser storage. */ }
     if (returnPath === '/profile') {
       try { sessionStorage.setItem('profile-return', String(Date.now())); } catch { /* Login still works without browser storage. */ }
+    }
+    if (returnPath === '/vacation') {
+      try { sessionStorage.setItem('vacation-return', String(Date.now())); } catch { /* Login still works without browser storage. */ }
+    }
+    if (returnPath === '/vacations') {
+      try { sessionStorage.setItem('vacations-return', String(Date.now())); } catch { /* Login still works without browser storage. */ }
     }
     // Redirect must include the repo subpath on GitHub Pages (origin alone → 404).
     await supabase.auth.signInWithOAuth({

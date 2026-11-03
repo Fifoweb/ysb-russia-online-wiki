@@ -123,6 +123,27 @@ updates OAuth redirects and verifies all GitHub Pages routes.
 
 ## Verification and deployment
 
+Vacation requests use the existing authenticated application limits and cooldown.
+The caller's verified Discord identity is the only author that can be mentioned.
+Leadership roles are a fixed server-side allowlist, including the owner-supplied
+UDK and OVK leadership IDs. The webhook is stored only in
+`DISCORD_VACATION_WEBHOOK_URL`; its webhook, guild and channel IDs are checked
+before delivery. No client can create or update a vacation row. `reserve_vacation`
+is service-only, serializes employee requests, rejects overlapping delivered
+periods and acknowledges already-delivered request IDs without a second POST.
+Known rejections can be retried; timeouts, transport errors and Discord 5xx keep
+an uncertain reservation. Only database settlement is retried after delivery.
+After verifying the Discord channel manually, an administrator can reconcile
+`sending`/`uncertain` records to `delivered` (message present) or `failed`
+(confirmed absent). The embed footer includes the request UUID for this check.
+There is no automatic resend of an unknown delivery outcome.
+
+The dashboard RPC is authenticated-only and returns names, departments and dates
+for delivered current/upcoming vacations, capped at 500. Reasons and delivery
+metadata are available only to each request owner through RLS. Time entry uses
+Europe/Moscow (UTC+03:00), stored as timestamps with time zone. The list refreshes
+every minute and never labels an undelivered request as an active vacation.
+
 Run `npm run test:security`, `npm audit`, `npm run build` and `git diff --check`.
 Apply database migrations before deploying the functions. Every submission
 function must be redeployed when its shared guard changes. `discord-interactions`
