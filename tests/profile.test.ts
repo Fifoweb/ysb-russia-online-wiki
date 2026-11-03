@@ -6,7 +6,7 @@ import ts from 'typescript';
 import { emptyProfile, readProfile, validateProfile, profileDefault, profileWriteValues, applyProfileDefaults, type Profile } from '../src/lib/profileData';
 import { createProfileStore } from '../src/lib/profileStore';
 
-const officer: Profile = { ...emptyProfile, game_nickname: 'Kira_Comis', static_id: '75463', department: 'usb', rank: 'Лейтенант' };
+const officer: Profile = { ...emptyProfile, game_nickname: 'Kira_Comis', static_id: '75463', department: 'usb', department_status: 'verified', rank: 'Лейтенант' };
 const otherOfficer: Profile = { ...officer, game_nickname: 'Pavel_Mironov', static_id: '91342', department: 'dps' };
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 function deferred<T>() {
@@ -16,18 +16,21 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-test('profile requires a valid nickname, numeric static ID and an allowed department', () => {
+test('profile requires nickname and static ID; unavailable automatic departments do not block saving', () => {
   assert.deepEqual(validateProfile(officer), {});
   assert.deepEqual(validateProfile({ ...officer, game_nickname: '  Кира Комиссарова  ', static_id: ' 00012 ' }), {});
   for (const patch of [{ game_nickname: 'ab' }, { game_nickname: 'x'.repeat(81) }, { game_nickname: 'Name\nName' },
     { static_id: '#123' }, { static_id: '1e4' }, { static_id: '12345678901' }, { static_id: '' },
-    { department: 'administrator' }, { department: '' }, { about: 'x'.repeat(1001) }]) {
+    { department: 'administrator' }, { about: 'x'.repeat(1001) }]) {
     assert.ok(Object.keys(validateProfile({ ...officer, ...patch })).length, JSON.stringify(patch));
   }
   const fields = profileWriteValues({ ...officer, game_nickname: ' Kira_Comis ', static_id: ' 75463 ', updated_at: 'forged' });
   assert.equal(fields.game_nickname, 'Kira_Comis');
   assert.equal(fields.static_id, '75463');
   assert.ok(!('updated_at' in fields));
+  assert.ok(!('department' in fields));
+  assert.ok(!('department_status' in fields));
+  assert.deepEqual(validateProfile({ ...officer, department: '', department_status: 'none' }), {});
   assert.deepEqual(readProfile({ ...officer, id: 'another-user', discord_id: 'forged', role: 'admin' }), officer);
 });
 

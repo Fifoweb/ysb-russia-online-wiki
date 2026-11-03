@@ -54,6 +54,12 @@
 .account-fields textarea { resize: vertical; }
 .account-fields small { color: var(--portal-muted); font-size: 14px; line-height: 20px; }
 .account-field-wide { grid-column: 1 / -1; }
+.account-department-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.account-department-field > label { color: var(--portal-text); font-size: 16px; line-height: 24px; font-weight: 500; }
+.account-department-control { display: flex; gap: 12px; align-items: center; }
+.account-department-control input { min-width: 0; flex: 1; }
+.account-department-control button { flex: 0 0 auto; }
+@media (max-width: 540px) { .account-department-control { align-items: stretch; flex-direction: column; } }
 .account-autofill-info { display: flex; align-items: start; gap: 12px; padding: 16px; margin-top: 24px; border: 1px solid rgb(125 211 252 / .16); border-radius: 12px; background: rgb(125 211 252 / .04); }
 .account-autofill-info > svg { flex: 0 0 auto; color: var(--portal-accent); }
 .account-autofill-info p { margin: 0; color: #bed1e8; font-size: 16px; line-height: 24px; }

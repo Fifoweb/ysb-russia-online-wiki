@@ -48,9 +48,26 @@ inserted automatically; selecting a subset cannot silently attach extra photos.
 
 Employee account data is stored in `profiles` under the existing Supabase Auth
 user ID associated with Discord login. Row level security allows each signed-in
-user to read and edit only their own row. Game nickname, StaticID and department
-are self-reported form defaults, never authorization or Discord role claims.
-They are cached only in page memory and discarded on account changes. Personal
+user to read and edit only their own row. Game nickname and StaticID are
+self-reported form defaults. Department membership is resolved separately by
+`sync-profile-department` using the verified Auth Discord identity and the existing
+server-side bot token. The guild comes from the configured application channel
+(or an explicit server-side `DISCORD_GUILD_ID`). All eight owner-supplied membership
+roles must exist in that guild; notification role IDs are not membership claims.
+Clients cannot choose the Discord account, guild, or department for this lookup.
+The membership table allows owner-only reads of the result, and no client writes,
+RPC calls, lease reads, or global quota reads. Editable legacy `profiles.department`
+values are ignored by the new client and never presented as verified membership.
+No Discord provider token is required or retained. A single matched role confirms
+the department; no role, a missing member, multiple departments, and outages are
+distinct states. Unavailable or ambiguous results clear department autofill while
+nickname and StaticID remain editable. Existing report permissions and department
+routing do not change; select-based autofill uses each form's existing allowlist.
+Results are cached for 60 seconds (15 on provider outages); 25-second leases prevent
+parallel refreshes for the same account. At most 120 uncached checks start globally
+per minute, and Discord 429 backoff pauses new checks for up to five minutes.
+These membership results are form defaults, never additional authorization grants.
+The browser caches profile data only in page memory and discards it on account changes. Personal
 report drafts are reset on logout or switching accounts; manually edited fields
 are not overwritten by a late profile response. The public achievements dashboard
 continues to expose aggregate results only.
