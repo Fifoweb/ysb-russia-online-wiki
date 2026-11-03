@@ -25,7 +25,7 @@ function ProfileSkeleton() {
   </div>;
 }
 
-function EmployeeCard({ user, profile, signOut }: { user: User; profile: Profile; signOut: () => Promise<void> }) {
+function EmployeeCard({ user, profile, signOut, onNavigate }: { user: User; profile: Profile; signOut: () => Promise<void>; onNavigate: (path: string) => void }) {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   const identity = user.identities?.find(item => item.provider === 'discord')?.identity_data as Record<string, unknown> | undefined;
@@ -42,6 +42,7 @@ function EmployeeCard({ user, profile, signOut }: { user: User; profile: Profile
       <dl className="account-card-static"><dt>StaticID</dt><dd>{profile.static_id ? `#${profile.static_id}` : 'Не указан'}</dd></dl>
       <div className="account-completeness"><div><span>{complete === 3 ? 'Готово к отчётам' : 'Заполнение профиля'}</span><strong>{complete} из 3</strong></div><progress max={3} value={complete} aria-label="Заполнение профиля" /></div>
     </section>
+    <MyVacations userId={user.id} onNavigate={onNavigate} />
     <section className="account-panel account-discord" aria-labelledby="account-discord-title">
       <div className="account-section-title"><DiscordLogo size={24} aria-hidden="true" /><h2 id="account-discord-title">Discord подключён</h2><CheckCircle size={20} weight="fill" aria-label="Подключён" /></div>
       <p>Вход и ваш профиль привязаны к этому аккаунту.</p>
@@ -147,8 +148,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       {enabled ? <button type="button" className="portal-primary" onClick={() => void signInWithDiscord('/profile')}><DiscordLogo size={24} aria-hidden="true" />Войти через Discord</button> : <p role="alert">Вход временно недоступен. Попробуйте позже.</p>}
       <div className="account-welcome-features"><span><IdentificationCard size={20} aria-hidden="true" />Игровой профиль</span><span><CheckCircle size={20} aria-hidden="true" />Автозаполнение отчётов</span><span><LockKey size={20} aria-hidden="true" />Доступ через ваш Discord</span></div>
     </section> : (status === 'loading' || status === 'idle') && profile.department_status === 'pending' ? <ProfileSkeleton /> : status === 'error' && profile.department_status === 'pending' ? <section className="account-panel account-load-error" role="alert"><IdentificationCard size={40} aria-hidden="true" /><h2>Профиль пока не загрузился</h2><p>{error}</p><button type="button" className="portal-primary" onClick={() => void refresh()}>Загрузить ещё раз</button></section> : <>
-      <div className="account-layout"><EmployeeCard user={user} profile={profile} signOut={signOut} /><div className="account-main"><ProfileEditor key={user.id} profile={profile} save={save} refresh={refresh} refreshing={status === 'loading'} />{status === 'error' && <p className="account-error" role="alert">{error}</p>}<p className="account-sync-note"><LockKey size={16} aria-hidden="true" />Данные доступны при входе с этим Discord на любом устройстве.</p></div></div>
-      <MyVacations userId={user.id} onNavigate={onNavigate} />
+      <div className="account-layout"><EmployeeCard user={user} profile={profile} signOut={signOut} onNavigate={onNavigate} /><div className="account-main"><ProfileEditor key={user.id} profile={profile} save={save} refresh={refresh} refreshing={status === 'loading'} />{status === 'error' && <p className="account-error" role="alert">{error}</p>}<p className="account-sync-note"><LockKey size={16} aria-hidden="true" />Данные доступны при входе с этим Discord на любом устройстве.</p></div></div>
       <section className="account-shortcuts" aria-labelledby="account-shortcuts-title"><h2 id="account-shortcuts-title">Перейти к работе</h2><div>{shortcuts.map(({ path, title, description, icon: Icon }) => <PortalLink key={path} path={path} onNavigate={onNavigate}><Icon size={28} weight="duotone" aria-hidden="true" /><span><strong>{title}</strong><span>{description}</span></span><ArrowUpRight size={20} aria-hidden="true" /></PortalLink>)}</div></section>
     </>}
   </PageTransition>;

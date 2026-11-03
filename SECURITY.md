@@ -150,6 +150,11 @@ history or changing the originally planned dates. Repeated calls are idempotent.
 The dashboard omits early-ended rows and overlap checks use their actual end.
 Direct client writes remain forbidden. This action sends no Discord message;
 browser-tab invalidation signals contain only a timestamp, never employee data.
+`cancel_my_vacation` similarly permits owners to cancel only their delivered
+vacations that have not started. It preserves the planned dates and records an
+immutable cancellation timestamp. Cancelled requests disappear from the dashboard
+and no longer reserve overlapping dates. An active vacation uses the early-return
+action instead. Both actions are idempotent and cannot modify another employee.
 
 Run `npm run test:security`, `npm audit`, `npm run build` and `git diff --check`.
 Apply database migrations before deploying the functions. Every submission
