@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test:auth-privacy": "tsx --test tests/auth-privacy.test.ts",
-    "test:security": "tsx --test tests/auth-privacy.test.ts tests/security-hardening.test.ts tests/application-guards.test.ts tests/home-layout.test.ts tests/achievements.test.ts tests/profile.test.ts tests/evidence-upload.test.ts",
+    "test:security": "tsx --test tests/auth-privacy.test.ts tests/security-hardening.test.ts tests/application-guards.test.ts tests/home-layout.test.ts tests/achievements.test.ts tests/profile.test.ts tests/evidence-upload.test.ts tests/evidence-album.test.ts tests/evidence-upload-ui.test.ts",
     "bot": "npx tsx src/bot/bot.ts"
   },
   "dependencies": {
@@ -31,9 +31,11 @@
     "@types/node": "^22.20.3",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/react-test-renderer": "^18.3.1",
     "@types/three": "^0.173.0",
     "@vitejs/plugin-react": "^4.3.4",
     "postcss": "^8.5.1",
+    "react-test-renderer": "^18.3.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "~5.7.2",

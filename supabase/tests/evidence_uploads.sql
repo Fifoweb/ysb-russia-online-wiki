@@ -64,6 +64,21 @@ begin
   v_result:=public.reserve_evidence_upload(v_user,repeat('b',64),100,'image/png');v_second:=(v_result->>'ticket')::uuid;
   if v_result->>'result'<>'reserved' or v_second=v_ticket then raise exception 'Explicit retry remained blocked after one minute'; end if;
   if public.settle_evidence_upload(repeat('b',64),v_ticket,'ready','https://allwebs.ru/images/2026/stale.png',null) then raise exception 'Old ticket overwrote a newer reservation'; end if;
+  v_result:=public.reserve_evidence_upload(v_other,repeat('f',64),100,'image/png');
+  v_ticket:=(v_result->>'ticket')::uuid;
+  if public.settle_evidence_upload(repeat('f',64),v_ticket,'ready','https://fotora.ru.evil.test/uploaded/?ID=TESTALBUM123',null)
+    or public.settle_evidence_upload(repeat('f',64),v_ticket,'ready','https://fotora.ru/uploaded/?ID=TESTALBUM123&download_images=1',null) then
+    raise exception 'Untrusted Fotora album URL accepted';
+  end if;
+  if not public.settle_evidence_upload(repeat('f',64),v_ticket,'ready','https://fotora.ru/uploaded/?ID=TESTALBUM123',now()+interval '1 day') then
+    raise exception 'Fotora album was not cached';
+  end if;
+  v_result:=public.reserve_evidence_upload(v_other,repeat('f',64),100,'image/png');
+  if v_result->>'result'<>'ready' or v_result->>'url'<>'https://fotora.ru/uploaded/?ID=TESTALBUM123' then
+    raise exception 'Switching hosts lost the original proof cache';
+  end if;
+  v_result:=public.reserve_evidence_upload(v_user,repeat('f',64),100,'image/png');
+  if v_result->>'result'<>'duplicate' or v_result ? 'url' then raise exception 'One shared photo disclosed another account album'; end if;
   update private.evidence_upload_buckets set amount=209715200 where bucket='day:user:'||v_user::text;
   v_result:=public.reserve_evidence_upload(v_user,repeat('c',64),100,'image/png');
   if v_result->>'result'<>'limit' then raise exception 'Daily image byte quota not enforced'; end if;

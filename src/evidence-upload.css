@@ -6,6 +6,9 @@
 .evidence-upload-select:active { transform: scale(.98); }
 .evidence-upload-tools > span { flex: 1; min-width: 160px; color: var(--portal-muted); font-size: 14px; line-height: 20px; }
 .evidence-upload-tools > small { flex-basis: 100%; color: var(--portal-muted); font-size: 14px; line-height: 20px; }
+.evidence-upload-plan { flex-basis: 100%; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 12px; border-top: 1px solid var(--portal-stroke); }
+.evidence-upload-plan > span { color: var(--portal-text); font-size: 14px; line-height: 20px; font-weight: 500; }
+.evidence-upload-start { background: #123760; border-color: rgb(125 211 252 / .45); }
 .wiki-content .evidence-upload-notice { margin: 12px 0 0; color: #fde68a; font-size: 14px; line-height: 20px; }
 .evidence-upload-list { display: flex; flex-direction: column; gap: 8px; padding: 0; margin: 12px 0 0; max-height: 400px; overflow-y: auto; overscroll-behavior: contain; list-style: none; }
 .wiki-content .evidence-upload-list > li { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 0; border: 1px solid var(--portal-stroke); border-radius: 12px; background: var(--portal-surface); }

@@ -32,6 +32,17 @@ links and provider response bodies are never exposed. Private SHA-256 caching
 prevents duplicate hosting requests. Unknown delivery outcomes are not resent
 automatically. Uploading images does not claim or reset report cooldowns.
 Allwebs is temporary external storage; its reported expiration is displayed.
+Bulk selections use `upload-evidence-album` with the same verified identity and
+shared private quotas/cache. A request carries at most 20 MiB of image data
+(21 MiB including multipart overhead), with one active album per worker. Files
+are validated before reaching Fotora. Guest cookies exist only during that
+server request; they are never stored, logged, or returned. The adapter uses
+Fotora's normal guest form and stops if a captcha or an unexpected flow appears.
+No external HTML or JavaScript is executed, and every remote URL is fixed or
+validated against the exact provider host and album route. Switching providers
+reuses the original cached proof URL instead of uploading the same photo again.
+An album URL is reused only by its owner. A matching photo from another account
+does not disclose the remaining photos in that account's album.
 
 Employee account data is stored in `profiles` under the existing Supabase Auth
 user ID associated with Discord login. Row level security allows each signed-in

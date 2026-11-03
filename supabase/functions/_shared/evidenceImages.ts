@@ -1,4 +1,7 @@
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_ALBUM_BYTES = 20 * 1024 * 1024;
+export const MAX_ALBUM_BODY_BYTES = MAX_ALBUM_BYTES + 1024 * 1024;
+export const MAX_SELECTED_IMAGES = 50;
 const MAX_PIXELS = 40_000_000;
 
 export function inspectEvidenceImage(bytes: Uint8Array): { mime: string; extension: string; width: number; height: number } | null {
@@ -70,6 +73,22 @@ export function allwebsImageUrl(value: unknown): string | null {
     return url.protocol === 'https:' && url.hostname === 'allwebs.ru' && !url.port && !url.username && !url.password
       && !url.search && !url.hash && /^\/images\/[a-zA-Z0-9/_.-]+\.(png|jpe?g|webp)$/.test(url.pathname) ? url.href : null;
   } catch { return null; }
+}
+
+export function fotoraAlbumUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 300) return null;
+  try {
+    const url = new URL(value);
+    const id = url.searchParams.get('ID');
+    if (url.protocol !== 'https:' || url.hostname !== 'fotora.ru' || url.port || url.username || url.password || url.hash
+      || !/^\/uploaded\/?$/.test(url.pathname) || !id || !/^[A-Za-z0-9]{5,64}$/.test(id)
+      || url.search !== `?ID=${id}`) return null;
+    return `https://fotora.ru/uploaded/?ID=${id}`;
+  } catch { return null; }
+}
+
+export function evidenceHostingUrl(value: unknown): string | null {
+  return allwebsImageUrl(value) ?? fotoraAlbumUrl(value);
 }
 
 export function allwebsExpiration(value: unknown): string | null {

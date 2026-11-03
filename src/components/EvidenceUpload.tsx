@@ -1,89 +1,102 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type ClipboardEvent, type DragEvent } from 'react';
-import { ArrowClockwise, CheckCircle, ClipboardText, FileImage, UploadSimple, X } from '@phosphor-icons/react';
+import { ArrowClockwise, CheckCircle, ClipboardText, FileImage, Images, UploadSimple, X } from '@phosphor-icons/react';
 import { useAuth } from '../lib/auth';
-import { IMAGE_ACCEPT, imageFileError, insertEvidenceUrl, removeEvidenceUrl, uploadEvidenceImage } from '../lib/evidenceUpload';
+import { IMAGE_ACCEPT, imageFileError, insertEvidenceUrls, removeEvidenceUrl, uploadEvidenceBatch } from '../lib/evidenceUpload';
+import { evidenceProvider, planEvidenceUploads, providerName, type EvidenceProvider } from '../lib/evidenceUploadPlan';
+import { MAX_SELECTED_IMAGES, fotoraAlbumUrl } from '../../supabase/functions/_shared/evidenceImages';
 import { useEvidenceUploadStatus } from './EvidenceUploadsProvider';
 import '../evidence-upload.css';
 
-type Item = { id: string; file: File; preview: string; status: 'queued' | 'uploading' | 'done' | 'error'; error?: string; url?: string; expiresAt?: string | null; originalValue: string; added?: boolean; retryable?: boolean };
-interface Props {
-  children: ReactNode; value: string; onChange: (value: string) => void;
-  multiple?: boolean; maxLength?: number; maxFiles?: number; disabled?: boolean;
-}
+type Item = {
+  id: string; files: File[]; preview: string; status: 'selected' | 'queued' | 'uploading' | 'done' | 'error';
+  provider?: EvidenceProvider; selectionCount?: number; error?: string; urls?: string[]; expiresAt?: string | null;
+  originalValue: string; retryable?: boolean;
+};
+interface Props { children: ReactNode; value: string; onChange: (value: string) => void; multiple?: boolean; maxLength?: number; maxFiles?: number; disabled?: boolean; }
+const waiting = (item: Item) => item.status === 'queued' || item.status === 'uploading';
 
 export default function EvidenceUpload({ children, value, onChange, multiple = false, maxLength = 1000, maxFiles = 10, disabled = false }: Props) {
   const { user } = useAuth();
-  const id = useId();
-  const { update } = useEvidenceUploadStatus();
-  const [items, setItems] = useState<Item[]>([]);
-  const [dragging, setDragging] = useState(false);
-  const [notice, setNotice] = useState('');
-  const input = useRef<HTMLInputElement>(null);
-  const itemsRef = useRef(items); itemsRef.current = items;
+  const id = useId(), { update } = useEvidenceUploadStatus();
+  const [items, setItems] = useState<Item[]>([]), [dragging, setDragging] = useState(false), [notice, setNotice] = useState('');
+  const [schedule, setSchedule] = useState(0);
+  const input = useRef<HTMLInputElement>(null), itemsRef = useRef(items); itemsRef.current = items;
   const latest = useRef({ value, onChange, disabled }); latest.current = { value, onChange, disabled };
-  const active = useRef(new Map<string, AbortController>());
+  const active = useRef(new Map<string, AbortController>()), previews = useRef(new Map<File, string>()), inserted = useRef(new Set<string>());
   const alive = useRef(true);
-  const previews = useRef(new Set<string>());
-  const pending = items.filter(item => item.status === 'queued' || item.status === 'uploading').length;
-  const failed = items.filter(item => item.status === 'error').length;
-  useEffect(() => { update(id, { pending, failed }); }, [id, pending, failed, update]);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-      active.current.forEach(controller => controller.abort()); active.current.clear();
-      previews.current.forEach(url => URL.revokeObjectURL(url)); previews.current.clear();
-      update(id, null);
-    };
+  const busy = items.some(waiting), selected = items.filter(item => item.status === 'selected');
+  const imageCount = items.reduce((sum, item) => sum + item.files.filter(file => !imageFileError(file)).length, 0);
+  const provider = evidenceProvider(imageCount);
+  const change = (mutate: (current: Item[]) => Item[]) => {
+    if (!alive.current) return;
+    const next = mutate(itemsRef.current); itemsRef.current = next; setItems(next);
+    update(id, { pending: next.filter(waiting).length, selected: next.filter(item => item.status === 'selected').length, failed: next.filter(item => item.status === 'error').length });
+  };
+  const patch = (key: string, values: Partial<Item>) => change(current => current.map(item => item.id === key ? { ...item, ...values } : item));
+  useEffect(() => () => {
+    alive.current = false; active.current.forEach(controller => controller.abort()); active.current.clear();
+    previews.current.forEach(url => URL.revokeObjectURL(url)); previews.current.clear(); update(id, null);
   }, [id, update]);
-
-  const patch = (key: string, values: Partial<Item>) => {
-    if (alive.current) setItems(current => current.map(item => item.id === key ? { ...item, ...values } : item));
-  };
+  useEffect(() => { alive.current = true; }, []);
   const write = (next: string) => { latest.current.value = next; latest.current.onChange(next); };
-  const insert = (item: Item, url: string) => {
+  const insert = (item: Item, urls: string[], explicit = false) => {
     const current = latest.current.value;
-    if (!multiple && current !== item.originalValue && current.trim() !== url) return { inserted: false, added: false };
-    const next = insertEvidenceUrl(current, url, multiple, maxLength, multiple ? maxFiles : 1);
-    if (next === null) return { inserted: false, added: false };
-    write(next); return { inserted: true, added: next !== current };
+    if (!explicit && !multiple && current !== item.originalValue && !urls.includes(current.trim())) return false;
+    const next = insertEvidenceUrls(current, urls, multiple, maxLength, multiple ? maxFiles : 1);
+    if (next === null) return false;
+    const old = new Set(current.trim().split(/\s+/));
+    urls.forEach(url => { if (!old.has(url)) inserted.current.add(url); });
+    write(next); return true;
   };
-
   useEffect(() => {
     if (!user || disabled) return;
     for (const item of items.filter(item => item.status === 'queued')) {
-      if (active.current.size >= 2) break;
+      if (active.current.size >= (item.provider === 'fotora' ? 1 : 2)) break;
       if (active.current.has(item.id)) continue;
-      const controller = new AbortController(); active.current.set(item.id, controller);
-      patch(item.id, { status: 'uploading' });
-      void uploadEvidenceImage(item.file, user.id, controller.signal).then(result => {
+      const controller = new AbortController(); active.current.set(item.id, controller); patch(item.id, { status: 'uploading' });
+      void uploadEvidenceBatch(item.files, item.provider!, item.selectionCount!, user.id, controller.signal).then(result => {
         if (!alive.current || controller.signal.aborted) return;
-        const { inserted, added } = insert(item, result.url);
-        patch(item.id, { ...result, added, status: inserted ? 'done' : 'error', error: inserted ? undefined : 'Файл загружен, но ссылка не добавлена: поле изменилось или достигнут лимит. Освободите место и нажмите «Подставить ссылку».' });
+        const added = insert(item, result.urls);
+        patch(item.id, { ...result, status: added ? 'done' : 'error', error: added ? undefined : 'Загрузка завершена, но ссылки не добавлены: поле изменилось или достигнут лимит. Освободите место и нажмите «Подставить ссылки».' });
       }).catch(error => {
-        if (alive.current && !controller.signal.aborted) patch(item.id, { status: 'error', error: error instanceof Error ? error.message : 'Не удалось загрузить файл.', retryable: (error as { retryable?: boolean })?.retryable !== false });
-      }).finally(() => { active.current.delete(item.id); });
+        if (alive.current && !controller.signal.aborted) patch(item.id, { status: 'error', error: error instanceof Error ? error.message : 'Не удалось загрузить файлы.', retryable: (error as { retryable?: boolean })?.retryable !== false });
+      }).finally(() => { active.current.delete(item.id); if (alive.current) setSchedule(value => value + 1); });
     }
-  }, [items, user?.id, disabled]);
-
+  }, [items, user?.id, disabled, schedule]);
   const add = (files: File[]) => {
-    if (!user || latest.current.disabled || input.current?.matches(':disabled')) return;
-    const current = itemsRef.current;
-    const limit = multiple ? maxFiles : 1;
-    if (current.length + files.length > limit) { setNotice(`В этом поле можно прикрепить не больше ${limit} ${limit === 1 ? 'изображения' : 'изображений'}. Уберите лишние файлы из списка.`); return; }
-    if (files.reduce((sum, file) => sum + file.size, 0) + current.reduce((sum, item) => sum + item.file.size, 0) > 100 * 1024 * 1024) { setNotice('За один раз можно выбрать до 100 МБ изображений.'); return; }
+    if (!user || latest.current.disabled || itemsRef.current.some(waiting)) return;
+    const current = itemsRef.current, existing = current.flatMap(item => item.files);
+    const unique: File[] = [];
+    for (const file of files) if (![...existing, ...unique].some(old => old.name === file.name && old.size === file.size && old.lastModified === file.lastModified)) unique.push(file);
+    if (!unique.length) { setNotice('Выбранные файлы уже есть в списке.'); return; }
+    const limit = multiple ? MAX_SELECTED_IMAGES : 1;
+    if (existing.length + unique.length > limit) { setNotice(`В этом поле можно выбрать не больше ${limit} фото. Уберите лишние файлы из списка.`); return; }
+    if ([...existing, ...unique].reduce((sum, file) => sum + file.size, 0) > 100 * 1024 * 1024) { setNotice('В одной подборке можно выбрать до 100 МБ изображений.'); return; }
     setNotice('');
-    const added: Item[] = [];
-    for (const file of files) {
-      if ([...current, ...added].some(item => item.file.name === file.name && item.file.size === file.size && item.file.lastModified === file.lastModified)) { setNotice('Повторно выбранные файлы пропущены.'); continue; }
-      const error = imageFileError(file);
-      const preview = error ? '' : URL.createObjectURL(file); if (preview) previews.current.add(preview);
-      added.push({ id: crypto.randomUUID(), file, preview, status: error ? 'error' : 'queued', error: error ?? undefined, originalValue: latest.current.value });
+    const added = unique.map(file => {
+      const error = imageFileError(file), preview = error ? '' : URL.createObjectURL(file); if (preview) previews.current.set(file, preview);
+      return { id: crypto.randomUUID(), files: [file], preview, status: error ? 'error' : 'selected', error: error ?? undefined, originalValue: latest.current.value, retryable: false } as Item;
+    });
+    change(current => [...current, ...added]);
+  };
+  const start = () => {
+    if (!user || disabled || itemsRef.current.some(waiting)) return;
+    const current = itemsRef.current, draft = current.filter(item => item.status === 'selected');
+    const total = current.reduce((sum, item) => sum + item.files.filter(file => !imageFileError(file)).length, 0), host = evidenceProvider(total);
+    const groups = planEvidenceUploads(draft.flatMap(item => item.files), host);
+    const jobs: Item[] = groups.map(files => ({ id: crypto.randomUUID(), files, preview: previews.current.get(files[0]) ?? '', provider: host, selectionCount: total, originalValue: latest.current.value, status: 'queued' }));
+    change(current => [...current.filter(item => item.status !== 'selected'), ...jobs]);
+  };
+  const remove = (item: Item) => {
+    active.current.get(item.id)?.abort();
+    const remaining = itemsRef.current.filter(record => record.id !== item.id);
+    let next = latest.current.value;
+    for (const url of item.urls ?? []) if (inserted.current.has(url) && !remaining.some(record => record.urls?.includes(url))) {
+      next = multiple ? removeEvidenceUrl(next, url) : next.trim() === url ? '' : next; inserted.current.delete(url);
     }
-    if (added.length) {
-      update(id, { pending: pending + added.filter(item => item.status === 'queued').length, failed: failed + added.filter(item => item.status === 'error').length });
-      setItems(current => [...current, ...added]);
-    }
+    if (next !== latest.current.value) write(next);
+    item.files.forEach(file => { const preview = previews.current.get(file); if (preview) URL.revokeObjectURL(preview); previews.current.delete(file); });
+    change(() => remaining);
   };
   const paste = (event: ClipboardEvent<HTMLDivElement>) => {
     const files = Array.from(event.clipboardData.items).filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => file !== null);
@@ -98,31 +111,29 @@ export default function EvidenceUpload({ children, value, onChange, multiple = f
     onDragLeave={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setDragging(false); }} onDrop={drop}>
     {children}
     <div className="evidence-upload-tools" role="group" aria-label="Загрузка скриншотов">
-      <input ref={input} hidden type="file" accept={IMAGE_ACCEPT} multiple={multiple} disabled={disabled || !user}
-        onChange={event => { add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
-      <button type="button" className="evidence-upload-select" disabled={disabled || !user} onClick={() => input.current?.click()}><UploadSimple size={20} aria-hidden="true" />Загрузить на Allwebs</button>
-      <span>или перетащите {multiple ? 'скриншоты' : 'скриншот'} сюда, либо вставьте Ctrl+V в поле</span>
-      <small>PNG, JPG, WEBP · до 10 МБ на файл. В отчёт добавятся ссылки на загруженные изображения.</small>
+      <input ref={input} hidden type="file" accept={IMAGE_ACCEPT} multiple={multiple} disabled={disabled || busy || !user} onChange={event => { add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
+      <button type="button" className="evidence-upload-select" disabled={disabled || busy || !user} onClick={() => input.current?.click()}><Images size={20} aria-hidden="true" />{multiple ? 'Выбрать скриншоты' : 'Выбрать скриншот'}</button>
+      <span>или перетащите {multiple ? 'снимки' : 'снимок'} сюда, либо вставьте Ctrl+V в поле</span>
+      <small>PNG, JPG, WEBP · до 10 МБ на файл.{multiple ? ' До 10 фото — Allwebs, от 11 до 50 — альбомы Fotora.' : ' Загрузка через Allwebs.'}</small>
+      {selected.length > 0 && <div className="evidence-upload-plan" role="status"><span>{selected.length === imageCount ? `Выбрано ${imageCount} фото` : `Всего ${imageCount} фото · новых ${selected.length}`} · {providerName(provider)}</span>
+        <button type="button" className="evidence-upload-select evidence-upload-start" disabled={disabled || busy || !user} onClick={start}><UploadSimple size={20} aria-hidden="true" />Загрузить выбранные</button>
+      </div>}
     </div>
     {notice && <p className="evidence-upload-notice" role="status">{notice}</p>}
-    {items.length > 0 && <ul className="evidence-upload-list" aria-label="Выбранные скриншоты">{items.map(item => <li key={item.id} data-status={item.status}>
-      {item.preview ? <img src={item.preview} alt="" width={56} height={56} loading="lazy" decoding="async" /> : <FileImage size={32} aria-hidden="true" />}
-      <div className="evidence-upload-detail"><strong title={item.file.name}>{item.file.name}</strong><span role="status">{item.status === 'queued' ? 'В очереди…' : item.status === 'uploading' ? 'Загружаем…' : item.status === 'done' ? <><CheckCircle size={16} aria-hidden="true" />Ссылка добавлена</> : item.error}</span>
-        {item.expiresAt && item.status === 'done' && <small>Хостинг указал срок до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</small>}
-        {item.status === 'uploading' && <progress aria-label={`Загрузка ${item.file.name}`} />}
-        {item.status === 'error' && item.url && <button className="evidence-upload-insert" type="button" disabled={disabled} onClick={() => {
-          const next = insertEvidenceUrl(latest.current.value, item.url!, multiple, maxLength, multiple ? maxFiles : 1);
-          if (next !== null) { const added = next !== latest.current.value; write(next); patch(item.id, { status: 'done', error: undefined, added }); }
-        }}><ClipboardText size={16} aria-hidden="true" />Подставить ссылку</button>}
-      </div>
-      {item.status === 'error' && !item.url && item.retryable !== false && !imageFileError(item.file) && <button className="evidence-upload-icon" type="button" disabled={disabled} aria-label={`Повторить загрузку ${item.file.name}`} onClick={() => {
-        const invalid = imageFileError(item.file); if (!invalid) patch(item.id, { status: 'queued', error: undefined });
-      }}><ArrowClockwise size={20} aria-hidden="true" /></button>}
-      <button className="evidence-upload-icon" type="button" disabled={disabled || item.status === 'uploading'} aria-label={`Убрать ${item.file.name} из формы`} onClick={() => {
-        if (item.url && item.added) write(multiple ? removeEvidenceUrl(latest.current.value, item.url) : latest.current.value.trim() === item.url ? '' : latest.current.value);
-        if (item.preview) { URL.revokeObjectURL(item.preview); previews.current.delete(item.preview); }
-        setItems(current => current.filter(record => record.id !== item.id && (!item.added || !item.url || record.url !== item.url)));
-      }}><X size={18} aria-hidden="true" /></button>
-    </li>)}</ul>}
+    {items.length > 0 && <ul className="evidence-upload-list" aria-label="Выбранные скриншоты">{items.map(item => {
+      const album = item.provider === 'fotora', title = album ? `Альбом Fotora · ${item.files.length} фото` : item.files[0].name;
+      const albumLink = item.urls?.map(fotoraAlbumUrl).find(Boolean);
+      return <li key={item.id} data-status={item.status}>
+        {item.preview ? <img src={item.preview} alt="" width={56} height={56} loading="lazy" decoding="async" /> : <FileImage size={32} aria-hidden="true" />}
+        <div className="evidence-upload-detail"><strong title={title}>{title}</strong><span role="status">{item.status === 'selected' ? 'Готово к загрузке' : item.status === 'queued' ? 'В очереди…' : item.status === 'uploading' ? `Загружаем на ${providerName(item.provider!)}…` : item.status === 'done' ? <><CheckCircle size={16} aria-hidden="true" />{(item.urls?.length ?? 0) > 1 ? 'Ссылки добавлены' : 'Ссылка добавлена'}</> : item.error}</span>
+          {item.expiresAt && item.status === 'done' && <small>Хостинг указал срок до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</small>}
+          {albumLink && <a className="evidence-upload-insert" href={albumLink} target="_blank" rel="noopener noreferrer">Открыть альбом</a>}
+          {item.status === 'uploading' && <progress aria-label={`Загрузка: ${title}`} />}
+          {item.status === 'error' && item.urls && <button className="evidence-upload-insert" type="button" disabled={disabled} onClick={() => { if (insert(item, item.urls!, true)) patch(item.id, { status: 'done', error: undefined }); }}><ClipboardText size={16} aria-hidden="true" />Подставить ссылки</button>}
+        </div>
+        {item.status === 'error' && !item.urls && item.provider && item.retryable !== false && <button className="evidence-upload-icon" type="button" disabled={disabled || busy} aria-label={`Повторить загрузку: ${title}`} onClick={() => patch(item.id, { status: 'queued', error: undefined })}><ArrowClockwise size={20} aria-hidden="true" /></button>}
+        <button className="evidence-upload-icon" type="button" disabled={disabled || item.status === 'uploading'} aria-label={`Убрать из формы: ${title}`} onClick={() => remove(item)}><X size={18} aria-hidden="true" /></button>
+      </li>;
+    })}</ul>}
   </div>;
 }

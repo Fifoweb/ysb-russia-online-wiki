@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { MAX_IMAGE_BYTES, inspectEvidenceImage, readLimitedBytes, allwebsImageUrl, allwebsExpiration } from '../_shared/evidenceImages.ts';
+import { MAX_IMAGE_BYTES, inspectEvidenceImage, readLimitedBytes, evidenceHostingUrl, allwebsImageUrl, allwebsExpiration } from '../_shared/evidenceImages.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -50,8 +50,9 @@ async function handleUpload(req: Request): Promise<Response> {
     if (error || !data?.result) throw new Error();
     reservation = data;
   } catch { return json(503, { error: 'Не удалось подготовить загрузку. Попробуйте позже.' }); }
-  if (reservation.result === 'ready' && allwebsImageUrl(reservation.url)) return json(200, { url: reservation.url, expiresAt: reservation.expiresAt ?? null, reused: true });
+  if (reservation.result === 'ready' && evidenceHostingUrl(reservation.url)) return json(200, { url: evidenceHostingUrl(reservation.url), expiresAt: reservation.expiresAt ?? null, reused: true });
   if (reservation.result === 'limit') return json(429, { error: 'Достигнут суточный лимит загрузки изображений. Можно вставить готовые ссылки.', retryable: false });
+  if (reservation.result === 'duplicate') return json(409, { error: 'Этот скриншот уже входит в подборку другого аккаунта. Приложите собственные доказательства.', retryable: false });
   if (reservation.result === 'pending') return json(409, { error: 'Этот скриншот уже загружается. Подождите несколько секунд и повторите попытку.' }, 5);
   if (reservation.result === 'uncertain') {
     const retry = Number.isInteger(reservation.retryAfterSeconds) && reservation.retryAfterSeconds! > 0 ? reservation.retryAfterSeconds! : 60;

@@ -38,7 +38,7 @@ test('hosting results allow only original HTTPS images and never deletion URLs o
 });
 
 function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: number; dbDown?: boolean;
-  reservation?: string; hostingHttp?: number; networkError?: boolean; networkErrorAt?: number; healthFailures?: number; invalidResult?: boolean; syncDown?: boolean } = {}) {
+  reservation?: string; cachedUrl?: string; hostingHttp?: number; networkError?: boolean; networkErrorAt?: number; healthFailures?: number; invalidResult?: boolean; syncDown?: boolean } = {}) {
   let handler!: (request: Request) => Promise<Response>;
   const calls: { name: string; params: Record<string, unknown> }[] = [];
   const sent: { url: string; body: FormData; headers: Record<string, string>; byteLength: number; client: unknown }[] = [];
@@ -52,7 +52,7 @@ function fixture(options: { anonymous?: boolean; identity?: boolean; attempt?: n
       calls.push({ name, params });
       if (options.dbDown) return { data: null, error: new Error('private-secret-marker') };
       if (name === 'claim_evidence_upload_attempt') return { data: options.attempt ?? 0, error: null };
-      if (name === 'reserve_evidence_upload') return { data: { result: options.reservation ?? 'reserved', ticket: 'ticket', url: imageUrl, expiresAt: '2099-01-01T00:00:00Z' }, error: null };
+      if (name === 'reserve_evidence_upload') return { data: { result: options.reservation ?? 'reserved', ticket: 'ticket', url: options.cachedUrl ?? imageUrl, expiresAt: '2099-01-01T00:00:00Z' }, error: null };
       if (name === 'settle_evidence_upload') return { data: !options.syncDown, error: null };
       throw new Error('Unexpected RPC');
     },
@@ -97,7 +97,7 @@ test('size, format, request limits and unavailable guards fail before hosting up
     [{ attempt: 17 }, {}, png,429], [{ dbDown: true }, {}, png,503], [{}, {'Content-Type':'text/html'},png,415],
     [{}, {'Content-Length':String(MAX_IMAGE_BYTES+1)},png,413], [{}, {},new Uint8Array(MAX_IMAGE_BYTES+1),413],
     [{}, {},new TextEncoder().encode('<html>fake.png</html>'),400], [{ reservation: 'pending' },{},png,409],
-    [{ reservation: 'uncertain' },{},png,409], [{ reservation: 'limit' },{},png,429],
+    [{ reservation: 'uncertain' },{},png,409], [{ reservation: 'limit' },{},png,429], [{ reservation: 'duplicate' },{},png,409],
   ] as const) {
     const app=fixture(options);const response=await app.submit(bytes,headers);assert.equal(response.status,status);assert.equal(app.sent.length,0);assert.equal(app.checks.length,0);
     assert.doesNotMatch(await response.text(),/private-secret-marker/);
@@ -119,6 +119,9 @@ test('uploads preserve original bytes, use a generated filename and commit a reu
 
 test('cached files never contact Allwebs twice and uncertain outcomes offer only an explicit delayed retry', async () => {
   const cached=fixture({reservation:'ready'});assert.equal((await cached.submit()).status,200);assert.equal(cached.sent.length,0);assert.equal(cached.checks.length,0);
+  const previousAlbum='https://fotora.ru/uploaded/?ID=TESTALBUM123';
+  const fotora=fixture({reservation:'ready',cachedUrl:previousAlbum});const reused=await fotora.submit();
+  assert.equal(reused.status,200);assert.equal((await reused.json()).url,previousAlbum);assert.equal(fotora.sent.length,0);
   for(const options of [{networkError:true},{invalidResult:true},{hostingHttp:503}]) {
     const app=fixture(options);const response=await app.submit();assert.equal(response.status,502);assert.equal(app.sent.length,1);
     assert.equal(app.calls.filter(call=>call.name==='settle_evidence_upload').at(-1)?.params.p_status,'uncertain');
