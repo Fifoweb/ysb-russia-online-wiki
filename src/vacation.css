@@ -74,6 +74,11 @@
 .vacation-personal-list article { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 16px; border: 1px solid var(--portal-stroke); border-radius: 12px; }
 .vacation-personal-list article span { color: var(--portal-muted); }
 .vacation-personal-list article p { flex-basis: 100%; margin: 0; color: var(--portal-muted); overflow-wrap: anywhere; }
+.vacation-return-button { margin-top: 8px; }
+.vacation-return-dialog { width: min(560px, calc(100% - 32px)); }
+.vacation-return-dialog p { color: var(--portal-muted); font-size: 16px; line-height: 24px; }
+.vacation-return-dialog button:disabled { opacity: .65; cursor: wait; }
+.vacation-return-notice { padding: 16px; margin-bottom: 16px; border: 1px solid rgb(110 231 183 / .25); border-radius: 12px; background: rgb(110 231 183 / .06); color: #a7f3d0 !important; }
 @media (max-width: 900px) { .vacation-form { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .vacation-panel { padding: 24px; } .vacation-dashboard-heading,.vacation-list-card { align-items: start; flex-direction: column; } .vacation-period { align-items: start; } }
 @media (max-width: 640px) { .vacation-stat-grid { gap: 8px; } .vacation-stat { padding: 12px; display: flex; flex-direction: column; gap: 8px; } .vacation-stat strong { font-size: 30px; line-height: 36px; } .vacation-stat svg { display: none; } .vacation-toolbar > label:not(.vacation-search) { flex: 1; min-width: 120px; } }

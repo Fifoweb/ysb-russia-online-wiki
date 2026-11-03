@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { profileDepartmentLabel } from '../lib/profileData';
 import { vacationDate, vacationDuration, type VacationRow } from '../lib/vacation';
+import { VACATIONS_CHANGED } from '../lib/endVacation';
 import '../vacation.css';
 
 export default function VacationDashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
@@ -21,18 +22,25 @@ export default function VacationDashboard({ onNavigate }: { onNavigate: (path: s
   const [limit, setLimit] = useState(30);
   useEffect(() => {
     let active = true;
+    let generation = 0;
     const load = async () => {
       if (!user || !supabase) return;
+      const request = ++generation;
       setBusy(true);
       try {
         const { data, error } = await supabase.rpc('list_vacations');
-        if (active) { if (error) setError('Не удалось загрузить список отпусков.'); else { setRows(data || []); setError(''); } }
-      } catch { if (active) setError('Не удалось загрузить список отпусков.'); }
-      finally { if (active) { setBusy(false); setNow(Date.now()); } }
+        if (active && generation === request) { if (error) setError('Не удалось загрузить список отпусков.'); else { setRows(data || []); setError(''); } }
+      } catch { if (active && generation === request) setError('Не удалось загрузить список отпусков.'); }
+      finally { if (active && generation === request) { setBusy(false); setNow(Date.now()); } }
     };
     void load();
-    const timer = window.setInterval(() => void load(), 60_000);
-    return () => { active = false; window.clearInterval(timer); };
+    const refreshList = () => { void load(); };
+    const storage = (event: StorageEvent) => { if (event.key === VACATIONS_CHANGED) refreshList(); };
+    const timer = window.setInterval(refreshList, 15_000);
+    window.addEventListener(VACATIONS_CHANGED, refreshList);
+    window.addEventListener('focus', refreshList);
+    window.addEventListener('storage', storage);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener(VACATIONS_CHANGED, refreshList); window.removeEventListener('focus', refreshList); window.removeEventListener('storage', storage); };
   }, [user?.id, refresh]);
   const current = (rows || []).filter(row => Date.parse(row.starts_at) <= now && Date.parse(row.ends_at) > now);
   const upcoming = (rows || []).filter(row => Date.parse(row.starts_at) > now);
@@ -56,7 +64,7 @@ export default function VacationDashboard({ onNavigate }: { onNavigate: (path: s
         <label><span className="sr-only">Период</span><select value={status} onChange={e => { setStatus(e.target.value); setLimit(30); }}><option value="all">Все отпуска</option><option value="current">В отпуске сейчас</option><option value="upcoming">Предстоящие</option></select></label>
         <button className="portal-secondary" disabled={busy} onClick={() => setRefresh(value => value + 1)} aria-label="Обновить список отпусков"><ArrowsClockwise size={20} aria-hidden="true" /></button>
       </div>
-      <p className="vacation-data-note" role="status">{busy ? 'Обновляем список…' : `Найдено: ${visible.length}. Время московское. Список обновляется каждую минуту.`}</p>
+      <p className="vacation-data-note" role="status">{busy ? 'Обновляем список…' : `Найдено: ${visible.length}. Время московское. Список обновляется каждые 15 секунд.`}</p>
       {error && <p className="vacation-error" role="alert">{error} <button onClick={() => setRefresh(value => value + 1)}>Повторить</button></p>}
       {!rows && !error ? <div className="vacation-skeleton" role="status" aria-label="Загружаем отпуска…"><span /><span /><span /></div> : rows && (visible.length ? <>
         <div className="vacation-list">{visible.slice(0, limit).map((row, index) => {

@@ -142,7 +142,14 @@ The dashboard RPC is authenticated-only and returns names, departments and dates
 for delivered current/upcoming vacations, capped at 500. Reasons and delivery
 metadata are available only to each request owner through RLS. Time entry uses
 Europe/Moscow (UTC+03:00), stored as timestamps with time zone. The list refreshes
-every minute and never labels an undelivered request as an active vacation.
+every 15 seconds and never labels an undelivered request as an active vacation.
+`end_my_vacation` allows an authenticated owner to end only their own currently
+active, delivered vacation. It uses the same per-user database lock as request
+reservation and records an immutable early-return timestamp instead of deleting
+history or changing the originally planned dates. Repeated calls are idempotent.
+The dashboard omits early-ended rows and overlap checks use their actual end.
+Direct client writes remain forbidden. This action sends no Discord message;
+browser-tab invalidation signals contain only a timestamp, never employee data.
 
 Run `npm run test:security`, `npm audit`, `npm run build` and `git diff --check`.
 Apply database migrations before deploying the functions. Every submission
