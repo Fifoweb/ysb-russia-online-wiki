@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
@@ -133,7 +134,7 @@ export default function AcademyPromotionReportForm() {
                 </label>
                 <label className="block">
                   <span>Подразделение</span>
-                  <select value={department} onChange={event => { setDepartment(event.target.value as Department); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); }} className={inputClass}>
+                  <PortalSelect label="Подразделение" value={department} onChange={event => { setDepartment(event.target.value as Department); setRankTransition(''); setEvidence(blankEvidence); setFromRank(''); setToRank(''); setWorkEvidence(''); }} className={inputClass}>
                     <option value="academy">Академия</option>
                     <option value="uku">УКУ · Учебное и кадровое управление</option>
                     <option value="usb">УСБ · Управление собственной безопасности</option>
@@ -142,31 +143,31 @@ export default function AcademyPromotionReportForm() {
                     <option value="uor">УОР · Управление оперативного розыска</option>
                     <option value="ugk">УГК · Управление грузового контроля</option>
                     <option value="mb">МБ · Мотоциклетный Батальон</option>
-                  </select>
+                  </PortalSelect>
                 </label>
                 {department === 'academy' ? (
                 <label className="block">
                   <span>На какой ранг повышаетесь <span className="text-rose-300">*</span></span>
-                  <select value={rankTransition} onChange={event => { setRankTransition(event.target.value as RankTransition); setEvidence(blankEvidence); }} className={inputClass}>
+                  <PortalSelect label="На какой ранг повышаетесь" value={rankTransition} onChange={event => { setRankTransition(event.target.value as RankTransition); setEvidence(blankEvidence); }} className={inputClass}>
                     <option value="">Выберите повышение</option>
                     <option value="1-2">Рядовой (1) → Младший сержант (2)</option>
                     <option value="2-3">Младший сержант (2) → Сержант (3)</option>
-                  </select>
+                  </PortalSelect>
                 </label>
                 ) : <>
                   <label className="block">
                     <span>С какого ранга <span className="text-rose-300">*</span></span>
-                    <select value={fromRank} onChange={event => setFromRank(event.target.value)} className={inputClass}>
+                    <PortalSelect label="С какого ранга" value={fromRank} onChange={event => setFromRank(event.target.value)} className={inputClass}>
                       <option value="">Выберите ранг</option>
                       {Array.from({ length: 14 }, (_, index) => index + 1).map(rank => <option key={rank} value={rank}>{rank}</option>)}
-                    </select>
+                    </PortalSelect>
                   </label>
                   <label className="block">
                     <span>На какой ранг <span className="text-rose-300">*</span></span>
-                    <select value={toRank} onChange={event => setToRank(event.target.value)} className={inputClass}>
+                    <PortalSelect label="На какой ранг" value={toRank} onChange={event => setToRank(event.target.value)} className={inputClass}>
                       <option value="">Выберите ранг</option>
                       {Array.from({ length: 14 }, (_, index) => index + 2).map(rank => <option key={rank} value={rank}>{rank}</option>)}
-                    </select>
+                    </PortalSelect>
                   </label>
                 </>}
               </div>

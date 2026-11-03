@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarBlank } from '@phosphor-icons/react';
 import PageTransition from '../components/PageTransition';
@@ -46,7 +47,7 @@ export default function Vacation({ onNavigate }: { onNavigate: (path:string)=>vo
         <section className="panel vacation-panel"><div className="vacation-panel-heading"><CalendarBlank size={24} aria-hidden="true"/><div><h2>Детали отпуска</h2><p>Уведомление придёт от вашего Discord-аккаунта.</p></div></div>
           <fieldset disabled={state==='sending'||uncertain} className="vacation-fields"><legend className="sr-only">Данные заявки</legend>
           <div className="vacation-time-grid"><TimePicker label="Время начала" name="startTime" value={startTime} onChange={setStartTime} disabled={state==='sending'||uncertain} /><TimePicker label="Время окончания" name="endTime" value={endTime} onChange={setEndTime} disabled={state==='sending'||uncertain} alignEnd /></div>
-          <label>Какое руководство уведомить <select name="leadership" required value={leadership} onChange={e=>setLeadership(e.target.value)}><option value="">Выберите руководство</option>{vacationLeadership.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+          <label>Какое руководство уведомить <PortalSelect label="Какое руководство уведомить" name="leadership" required value={leadership} onChange={e=>setLeadership(e.target.value)}><option value="">Выберите руководство</option>{vacationLeadership.map(([id,label])=><option key={id} value={id}>{label}</option>)}</PortalSelect></label>
           <label>Причина отпуска <textarea name="reason" autoComplete="off" required minLength={3} maxLength={1000} rows={4} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Например, семейные обстоятельства…" /></label>
           </fieldset>
           {start&&end&&<p className="vacation-duration" role="status">{periodError||`Длительность: ${vacationDuration(vacationTimestamp(start,startTime),vacationTimestamp(end,endTime))}`}</p>}

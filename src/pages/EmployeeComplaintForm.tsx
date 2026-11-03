@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
@@ -134,11 +135,11 @@ export default function EmployeeComplaintForm() {
               </div>
               <label htmlFor="complaint-faction" className="block mt-5">
                 <span>Фракция нарушителя <span className="text-rose-300">*</span></span>
-                <select id="complaint-faction" value={form.faction} onChange={update('faction')}
+                <PortalSelect label="Фракция нарушителя" id="complaint-faction" value={form.faction} onChange={update('faction')}
                   required className={inputClass}>
                   <option value="">Выберите фракцию</option>
                   {factions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
+                </PortalSelect>
               </label>
               {form.faction === 'other' && (
                 <label htmlFor="complaint-other-faction" className="block mt-5">

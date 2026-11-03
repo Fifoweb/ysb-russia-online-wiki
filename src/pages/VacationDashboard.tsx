@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { useEffect, useState } from 'react';
 import { ArrowsClockwise, CalendarBlank, Clock, MagnifyingGlass, UsersThree } from '@phosphor-icons/react';
 import PageTransition from '../components/PageTransition';
@@ -60,8 +61,8 @@ export default function VacationDashboard({ onNavigate }: { onNavigate: (path: s
       </div>
       <div className="vacation-toolbar">
         <label className="vacation-search"><MagnifyingGlass size={20} aria-hidden="true" /><span className="sr-only">Поиск сотрудника</span><input type="search" placeholder="Найти сотрудника…" value={query} onChange={e => { setQuery(e.target.value); setLimit(30); }} /></label>
-        <label><span className="sr-only">Отдел</span><select value={department} onChange={e => { setDepartment(e.target.value); setLimit(30); }}><option value="">Все отделы</option>{departments.map(id => <option key={id} value={id || '__unknown'}>{profileDepartmentLabel(id).split(' | ')[0] || 'Отдел не указан'}</option>)}</select></label>
-        <label><span className="sr-only">Период</span><select value={status} onChange={e => { setStatus(e.target.value); setLimit(30); }}><option value="all">Все отпуска</option><option value="current">В отпуске сейчас</option><option value="upcoming">Предстоящие</option></select></label>
+        <label><span className="sr-only">Отдел</span><PortalSelect label="Отдел" value={department} onChange={e => { setDepartment(e.target.value); setLimit(30); }}><option value="">Все отделы</option>{departments.map(id => <option key={id} value={id || '__unknown'}>{profileDepartmentLabel(id).split(' | ')[0] || 'Отдел не указан'}</option>)}</PortalSelect></label>
+        <label><span className="sr-only">Период</span><PortalSelect label="Период" value={status} onChange={e => { setStatus(e.target.value); setLimit(30); }}><option value="all">Все отпуска</option><option value="current">В отпуске сейчас</option><option value="upcoming">Предстоящие</option></PortalSelect></label>
         <button className="portal-secondary" disabled={busy} onClick={() => setRefresh(value => value + 1)} aria-label="Обновить список отпусков"><ArrowsClockwise size={20} aria-hidden="true" /></button>
       </div>
       <p className="vacation-data-note" role="status">{busy ? 'Обновляем список…' : `Найдено: ${visible.length}. Время московское. Список обновляется каждые 15 секунд.`}</p>

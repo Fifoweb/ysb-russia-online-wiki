@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import { useProfileForm } from '../lib/useProfileForm';
 import ProfileAutofillNotice from '../components/ProfileAutofillNotice';
@@ -136,20 +137,20 @@ export default function DepartmentApplicationForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <label htmlFor="department-source" className="block">
                   <span>Из какого отдела переводитесь? <span className="text-rose-300">*</span></span>
-                  <select id="department-source" value={form.sourceDepartment}
+                  <PortalSelect label="Из какого отдела переводитесь?" id="department-source" value={form.sourceDepartment}
                     onChange={update('sourceDepartment')} required className={inputClass}>
                     <option value="">Выберите текущий отдел</option>
                     {departments.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                  </select>
+                  </PortalSelect>
                 </label>
                 <label htmlFor="department-target" className="block">
                   <span>В какой отдел подаёте заявку? <span className="text-rose-300">*</span></span>
-                  <select id="department-target" value={form.targetDepartment}
+                  <PortalSelect label="В какой отдел подаёте заявку?" id="department-target" value={form.targetDepartment}
                     onChange={update('targetDepartment')} required className={inputClass}>
                     <option value="">Выберите отдел назначения</option>
                     {departments.filter((item) => item.id !== form.sourceDepartment)
                       .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                  </select>
+                  </PortalSelect>
                 </label>
               </div>
             </div>

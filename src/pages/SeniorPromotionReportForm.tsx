@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { ApplicationSubmitButton, SubmissionSuccess } from '../components/SubmissionFeedback';
 import EvidenceUpload from '../components/EvidenceUpload';
 import { useEvidenceUploadStatus } from '../components/EvidenceUploadsProvider';
@@ -132,9 +133,9 @@ export default function SeniorPromotionReportForm() {
               <p className="eyebrow mb-2">03 · КОГО ОТМЕТИТЬ</p>
               <label className="block">
                 <span>Руководство или конкретные люди <span className="text-rose-300">*</span></span>
-                <select value={form.mentionTarget} onChange={set('mentionTarget')} className={inputClass}>
+                <PortalSelect label="Руководство или конкретные люди" value={form.mentionTarget} onChange={set('mentionTarget')} className={inputClass}>
                   {targets.map(target => <option key={target.value} value={target.value}>{target.label}</option>)}
-                </select>
+                </PortalSelect>
               </label>
               {form.mentionTarget === 'people' && (
                 <div className="mt-4 space-y-3">

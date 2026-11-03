@@ -1,3 +1,4 @@
+import PortalSelect from '../components/PortalSelect';
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, CalendarDays, CheckCircle2, Clock3, RefreshCw, Target, Trophy, Users } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
@@ -100,12 +101,12 @@ export default function AchievementsDashboard() {
     </div>
 
     <div className="achievement-toolbar">
-      <label><span>Неделя</span><select value={week} disabled={availableWeeks.length === 1} onChange={event => setSelectedWeek(event.target.value === currentWeek ? null : event.target.value)}>
+      <label><span>Неделя</span><PortalSelect label="Неделя" value={week} disabled={availableWeeks.length === 1} onChange={event => setSelectedWeek(event.target.value === currentWeek ? null : event.target.value)}>
         {availableWeeks.map(start => <option key={start} value={start}>{start === currentWeek ? 'Текущая · ' : ''}{weekLabel(start)}</option>)}
-      </select></label>
-      <label><span>Отдел</span><select value={department} onChange={event => setDepartment(event.target.value as AchievementDepartment | '')}>
+      </PortalSelect></label>
+      <label><span>Отдел</span><PortalSelect label="Отдел" value={department} onChange={event => setDepartment(event.target.value as AchievementDepartment | '')}>
         <option value="">Вся фракция</option>{rankedDepartments.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-      </select></label>
+      </PortalSelect></label>
       <button type="button" className="secondary-button" onClick={() => setRefresh(value => value + 1)} disabled={loading} aria-label="Обновить прогресс ачивок">
         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Обновить
       </button>
