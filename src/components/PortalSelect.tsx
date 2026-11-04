@@ -24,6 +24,7 @@ export default function PortalSelect({ label, children, className = '', id, valu
   const [open, setOpen] = useState(false), [active, setActive] = useState(0), [invalid, setInvalid] = useState(false);
   const [position, setPosition] = useState<CSSProperties>();
   const search = useRef({ text: '', time: 0 });
+  const anchor = useRef({ top: 0, left: 0, bottom: 0 });
   const options = optionsOf(children), enabled = options.map((option, index) => option.disabled ? -1 : index).filter(index => index >= 0);
   const selected = options.findIndex(option => option.value === value);
   const initial = enabled.includes(selected) ? selected : enabled[0] ?? -1;
@@ -51,6 +52,7 @@ export default function PortalSelect({ label, children, className = '', id, valu
   useLayoutEffect(() => {
     if (!open || !trigger.current) return;
     const rect = trigger.current.getBoundingClientRect(), edge = 16, gap = 8;
+    anchor.current = { top: rect.top, left: rect.left, bottom: rect.bottom };
     const viewportWidth = document.documentElement.clientWidth, viewportHeight = window.innerHeight;
     const width = Math.min(Math.max(rect.width, 240), viewportWidth - edge * 2);
     const below = viewportHeight - rect.bottom - edge - gap, above = rect.top - edge - gap;
@@ -70,7 +72,12 @@ export default function PortalSelect({ label, children, className = '', id, valu
     const outside = (event: PointerEvent) => {
       if (!trigger.current?.contains(event.target as Node) && !menu.current?.contains(event.target as Node)) choose(active);
     };
-    const scroll = (event: Event) => { if (!menu.current?.contains(event.target as Node)) setOpen(false); };
+    const scroll = (event: Event) => {
+      if (menu.current?.contains(event.target as Node)) return;
+      const rect = trigger.current?.getBoundingClientRect();
+      // A focus/scrollIntoView event may arrive after opening at the new position.
+      if (!rect || Math.abs(rect.top - anchor.current.top) > 1 || Math.abs(rect.left - anchor.current.left) > 1 || Math.abs(rect.bottom - anchor.current.bottom) > 1) setOpen(false);
+    };
     const resize = () => setOpen(false);
     document.addEventListener('pointerdown', outside, true);
     document.addEventListener('scroll', scroll, true);

@@ -11,13 +11,18 @@ import { getFunctionErrorMessage } from '../lib/functionError';
 import { invokeApplication, useApplicationCooldown } from '../lib/applicationCooldown';
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
 import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
+import PortalSelect from '../components/PortalSelect';
+import { useProfile } from '../lib/useProfile';
+import { profileDepartmentLabel } from '../lib/profileData';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
-const initialForm = { fullNameStatic: '', targetRank: '', reportUrl: '' };
+const initialForm = { fullNameStatic: '', targetRank: '', reportUrl: '', recipient: 'department' };
 const inputClass = 'mt-2 w-full px-4 py-3 text-sm outline-none';
 
 export default function PromotionForm() {
   const { user, loading, signInWithDiscord } = useAuth();
+  const { profile } = useProfile();
+  const department = profile.department_status === 'verified' ? profileDepartmentLabel(profile.department).split(' | ')[0] : '';
   const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -25,13 +30,14 @@ export default function PromotionForm() {
   const discordId = (user?.identities?.find((identity) => identity.provider === 'discord')?.identity_data as Record<string, unknown> | null)?.sub;
 
   const set = (key: keyof typeof form) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => setForm((current) => ({ ...current, [key]: event.target.value }));
+    (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const rankValid = /^(?:[1-9]|1[0-5])$/.test(form.targetRank);
   const reportUrlValid = /^https:\/\/(?:discord\.com|discordapp\.com)\/channels\/\d{17,20}\/\d{17,20}\/\d{17,20}\/?$/i.test(form.reportUrl.trim());
   const incompleteReason = [
     !form.fullNameStatic.trim() && 'Укажите имя, фамилию и StaticID.',
     !form.targetRank.trim() ? 'Укажите желаемый ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
     !form.reportUrl.trim() ? 'Добавьте ссылку на сообщение с отчётом.' : !reportUrlValid && 'Проверьте ссылку на сообщение Discord.',
+    form.recipient === 'department' && !department && 'Подтвердите отдел в личном кабинете или выберите старший состав.',
   ].find(Boolean) || undefined;
   const allFilled = !incompleteReason;
 
@@ -114,6 +120,16 @@ export default function PromotionForm() {
                     : 'Скопируйте ссылку на сообщение с отчётом в Discord.'}
                 </span>
               </label>
+            </div>
+            <div className="border-t border-sky-300/15 pt-6">
+              <label className="block">
+                <span>Кого уведомить <span className="text-rose-300">*</span></span>
+                <PortalSelect label="Кого уведомить" value={form.recipient} onChange={set('recipient')} className={inputClass} disabled={state === 'sending'}>
+                  <option value="department">Руководство моего отдела</option>
+                  <option value="senior">Старший состав</option>
+                </PortalSelect>
+              </label>
+              <p className="mt-2 text-sm text-slate-300" role="status">{form.recipient === 'senior' ? 'Запрос получит старший состав ГИБДД.' : department ? `Будет отмечено руководство ${department}. Отдел подтверждён в Discord.` : 'Отдел пока не подтверждён. Обновите его в личном кабинете или выберите старший состав.'}</p>
             </div>
             <div className="border-t border-sky-300/15 pt-5">
               <label className="block">

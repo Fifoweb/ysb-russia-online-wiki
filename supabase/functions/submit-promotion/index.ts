@@ -1,5 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { withSubmissionCooldown } from '../_shared/submissionCooldown.ts';
+import { createDepartmentLookup } from '../_shared/discordDepartments.ts';
+import { currentDepartments, departmentLeadershipRoles } from '../_shared/departments.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +9,7 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const CHANNEL_ID = '1538937568429740200';
-const NOTIFICATION_ROLE_IDS = ['1538937566273732632'];
+const departmentLookup = createDepartmentLookup(fetch);
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -28,7 +30,7 @@ async function getWebhookTarget(raw: string | undefined, expectedChannelId: stri
     if (!response.ok) { console.error('Discord webhook lookup failed', response.status); return null; }
     const webhook = await response.json();
     return String(webhook.channel_id) === expectedChannelId && typeof webhook.guild_id === 'string'
-      ? { url } : null;
+      ? { url, guildId: String(webhook.guild_id) } : null;
   } catch (error) { console.error('Discord webhook lookup failed'); return null; }
 }
 
@@ -59,6 +61,9 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const fullNameStatic = readText('fullNameStatic');
   const targetRank = readText('targetRank');
   const reportUrl = readText('reportUrl');
+  // Preserve the previous recipient for submissions from an already open old page.
+  const recipient = body.recipient === undefined ? 'senior' : body.recipient;
+  if (recipient !== 'senior' && recipient !== 'department') return json(400, { error: 'Выберите руководство своего отдела или старший состав' });
   if (!fullNameStatic || !targetRank || !reportUrl) return json(400, { error: 'Заполните все обязательные поля' });
   if (fullNameStatic.length > 100 || targetRank.length > 2 || reportUrl.length > 300) return json(400, { error: 'Слишком длинные поля' });
   if (!/^(?:[1-9]|1[0-5])$/.test(targetRank)) return json(400, { error: 'Ранг должен быть числом от 1 до 15' });
@@ -84,6 +89,19 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   }
   const target = await getWebhookTarget(Deno.env.get('DISCORD_PROMOTION_WEBHOOK_URL'), CHANNEL_ID);
   if (!target) return json(500, { error: 'Вебхук запросов на повышение не настроен для нужного канала' });
+  let roleId: string = departmentLeadershipRoles.senior;
+  let recipientLabel = 'Старший состав';
+  if (recipient === 'department') {
+    try {
+      const result = await departmentLookup.lookup(discordId, Deno.env.get('DISCORD_BOT_TOKEN') || '', undefined, target.guildId);
+      if (result.status !== 'verified' || !result.department) return json(409, { error: 'Не удалось однозначно определить ваш отдел. Проверьте роли Discord или выберите старший состав.' });
+      roleId = departmentLeadershipRoles[result.department];
+      recipientLabel = `Руководство ${currentDepartments.find(department => department.id === result.department)!.label.split(' | ')[0]}`;
+    } catch {
+      return json(503, { error: 'Проверка отдела временно недоступна. Попробуйте позже или выберите старший состав.' });
+    }
+  }
+  const notificationRoleIds = [roleId];
 
   const dateStr = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -95,6 +113,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
       { name: '👤 Имя Фамилия | StaticID', value: fullNameStatic },
       { name: '📈 На какой ранг повысить?', value: targetRank },
       { name: '🔗 Ссылка на отчёт (сообщение)', value: report.href },
+      { name: '📣 Кому направлено', value: recipientLabel },
       { name: '🆔 Discord ID', value: discordId },
     ],
     footer: { text: `Отправил ДС ${discordName} • ${dateStr}` },
@@ -102,9 +121,9 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   };
   const response = await sendWebhookMessage(
     target,
-    `📤 Новый запрос на повышение\n${NOTIFICATION_ROLE_IDS.map((id) => `<@&${id}>`).join(' ')}`,
+    `📤 Новый запрос на повышение\n${notificationRoleIds.map((id) => `<@&${id}>`).join(' ')}`,
     [embed],
-    NOTIFICATION_ROLE_IDS,
+    notificationRoleIds,
   );
   if (!response.ok) {
     console.error('Discord promotion webhook error', response.status);
