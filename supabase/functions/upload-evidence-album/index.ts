@@ -2,7 +2,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { MAX_ALBUM_BYTES, MAX_ALBUM_BODY_BYTES, MAX_IMAGE_BYTES, MAX_SELECTED_IMAGES, evidenceHostingUrl, fotoraAlbumUrl, inspectEvidenceImage, readLimitedBytes } from '../_shared/evidenceImages.ts';
 import { FotoraUploadError, uploadFotoraAlbum } from '../_shared/fotora.ts';
 
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Expose-Headers': 'Retry-After' };
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-region', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Expose-Headers': 'Retry-After' };
 const json = (status: number, body: unknown, retry?: number) => Response.json(body, { status, headers: { ...cors, ...(retry ? { 'Retry-After': String(retry) } : {}) } });
 type Photo = { bytes: Uint8Array; hash: string; mime: string; extension: string; ticket?: string };
 

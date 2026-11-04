@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { FunctionRegion } from '@supabase/supabase-js';
 import { getApplicationSession } from './auth';
 import { getFunctionErrorMessage } from './functionError';
 import { evidenceHostingUrl, MAX_IMAGE_BYTES, MAX_SELECTED_IMAGES } from '../../supabase/functions/_shared/evidenceImages';
@@ -57,6 +58,8 @@ async function invokeUpload(name: string, body: File | FormData, userId: string,
     if (!auth.session) throw new Error(auth.error);
     if (!supabase) throw new Error('Загрузка временно недоступна.');
     const { data, error } = await supabase.functions.invoke(name, {
+      // Hosting API probes succeed in Frankfurt but time out from US East.
+      region: FunctionRegion.EuCentral1,
       body, headers: { Authorization: `Bearer ${auth.session.access_token}`, ...(body instanceof File ? { 'Content-Type': body.type } : {}) }, signal, timeout: body instanceof File ? 75_000 : 120_000,
     });
     if (error) {

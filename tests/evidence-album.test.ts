@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import ts from 'typescript';
+import { FunctionRegion } from '@supabase/supabase-js';
 import { evidenceHostingUrl, fotoraAlbumUrl, MAX_ALBUM_BYTES } from '../supabase/functions/_shared/evidenceImages';
 import { evidenceProvider, planEvidenceUploads } from '../src/lib/evidenceUploadPlan';
 
@@ -151,5 +152,17 @@ test('Fotora endpoint accepts one to ten images with the same quota and verifica
     const app=albumFixture();const files=Array.from({length:count},(_,index)=>new Uint8Array([...png,index]));
     const response=await app.submit(files,count);assert.equal(response.status,200);
     assert.equal(app.hosted[0].length,count);assert.deepEqual((await response.json()).urls,[albumUrl]);
+  }
+});
+
+test('hosting calls use the verified European region and preserve session authentication',async()=>{
+  for(const provider of ['allwebs','fotora']){
+    const calls:{name:string;options:any}[]=[];
+    const context=createContext({FunctionRegion,File,FormData,MAX_IMAGE_BYTES:10*1024*1024,MAX_SELECTED_IMAGES:50,evidenceHostingUrl,
+      getApplicationSession:async()=>({session:{access_token:'offline-session'}}),
+      supabase:{functions:{invoke:async(name:string,options:any)=>{calls.push({name,options});return{data:provider==='allwebs'?{url:'https://allwebs.ru/images/2026/test.png'}:{urls:[albumUrl]},error:null}}}}});
+    runInContext(compile('../src/lib/evidenceUpload.ts'),context);
+    const result=await context.uploadEvidenceBatch([new File([png],'offline.png',{type:'image/png'})],provider,1,'offline-user',new AbortController().signal);
+    assert.equal(calls[0].options.region,'eu-central-1');assert.equal(calls[0].options.headers.Authorization,'Bearer offline-session');assert.equal(result.urls.length,1);
   }
 });

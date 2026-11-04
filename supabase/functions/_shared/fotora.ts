@@ -21,7 +21,8 @@ export async function uploadFotoraAlbum(photos: Photo[]): Promise<{ url: string;
       headers['Content-Length'] = String(body.length);
       started = true;
     }
-    const response = await fetch(`https://fotora.ru${path}`, { method: form ? 'POST' : 'GET', headers, body, client, signal, redirect: 'error' });
+    const requestSignal = path === '/' && !form ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : signal;
+    const response = await fetch(`https://fotora.ru${path}`, { method: form ? 'POST' : 'GET', headers, body, client, signal: requestSignal, redirect: 'error' });
     for (const value of response.headers.getSetCookie()) {
       const match = /^([A-Za-z_][A-Za-z0-9_-]*)=([^;\r\n]{0,4096})/.exec(value);
       if (match && cookies.size < 8) cookies.set(match[1], match[2]);

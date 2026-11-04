@@ -32,6 +32,10 @@ links and provider response bodies are never exposed. Private SHA-256 caching
 prevents duplicate hosting requests. Unknown delivery outcomes are not resent
 automatically. Uploading images does not claim or reset report cooldowns.
 Allwebs is temporary external storage; its reported expiration is displayed.
+Hosting calls are pinned to `eu-central-1`, where authenticated API probes
+succeed; US East connections timed out. Both upload handlers allow the SDK's
+`x-region` preflight header. Fotora's initial connection has a 12-second deadline;
+file POSTs are never automatically retried when their outcome is uncertain.
 New selections temporarily use Fotora for 1–50 images. The client routing switch
 `ALLWEBS_UPLOADS_ENABLED` is off; existing Allwebs proof links and the legacy
 integration remain valid. All selection sizes use `upload-evidence-album` with the same verified identity and
