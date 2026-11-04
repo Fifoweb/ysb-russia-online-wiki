@@ -36,9 +36,10 @@ Hosting calls are pinned to `eu-central-1`, where authenticated API probes
 succeed; US East connections timed out. Both upload handlers allow the SDK's
 `x-region` preflight header. Fotora's initial connection has a 12-second deadline;
 file POSTs are never automatically retried when their outcome is uncertain.
-New selections temporarily use Fotora for 1–50 images. The client routing switch
-`ALLWEBS_UPLOADS_ENABLED` is off; existing Allwebs proof links and the legacy
-integration remain valid. All selection sizes use `upload-evidence-album` with the same verified identity and
+Allwebs is temporarily restored for selections of 1–10 images through the
+European route (`ALLWEBS_UPLOADS_ENABLED` is on). Selections of 11–50 retain
+Fotora; its external availability is independent of the routing switch. Existing
+proof links remain valid. Fotora uses `upload-evidence-album` with the same verified identity and
 shared private quotas/cache. A request carries at most 20 MiB of image data
 (21 MiB including multipart overhead), with one active album per worker. Files
 are validated before reaching Fotora. Guest cookies exist only during that

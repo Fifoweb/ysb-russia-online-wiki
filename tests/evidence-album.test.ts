@@ -16,8 +16,8 @@ function compile(path: string) {
   }).outputText.replace(/export /g, '');
 }
 
-test('all selection sizes temporarily use Fotora; every album respects the byte budget without losing order', () => {
-  for (const count of [1, 9, 10]) assert.equal(evidenceProvider(count), 'fotora');
+test('restored small selections use Allwebs, larger selections retain Fotora and album byte limits', () => {
+  for (const count of [1, 9, 10]) assert.equal(evidenceProvider(count), 'allwebs');
   for (const count of [11, 12, 50]) assert.equal(evidenceProvider(count), 'fotora');
   const files = Array.from({ length: 50 }, (_, id) => ({ id, size: 3 * 1024 * 1024 }));
   const albums = planEvidenceUploads(files, 'fotora');
