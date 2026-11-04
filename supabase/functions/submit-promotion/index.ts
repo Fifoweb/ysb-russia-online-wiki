@@ -63,7 +63,7 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   const reportUrl = readText('reportUrl');
   // Preserve the previous recipient for submissions from an already open old page.
   const recipient = body.recipient === undefined ? 'senior' : body.recipient;
-  if (recipient !== 'senior' && recipient !== 'department') return json(400, { error: 'Выберите руководство своего отдела или старший состав' });
+  if (typeof recipient !== 'string' || recipient !== 'department' && !Object.hasOwn(departmentLeadershipRoles, recipient)) return json(400, { error: 'Выберите руководство отдела или старший состав' });
   if (!fullNameStatic || !targetRank || !reportUrl) return json(400, { error: 'Заполните все обязательные поля' });
   if (fullNameStatic.length > 100 || targetRank.length > 2 || reportUrl.length > 300) return json(400, { error: 'Слишком длинные поля' });
   if (!/^(?:[1-9]|1[0-5])$/.test(targetRank)) return json(400, { error: 'Ранг должен быть числом от 1 до 15' });
@@ -91,6 +91,12 @@ Deno.serve(withSubmissionCooldown(async (req) => {
   if (!target) return json(500, { error: 'Вебхук запросов на повышение не настроен для нужного канала' });
   let roleId: string = departmentLeadershipRoles.senior;
   let recipientLabel = 'Старший состав';
+  if (recipient !== 'senior' && recipient !== 'department') {
+    const department = currentDepartments.find(department => department.id === recipient)!;
+    roleId = departmentLeadershipRoles[department.id];
+    recipientLabel = `Руководство ${department.label.split(' | ')[0]}`;
+  }
+  // Compatibility for previously opened forms that selected the automatic department.
   if (recipient === 'department') {
     try {
       const result = await departmentLookup.lookup(discordId, Deno.env.get('DISCORD_BOT_TOKEN') || '', undefined, target.guildId);

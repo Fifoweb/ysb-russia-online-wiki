@@ -87,10 +87,11 @@ OVK. OVK/UDK applications and promotion reports use the owner's supplied forum
 threads and leadership roles. Their webhook URLs are server-only secrets
 `DISCORD_OVK_PROMOTION_WEBHOOK_URL` and `DISCORD_UDK_PROMOTION_WEBHOOK_URL`.
 Promotion delivery validates the webhook ID and parent channel before posting.
-Promotion requests let the author notify either senior staff or their own
-department leadership. The latter is resolved from live Discord membership using
-the verified Auth identity; client-supplied department and role IDs are ignored.
-Missing, ambiguous or unavailable membership blocks department notifications.
+Promotion requests let the author notify senior staff or any current department's
+leadership. Only recipient keys from the shared catalog are accepted; role IDs
+are resolved server-side, and separate client-supplied role/department fields are
+ignored. Old open forms requesting automatic own-department routing still use
+live Discord membership and fail closed if it cannot be verified.
 This recipient selection does not grant approval permissions.
 
 `is_site_session_active()` checks the caller's verified JWT session ID against

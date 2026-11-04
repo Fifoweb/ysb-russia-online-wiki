@@ -114,11 +114,23 @@ test('senior recipients and old open promotion pages retain senior notification 
   }
 });
 
-test('unverified or ambiguous departments, Discord outages and forged recipients cannot send a promotion request', async () => {
+test('legacy automatic recipients fail closed for unverified departments; forged recipients never send', async () => {
   for (const [options, status] of [[{ roles: [] }, 409], [{ missing: true }, 409], [{ roles: [discordDepartmentRoles.udk, discordDepartmentRoles.dps] }, 409], [{ unavailable: true }, 503]] as const) {
     const app = promotionFixture(options as { roles?: string[]; missing?: boolean; unavailable?: boolean });
     assert.equal((await app.submit({ recipient: 'department' })).status, status);
     assert.equal(app.posts.length, 0);
   }
-  const app = promotionFixture(); assert.equal((await app.submit({ recipient: 'mb' })).status, 400); assert.equal(app.posts.length, 0);
+  for(const recipient of ['unknown', '__proto__', 'constructor', '1540269491404017674', null, [], {}]){
+    const app = promotionFixture(); assert.equal((await app.submit({ recipient })).status, 400); assert.equal(app.posts.length, 0);
+  }
+});
+
+test('promotion authors can select any current department leadership independently of their own roles',async()=>{
+  for(const department of currentDepartments){
+    const app=promotionFixture({unavailable:true});
+    assert.equal((await app.submit({recipient:department.id,department:'forged',roleId:'forged'})).status,200);
+    assert.deepEqual(app.posts[0].allowed_mentions,{parse:[],roles:[departmentLeadershipRoles[department.id]]});
+    assert.equal(app.posts[0].embeds[0].fields.find((field:any)=>field.name.includes('Кому направлено')).value,`Руководство ${department.label.split(' | ')[0]}`);
+    assert.equal(app.lookups.length,0);
+  }
 });

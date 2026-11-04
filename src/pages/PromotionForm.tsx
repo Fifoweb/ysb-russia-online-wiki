@@ -12,17 +12,14 @@ import { invokeApplication, useApplicationCooldown } from '../lib/applicationCoo
 import ApplicationCooldownBanner from '../components/ApplicationCooldownBanner';
 import ApplicationSubmitHint from '../components/ApplicationSubmitHint';
 import PortalSelect from '../components/PortalSelect';
-import { useProfile } from '../lib/useProfile';
-import { profileDepartmentLabel } from '../lib/profileData';
+import { departmentLeadershipOptions } from '../data/departments';
 
 type State = 'idle' | 'sending' | 'ok' | 'error';
-const initialForm = { fullNameStatic: '', targetRank: '', reportUrl: '', recipient: 'department' };
+const initialForm = { fullNameStatic: '', targetRank: '', reportUrl: '', recipient: 'senior' };
 const inputClass = 'mt-2 w-full px-4 py-3 text-sm outline-none';
 
 export default function PromotionForm() {
   const { user, loading, signInWithDiscord } = useAuth();
-  const { profile } = useProfile();
-  const department = profile.department_status === 'verified' ? profileDepartmentLabel(profile.department).split(' | ')[0] : '';
   const [form, setForm, resetForm] = useProfileForm(initialForm, { fullNameStatic: 'combined' });
   const [state, setState] = useState<State>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -37,7 +34,6 @@ export default function PromotionForm() {
     !form.fullNameStatic.trim() && 'Укажите имя, фамилию и StaticID.',
     !form.targetRank.trim() ? 'Укажите желаемый ранг.' : !rankValid && 'Ранг должен быть от 1 до 15.',
     !form.reportUrl.trim() ? 'Добавьте ссылку на сообщение с отчётом.' : !reportUrlValid && 'Проверьте ссылку на сообщение Discord.',
-    form.recipient === 'department' && !department && 'Подтвердите отдел в личном кабинете или выберите старший состав.',
   ].find(Boolean) || undefined;
   const allFilled = !incompleteReason;
 
@@ -125,11 +121,10 @@ export default function PromotionForm() {
               <label className="block">
                 <span>Кого уведомить <span className="text-rose-300">*</span></span>
                 <PortalSelect label="Кого уведомить" value={form.recipient} onChange={set('recipient')} className={inputClass} disabled={state === 'sending'}>
-                  <option value="department">Руководство моего отдела</option>
-                  <option value="senior">Старший состав</option>
+                  {departmentLeadershipOptions.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
                 </PortalSelect>
               </label>
-              <p className="mt-2 text-sm text-slate-300" role="status">{form.recipient === 'senior' ? 'Запрос получит старший состав ГИБДД.' : department ? `Будет отмечено руководство ${department}. Отдел подтверждён в Discord.` : 'Отдел пока не подтверждён. Обновите его в личном кабинете или выберите старший состав.'}</p>
+              <p className="mt-2 text-sm text-slate-300" role="status">{form.recipient === 'senior' ? 'Запрос получит старший состав ГИБДД.' : `Получатель: ${departmentLeadershipOptions.find(option => option.id === form.recipient)?.label}. Можно выбрать руководство любого отдела.`}</p>
             </div>
             <div className="border-t border-sky-300/15 pt-5">
               <label className="block">
