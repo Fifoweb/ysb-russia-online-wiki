@@ -32,7 +32,9 @@ links and provider response bodies are never exposed. Private SHA-256 caching
 prevents duplicate hosting requests. Unknown delivery outcomes are not resent
 automatically. Uploading images does not claim or reset report cooldowns.
 Allwebs is temporary external storage; its reported expiration is displayed.
-Bulk selections use `upload-evidence-album` with the same verified identity and
+New selections temporarily use Fotora for 1–50 images. The client routing switch
+`ALLWEBS_UPLOADS_ENABLED` is off; existing Allwebs proof links and the legacy
+integration remain valid. All selection sizes use `upload-evidence-album` with the same verified identity and
 shared private quotas/cache. A request carries at most 20 MiB of image data
 (21 MiB including multipart overhead), with one active album per worker. Files
 are validated before reaching Fotora. Guest cookies exist only during that

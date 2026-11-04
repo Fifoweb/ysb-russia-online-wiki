@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode, type ClipboardEvent
 import { ArrowClockwise, CheckCircle, ClipboardText, FileImage, Images, UploadSimple, X } from '@phosphor-icons/react';
 import { useAuth } from '../lib/auth';
 import { IMAGE_ACCEPT, imageFileError, insertEvidenceUrls, removeEvidenceUrl, uploadEvidenceBatch } from '../lib/evidenceUpload';
-import { evidenceProvider, planEvidenceUploads, providerName, type EvidenceProvider } from '../lib/evidenceUploadPlan';
+import { evidenceProvider, evidenceUploadHint, planEvidenceUploads, providerName, type EvidenceProvider } from '../lib/evidenceUploadPlan';
 import { MAX_SELECTED_IMAGES, fotoraAlbumUrl } from '../../supabase/functions/_shared/evidenceImages';
 import { useEvidenceUploadStatus } from './EvidenceUploadsProvider';
 import '../evidence-upload.css';
@@ -114,7 +114,7 @@ export default function EvidenceUpload({ children, value, onChange, multiple = f
       <input ref={input} hidden type="file" accept={IMAGE_ACCEPT} multiple={multiple} disabled={disabled || busy || !user} onChange={event => { add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
       <button type="button" className="evidence-upload-select" disabled={disabled || busy || !user} onClick={() => input.current?.click()}><Images size={20} aria-hidden="true" />{multiple ? 'Выбрать скриншоты' : 'Выбрать скриншот'}</button>
       <span>или перетащите {multiple ? 'снимки' : 'снимок'} сюда, либо вставьте Ctrl+V в поле</span>
-      <small>PNG, JPG, WEBP · до 10 МБ на файл.{multiple ? ' До 10 фото — Allwebs, от 11 до 50 — альбомы Fotora.' : ' Загрузка через Allwebs.'}</small>
+      <small>PNG, JPG, WEBP · до 10 МБ на файл. {evidenceUploadHint(multiple)}</small>
       {selected.length > 0 && <div className="evidence-upload-plan" role="status"><span>{selected.length === imageCount ? `Выбрано ${imageCount} фото` : `Всего ${imageCount} фото · новых ${selected.length}`} · {providerName(provider)}</span>
         <button type="button" className="evidence-upload-select evidence-upload-start" disabled={disabled || busy || !user} onClick={start}><UploadSimple size={20} aria-hidden="true" />Загрузить выбранные</button>
       </div>}

@@ -15,8 +15,8 @@ function compile(path: string) {
   }).outputText.replace(/export /g, '');
 }
 
-test('ten photos use Allwebs; eleven use Fotora; every album respects the byte budget without losing order', () => {
-  for (const count of [1, 9, 10]) assert.equal(evidenceProvider(count), 'allwebs');
+test('all selection sizes temporarily use Fotora; every album respects the byte budget without losing order', () => {
+  for (const count of [1, 9, 10]) assert.equal(evidenceProvider(count), 'fotora');
   for (const count of [11, 12, 50]) assert.equal(evidenceProvider(count), 'fotora');
   const files = Array.from({ length: 50 }, (_, id) => ({ id, size: 3 * 1024 * 1024 }));
   const albums = planEvidenceUploads(files, 'fotora');
@@ -32,7 +32,7 @@ test('Fotora album URLs are canonical and reject private actions, alternate host
     'https://fotora.ru/create-album/','https://fotora.ru/uploaded/?ID=%2fetc%2fpasswd']) assert.equal(fotoraAlbumUrl(value),null);
 });
 
-function protocolFixture(options: { failAt?: number; captcha?: boolean; redirect?: string; galleryCount?: number } = {}) {
+function protocolFixture(options: { failAt?: number; captcha?: boolean; redirect?: string; galleryCount?: number; photoCount?: number; direct?: boolean } = {}) {
   const calls: { url: string; method: string; cookie: string | null; form?: FormData }[] = [];
   let closed = false;
   const context = createContext({ Request, Response, Headers, FormData, File, Blob, URL, AbortSignal, Uint8Array, DataView, TextDecoder, Map,
@@ -42,15 +42,16 @@ function protocolFixture(options: { failAt?: number; captcha?: boolean; redirect
       calls.push({url,method:init.method!,cookie:headers.get('cookie'),form});
       if(calls.length===options.failAt)throw new Error('private-cookie-marker');
       if(calls.length===1)return new Response('<form><input name="uploadFiles[]">'+(options.captcha?'<div class="cf-turnstile"></div>':'')+'</form>',{headers:{'Set-Cookie':'PHPSESSID=private-cookie-marker; Path=/; Secure; HttpOnly'}});
-      if(calls.length===2)return new Response('<script>window.location.href="/create-album";</script>');
-      if(calls.length===3)return new Response('<form id="createAlbumForm"><input id="imageComment"><input id="imageComment"></form>');
+      if(calls.length===2)return new Response('<script>window.location.href="'+(options.direct?'/uploaded?ID=TESTALBUM123':'/create-album')+'";</script>');
+      if(options.direct&&calls.length===3)return new Response('<img class="uploaded-image">');
+      if(calls.length===3)return new Response('<form id="createAlbumForm">'+'<input id="imageComment">'.repeat(options.photoCount??2)+'</form>');
       if(calls.length===4)return new Response(`<script>window.location.href="${options.redirect??'/uploaded?ID=TESTALBUM123'}";</script>`);
-      return new Response('<img class="uploaded-image">'.repeat(options.galleryCount??2)+'<span>Дата удаления:</span> 04.12.2099');
+      return new Response('<img class="uploaded-image">'.repeat(options.galleryCount??options.photoCount??2)+'<span>Дата удаления:</span> 04.12.2099');
     },
   });
   runInContext(compile('../supabase/functions/_shared/evidenceImages.ts'),context);
   runInContext(compile('../supabase/functions/_shared/fotora.ts'),context);
-  const photos=[0,1].map(index=>({bytes:new Uint8Array([...png,index]),hash:String(index).repeat(64),mime:'image/png',extension:'png'}));
+  const photos=Array.from({length:options.photoCount??2},(_,index)=>({bytes:new Uint8Array([...png,index]),hash:String(index).repeat(64),mime:'image/png',extension:'png'}));
   return { run:()=>context.uploadFotoraAlbum(photos), calls, closed:()=>closed };
 }
 
@@ -109,7 +110,7 @@ test('album auth, request quotas, invalid images, duplicates and oversized group
     const app=albumFixture(options);assert.equal((await app.submit()).status,status);assert.equal(app.hosted.length,0);
     if(options.anonymous||options.identity===false)assert.equal(app.calls.length,0);
   }
-  for(const [files,count,status] of [[[png],10,400],[[new TextEncoder().encode('<svg/>')],11,400],[[png,png],11,400],[[new Uint8Array(10*1024*1024+1)],11,413]] as const){
+  for(const [files,count,status] of [[[png],0,400],[[new TextEncoder().encode('<svg/>')],11,400],[[png,png],11,400],[[new Uint8Array(10*1024*1024+1)],11,413]] as const){
     const app=albumFixture();assert.equal((await app.submit([...files],count)).status,status);assert.equal(app.hosted.length,0);
   }
 });
@@ -133,4 +134,22 @@ test('a blocked member releases unused reservations; ambiguous hosting outcomes 
   assert.equal(denied.status,409);assert.equal((await denied.json()).retryable,false);assert.equal(duplicate.hosted.length,0);
   for(const status of ['failed','uncertain'] as const){const app=albumFixture({hostingError:status});const response=await app.submit();assert.equal(response.status,status==='failed'?503:502);assert.equal(app.hosted.length,1);assert.ok(app.calls.filter(call=>call.name==='settle_evidence_upload').every(call=>call.params.p_status===status));}
   const sync=albumFixture({syncDown:true});const response=await sync.submit();assert.equal(response.status,200);const data=await response.json();assert.deepEqual(data.urls,[albumUrl]);assert.equal(data.syncPending,true);assert.equal(sync.hosted.length,1);
+});
+
+
+test('Fotora accepts one image through either an album draft or a direct public result',async()=>{
+  for(const direct of [false,true]){
+    const app=protocolFixture({photoCount:1,direct});const result=await app.run();
+    assert.equal(result.url,albumUrl);assert.equal(app.closed(),true);
+    assert.equal((app.calls[1].form!.getAll('uploadFiles[]')).length,1);
+    assert.equal(app.calls.at(-1)?.cookie,null);
+  }
+});
+
+test('Fotora endpoint accepts one to ten images with the same quota and verification checks',async()=>{
+  for(const count of [1,2,10]){
+    const app=albumFixture();const files=Array.from({length:count},(_,index)=>new Uint8Array([...png,index]));
+    const response=await app.submit(files,count);assert.equal(response.status,200);
+    assert.equal(app.hosted[0].length,count);assert.deepEqual((await response.json()).urls,[albumUrl]);
+  }
 });

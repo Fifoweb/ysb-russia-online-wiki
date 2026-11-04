@@ -36,8 +36,8 @@ async function handleAlbum(req: Request): Promise<Response> {
     form = await new Request(req.url, { method: 'POST', headers: { 'Content-Type': contentType }, body: raw }).formData();
   } catch { return json(413, { error: 'Не удалось прочитать изображения. Уменьшите размер группы.' }); }
   const files = form.getAll('files'), selectionCount = Number(form.get('selectionCount'));
-  if (!Number.isInteger(selectionCount) || selectionCount <= 10 || selectionCount > MAX_SELECTED_IMAGES || !files.length || files.length > selectionCount
-    || files.some(file => !(file instanceof File)) || [...form.keys()].some(key => key !== 'files' && key !== 'selectionCount')) return json(400, { error: 'Для Fotora нужна подборка от 11 до 50 изображений.' });
+  if (!Number.isInteger(selectionCount) || selectionCount < 1 || selectionCount > MAX_SELECTED_IMAGES || !files.length || files.length > selectionCount
+    || files.some(file => !(file instanceof File)) || [...form.keys()].some(key => key !== 'files' && key !== 'selectionCount')) return json(400, { error: 'Для Fotora выберите от 1 до 50 изображений.' });
   if ((files as File[]).reduce((sum, file) => sum + file.size, 0) > MAX_ALBUM_BYTES) return json(413, { error: 'Слишком большая группа изображений.' });
   const photos: Photo[] = [];
   for (const file of files as File[]) {

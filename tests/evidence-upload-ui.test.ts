@@ -7,7 +7,7 @@ import * as React from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import { act, create, type ReactTestRenderer, type ReactTestInstance } from 'react-test-renderer';
 import ts from 'typescript';
-import { evidenceProvider, planEvidenceUploads, providerName } from '../src/lib/evidenceUploadPlan';
+import { evidenceProvider, evidenceUploadHint, planEvidenceUploads, providerName } from '../src/lib/evidenceUploadPlan';
 import { MAX_SELECTED_IMAGES, MAX_IMAGE_BYTES, evidenceHostingUrl, fotoraAlbumUrl } from '../supabase/functions/_shared/evidenceImages';
 
 const album='https://fotora.ru/uploaded/?ID=TESTALBUM123';
@@ -21,7 +21,7 @@ const uploadData=runInContext('({IMAGE_ACCEPT,imageFileError,insertEvidenceUrls,
 async function fixture(multiple=true, initial='Ручная ссылка\nhttps://example.test/manual.png'){
   const calls:{files:File[];provider:string;count:number;signal:AbortSignal;resolve:(value:{urls:string[];expiresAt:null})=>void;reject:(error:Error)=>void}[]=[];
   const context=createContext({...React,_jsx:jsx,_jsxs:jsxs,_Fragment:React.Fragment,crypto:webcrypto,URL,File,AbortController,
-    useAuth:()=>({user:{id:'test-user'}}), ...uploadData,evidenceProvider,planEvidenceUploads,providerName,MAX_SELECTED_IMAGES,fotoraAlbumUrl,
+    useAuth:()=>({user:{id:'test-user'}}), ...uploadData,evidenceProvider,evidenceUploadHint,planEvidenceUploads,providerName,MAX_SELECTED_IMAGES,fotoraAlbumUrl,
     ArrowClockwise:()=>null,CheckCircle:()=>null,ClipboardText:()=>null,FileImage:()=>null,Images:()=>null,UploadSimple:()=>null,X:()=>null,
     uploadEvidenceBatch:(files:File[],provider:string,count:number,_id:string,signal:AbortSignal)=>new Promise((resolve,reject)=>calls.push({files,provider,count,signal,resolve,reject})),
   });
@@ -43,10 +43,10 @@ async function fixture(multiple=true, initial='Ручная ссылка\nhttps:
   return{renderer,calls,button,add,click,finish,field,reason,close};
 }
 
-test('adding photos in portions switches ten to eleven before uploading; Fotora inserts one album and removal preserves manual links',async()=>{
+test('adding photos in portions keeps Fotora for every selection size; Fotora inserts one album and removal preserves manual links',async()=>{
   const app=await fixture();
   await app.add(photos(8));assert.equal(app.calls.length,0);assert.match(app.reason(),/Загрузить выбранные/);
-  await app.add(photos(2,8));assert.match(app.renderer.root.findByProps({className:'evidence-upload-plan'}).findByType('span').children.join(''),/Allwebs/);
+  await app.add(photos(2,8));assert.match(app.renderer.root.findByProps({className:'evidence-upload-plan'}).findByType('span').children.join(''),/Fotora/);
   await app.add(photos(1,10));assert.equal(app.calls.length,0);assert.equal(app.renderer.root.findByProps({className:'evidence-upload-plan'}).findByType('span').children.join(''),'Выбрано 11 фото · Fotora');
   await app.click(app.button('Загрузить выбранные'));assert.equal(app.calls.length,1);assert.equal(app.calls[0].provider,'fotora');assert.equal(app.calls[0].files.length,11);assert.equal(app.calls[0].count,11);
   await app.finish(0,[album]);assert.equal(app.field(),'Ручная ссылка\nhttps://example.test/manual.png\n'+album);assert.equal(app.reason(),'');
@@ -54,24 +54,24 @@ test('adding photos in portions switches ten to eleven before uploading; Fotora 
   await app.click(remove);assert.equal(app.field(),'Ручная ссылка\nhttps://example.test/manual.png');await app.close();
 });
 
-test('ten selected photos stay individual Allwebs jobs with only two uploads in flight',async()=>{
+test('ten selected photos use one Fotora batch, and unmount aborts the upload',async()=>{
   const app=await fixture();await app.add(photos(10));await app.click(app.button('Загрузить выбранные'));
-  assert.equal(app.calls.length,2);assert.ok(app.calls.every(call=>call.provider==='allwebs'&&call.files.length===1));
-  await app.finish(0,['https://allwebs.ru/images/2026/one.png']);assert.equal(app.calls.length,3);
-  await app.close();assert.ok(app.calls.slice(1).every(call=>call.signal.aborted));
+  assert.equal(app.calls.length,1);assert.equal(app.calls[0].provider,'fotora');assert.equal(app.calls[0].files.length,10);
+  await app.close();assert.equal(app.calls[0].signal.aborted,true);
 });
 
-test('new additions use the updated total without reuploading previously completed photos',async()=>{
-  const app=await fixture();await app.add(photos(2));await app.click(app.button('Загрузить выбранные'));
-  await app.finish(0,['https://allwebs.ru/images/2026/one.png']);await app.finish(1,['https://allwebs.ru/images/2026/two.png']);
+test('new Fotora additions do not reupload completed photos or overwrite existing Allwebs links',async()=>{
+  const old='https://allwebs.ru/images/2026/one.png',first='https://fotora.ru/uploaded/?ID=FIRSTALBUM123';
+  const app=await fixture(true,old);await app.add(photos(2));await app.click(app.button('Загрузить выбранные'));
+  await app.finish(0,[first]);
   await app.add(photos(9,2));await app.click(app.button('Загрузить выбранные'));
-  assert.equal(app.calls.length,3);assert.equal(app.calls[2].provider,'fotora');assert.equal(app.calls[2].files.length,9);assert.equal(app.calls[2].count,11);
-  await app.finish(2,[album]);assert.match(app.field(),/one\.png\nhttps:\/\/allwebs.ru\/images\/2026\/two\.png/);assert.ok(app.field().endsWith(album));await app.close();
+  assert.equal(app.calls.length,2);assert.equal(app.calls[1].provider,'fotora');assert.equal(app.calls[1].files.length,9);assert.equal(app.calls[1].count,11);
+  await app.finish(1,[album]);assert.equal(app.field(),old+'\n'+first+'\n'+album);await app.close();
 });
 
 test('single-image controls preserve edits made while uploading and require an explicit insertion',async()=>{
   const app=await fixture(false,'https://example.test/original.png');await app.add(photos(1));await app.click(app.button('Загрузить выбранные'));
   await act(async()=>app.renderer.root.findByType('textarea').props.onChange({target:{value:'https://example.test/edited.png'}}));
-  const uploaded='https://allwebs.ru/images/2026/new.png';await app.finish(0,[uploaded]);assert.equal(app.field(),'https://example.test/edited.png');assert.ok(app.reason());
+  assert.equal(app.calls[0].provider,'fotora');assert.equal(app.calls[0].count,1);const uploaded=album;await app.finish(0,[uploaded]);assert.equal(app.field(),'https://example.test/edited.png');assert.ok(app.reason());
   await app.click(app.button('Подставить ссылки'));assert.equal(app.field(),uploaded);assert.equal(app.reason(),'');await app.close();
 });

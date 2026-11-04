@@ -2,7 +2,12 @@ import { MAX_ALBUM_BYTES } from '../../supabase/functions/_shared/evidenceImages
 
 export type EvidenceProvider = 'allwebs' | 'fotora';
 export const providerName = (provider: EvidenceProvider) => provider === 'allwebs' ? 'Allwebs' : 'Fotora';
-export const evidenceProvider = (selectedCount: number): EvidenceProvider => selectedCount <= 10 ? 'allwebs' : 'fotora';
+// Temporary routing switch; existing Allwebs links and integration stay intact.
+export const ALLWEBS_UPLOADS_ENABLED = false;
+export const evidenceProvider = (selectedCount: number): EvidenceProvider => ALLWEBS_UPLOADS_ENABLED && selectedCount <= 10 ? 'allwebs' : 'fotora';
+export const evidenceUploadHint = (multiple: boolean) => ALLWEBS_UPLOADS_ENABLED
+  ? multiple ? 'До 10 фото — Allwebs, от 11 до 50 — альбомы Fotora.' : 'Загрузка через Allwebs.'
+  : multiple ? 'Загрузка через Fotora — от 1 до 50 фото.' : 'Загрузка через Fotora.';
 
 export function planEvidenceUploads<T extends { size: number }>(files: T[], provider: EvidenceProvider): T[][] {
   if (provider === 'allwebs') return files.map(file => [file]);
